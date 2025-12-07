@@ -140,15 +140,23 @@ async def get_portfolio():
             trades = []
             
             if isinstance(raw_data, dict):
-                if "balances" in raw_data and raw_data["balances"]:
-                    balance = raw_data["balances"][0] if isinstance(raw_data["balances"], list) else raw_data["balances"]
-                    equity = float(balance.get("equity", 0) or 0)
-                    available_balance = float(balance.get("available_for_trade", 0) or 0)
-                    unrealized_pnl = float(balance.get("unrealised_pnl", 0) or 0)
-                    margin_used = float(balance.get("initial_margin", 0) or 0)
-                    margin_ratio = float(balance.get("margin_ratio", 0) or 0)
+                acc_list = raw_data.get("accounts", [])
+                if acc_list and len(acc_list) > 0:
+                    acc = acc_list[0]
+                    equity = float(acc.get("collateral", 0) or 0)
+                    available_balance = float(acc.get("available_balance", 0) or 0)
+                    margin_used = equity - available_balance
+                    
+                    pos_list = acc.get("positions", [])
+                    for pos in pos_list:
+                        pnl = float(pos.get("unrealized_pnl", 0) or 0)
+                        unrealized_pnl += pnl
+                    
+                    if equity > 0:
+                        margin_ratio = margin_used / equity
+                    
+                    positions = pos_list
                 
-                positions = raw_data.get("positions", []) or []
                 open_orders = raw_data.get("open_orders", []) or []
                 trades = raw_data.get("trades", []) or []
             

@@ -21,6 +21,11 @@ class LighterClient:
             try:
                 config = Configuration()
                 config.host = settings.lighter_base_url
+                
+                if account.proxy_url:
+                    config.proxy = account.proxy_url
+                    logger.info(f"Using proxy for {account.name}: {account.proxy_url[:40]}...")
+                
                 api_client = lighter.ApiClient(configuration=config)
                 self.api_clients[account.name] = api_client
                 self.account_apis[account.name] = lighter.AccountApi(api_client)
@@ -32,6 +37,10 @@ class LighterClient:
                         account_index=account.account_index,
                         api_private_keys=api_private_keys
                     )
+                    if account.proxy_url:
+                        signer.api_client.configuration.proxy = account.proxy_url
+                        if hasattr(signer.api_client, 'rest_client'):
+                            signer.api_client.rest_client.proxy = account.proxy_url
                     self.signer_clients[account.name] = signer
                 
                 logger.info(f"Initialized client for account: {account.name} (index: {account.account_index})")

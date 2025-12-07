@@ -13,6 +13,20 @@ class AccountConfig(BaseModel):
     public_key: str
     proxy_url: Optional[str] = None
 
+def convert_proxy_format(raw_proxy: str) -> str:
+    """Convert ip:port:user:pass to http://user:pass@ip:port format"""
+    if not raw_proxy:
+        return None
+    if raw_proxy.startswith("http://") or raw_proxy.startswith("https://"):
+        return raw_proxy
+    parts = raw_proxy.split(":")
+    if len(parts) == 4:
+        ip, port, user, password = parts
+        return f"http://{user}:{password}@{ip}:{port}"
+    elif len(parts) == 2:
+        return f"http://{raw_proxy}"
+    return raw_proxy
+
 class Settings(BaseModel):
     lighter_base_url: str = "https://mainnet.zklighter.elliot.ai"
     lighter_ws_url: str = "wss://mainnet.zklighter.elliot.ai/stream"
@@ -43,13 +57,16 @@ def load_accounts_from_env() -> List[AccountConfig]:
         private_key = env_vars.get(f"{prefix}_PRIVATE")
         public_key = env_vars.get(f"{prefix}_PUBLIC")
         
-        proxy_key = None
-        for key in env_vars:
-            if key.startswith(prefix.replace("_Account_Index", "").rsplit("_", 1)[0]) and "PROXY" in key:
-                proxy_key = key
-                break
-        
-        proxy_url = env_vars.get(proxy_key) if proxy_key else None
+        parts = prefix.split("_")
+        if len(parts) >= 2:
+            account_num = parts[1]
+            proxy_url = None
+            for key in env_vars:
+                if f"Lighter_{account_num}_PROXY" in key and "_URL" in key:
+                    proxy_url = env_vars.get(key)
+                    break
+        else:
+            proxy_url = None
         
         if account_index and private_key:
             accounts.append(AccountConfig(
@@ -58,7 +75,7 @@ def load_accounts_from_env() -> List[AccountConfig]:
                 api_key_index=int(api_key_index) if api_key_index else 2,
                 private_key=private_key,
                 public_key=public_key or "",
-                proxy_url=proxy_url
+                proxy_url=convert_proxy_format(proxy_url) if proxy_url else None
             ))
     
     return accounts
