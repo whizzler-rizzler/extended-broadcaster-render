@@ -175,11 +175,12 @@ async def get_portfolio():
                     for pos in pos_list:
                         pnl = float(pos.get("unrealized_pnl", 0) or 0)
                         unrealized_pnl += pnl
+                        pos_size = float(pos.get("position", 0) or 0)
+                        if pos_size != 0:
+                            positions.append(pos)
                     
                     if equity > 0:
                         margin_ratio = margin_used / equity
-                    
-                    positions = pos_list
                 
                 trades = raw_data.get("trades", []) or []
                 
