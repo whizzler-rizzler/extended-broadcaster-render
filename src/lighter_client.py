@@ -18,7 +18,6 @@ class LighterClient:
         self.account_apis: Dict[str, lighter.AccountApi] = {}
         self.running = False
         self._poll_task: Optional[asyncio.Task] = None
-        self._orders_poll_task: Optional[asyncio.Task] = None
         self._http_sessions: Dict[str, aiohttp.ClientSession] = {}
         self._account_proxies: Dict[str, Optional[str]] = {}
         self.last_update_times: Dict[int, float] = {}
@@ -203,34 +202,9 @@ class LighterClient:
             pass
         return []
     
-    async def poll_active_orders(self):
-        logger.info("Starting active orders polling (every 2s)")
-        while self.running:
-            try:
-                total_orders = 0
-                for account in settings.accounts:
-                    if not self.running:
-                        break
-                    position_markets = self._get_position_markets(account.account_index)
-                    orders = await self.fetch_all_active_orders(account.name, account.account_index, position_markets)
-                    total_orders += len(orders)
-                    await asyncio.sleep(0.2)
-                
-                if total_orders > 0:
-                    logger.info(f"Fetched {total_orders} active orders across all accounts")
-                
-                await asyncio.sleep(2.0)
-            except asyncio.CancelledError:
-                break
-            except Exception as e:
-                logger.error(f"Orders polling error: {e}", exc_info=True)
-                await asyncio.sleep(2)
-    
     async def start_polling(self):
         self.running = True
         logger.info(f"Starting account polling with interval: {settings.poll_interval}s")
-        
-        self._orders_poll_task = asyncio.create_task(self.poll_active_orders())
         
         while self.running:
             try:
@@ -244,12 +218,6 @@ class LighterClient:
     
     async def stop_polling(self):
         self.running = False
-        if self._orders_poll_task:
-            self._orders_poll_task.cancel()
-            try:
-                await self._orders_poll_task
-            except asyncio.CancelledError:
-                pass
         if self._poll_task:
             self._poll_task.cancel()
             try:

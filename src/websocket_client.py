@@ -40,15 +40,23 @@ class LighterWebSocketClient:
             except Exception as e:
                 logger.error(f"Callback error: {e}")
     
-    def _generate_auth_token(self) -> Optional[str]:
+    def _generate_auth_token(self, account_name: str = None) -> Optional[str]:
         if not self._signer_clients:
             return None
-        first_signer = next(iter(self._signer_clients.values()), None)
-        if first_signer:
+        
+        if account_name and account_name in self._signer_clients:
+            signer = self._signer_clients[account_name]
+        else:
+            signer = next(iter(self._signer_clients.values()), None)
+        
+        if signer:
             try:
-                expiry_timestamp = int(time.time()) + (8 * 60 * 60)
-                token = first_signer.create_auth_token_with_expiry(expiry_timestamp)
-                logger.info("Generated WebSocket auth token")
+                token, err = signer.create_auth_token_with_expiry(
+                    lighter.SignerClient.DEFAULT_10_MIN_AUTH_EXPIRY
+                )
+                if err:
+                    logger.error(f"Auth token error for {account_name}: {err}")
+                    return None
                 return token
             except Exception as e:
                 logger.error(f"Failed to generate auth token: {e}")
@@ -100,13 +108,29 @@ class LighterWebSocketClient:
                     retry_count = 0
                     logger.info("WebSocket connected successfully via proxy!")
                     
-                    for account_id in account_ids:
-                        subscribe_msg = {
+                    for acc in settings.accounts:
+                        account_id = acc.account_index
+                        auth_token = self._generate_auth_token(acc.name)
+                        
+                        if not auth_token:
+                            logger.warning(f"No auth token for {acc.name}, skipping subscriptions")
+                            continue
+                        
+                        positions_msg = {
                             "type": "subscribe",
-                            "channel": f"account_all/{account_id}"
+                            "channel": f"account_all_positions/{account_id}",
+                            "auth": auth_token
                         }
-                        await ws.send_json(subscribe_msg)
-                        logger.info(f"Subscribed to account_all/{account_id}")
+                        await ws.send_json(positions_msg)
+                        logger.info(f"Subscribed to account_all_positions/{account_id}")
+                        
+                        orders_msg = {
+                            "type": "subscribe",
+                            "channel": f"account_all_orders/{account_id}",
+                            "auth": auth_token
+                        }
+                        await ws.send_json(orders_msg)
+                        logger.info(f"Subscribed to account_all_orders/{account_id}")
                     
                     async for msg in ws:
                         if msg.type == aiohttp.WSMsgType.TEXT:
