@@ -131,6 +131,14 @@ class LighterWebSocketClient:
                         }
                         await ws.send_json(orders_msg)
                         logger.info(f"Subscribed to account_all_orders/{account_id}")
+                        
+                        trades_msg = {
+                            "type": "subscribe",
+                            "channel": f"account_all_trades/{account_id}",
+                            "auth": auth_token
+                        }
+                        await ws.send_json(trades_msg)
+                        logger.info(f"Subscribed to account_all_trades/{account_id}")
                     
                     async for msg in ws:
                         if msg.type == aiohttp.WSMsgType.TEXT:

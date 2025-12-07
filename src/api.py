@@ -50,7 +50,58 @@ async def startup():
     
     async def on_ws_message(data):
         await manager.broadcast({"type": "lighter_update", "data": data})
-        if "account_index" in data:
+        
+        channel = data.get("channel", "")
+        msg_type = data.get("type", "")
+        
+        if "account_all_orders" in channel:
+            parts = channel.replace("account_all_orders:", "").replace("account_all_orders/", "")
+            try:
+                account_id = int(parts)
+                orders = data.get("orders", [])
+                await cache.set(f"ws_orders:{account_id}", {
+                    "orders": orders,
+                    "timestamp": time.time()
+                })
+                if orders:
+                    logger.debug(f"Cached {len(orders)} orders for account {account_id}")
+            except (ValueError, TypeError):
+                pass
+        
+        elif "account_all_positions" in channel:
+            parts = channel.replace("account_all_positions:", "").replace("account_all_positions/", "")
+            try:
+                account_id = int(parts)
+                positions = data.get("positions", [])
+                await cache.set(f"ws_positions:{account_id}", {
+                    "positions": positions,
+                    "timestamp": time.time()
+                })
+                if positions:
+                    logger.debug(f"Cached {len(positions)} positions for account {account_id}")
+            except (ValueError, TypeError):
+                pass
+        
+        elif "account_all_trades" in channel:
+            parts = channel.replace("account_all_trades:", "").replace("account_all_trades/", "")
+            try:
+                account_id = int(parts)
+                trades = data.get("trades", {})
+                volumes = {
+                    "total_volume": data.get("total_volume"),
+                    "monthly_volume": data.get("monthly_volume"),
+                    "weekly_volume": data.get("weekly_volume"),
+                    "daily_volume": data.get("daily_volume")
+                }
+                await cache.set(f"ws_trades:{account_id}", {
+                    "trades": trades,
+                    "volumes": volumes,
+                    "timestamp": time.time()
+                })
+            except (ValueError, TypeError):
+                pass
+        
+        elif "account_index" in data:
             await cache.set(f"ws_update:{data['account_index']}", data)
     
     ws_client.set_signer_clients(lighter_client.signer_clients)
@@ -149,7 +200,15 @@ async def get_portfolio():
         if key.startswith("account:"):
             account_data = value.get("data", value)
             raw_data = account_data.get("raw_data", {})
-            active_orders = account_data.get("active_orders", []) or []
+            account_index = account_data.get("account_index")
+            
+            ws_orders_data = cached_data.get(f"ws_orders:{account_index}", {})
+            ws_orders = ws_orders_data.get("data", ws_orders_data).get("orders", []) if ws_orders_data else []
+            active_orders = ws_orders if ws_orders else (account_data.get("active_orders", []) or [])
+            
+            ws_trades_data = cached_data.get(f"ws_trades:{account_index}", {})
+            ws_trades = ws_trades_data.get("data", ws_trades_data) if ws_trades_data else {}
+            
             last_update = account_data.get("last_update", 0)
             
             is_live = (now - last_update) < 10
@@ -193,6 +252,9 @@ async def get_portfolio():
                         price = float(trade.get("price", 0) or 0)
                         volume_24h += size * price
             
+            ws_volumes = ws_trades.get("volumes", {}) if ws_trades else {}
+            ws_trades_list = ws_trades.get("trades", {}) if ws_trades else {}
+            
             account_entry = {
                 "account_index": str(account_data.get("account_index", "")),
                 "name": account_data.get("account_name", ""),
@@ -203,10 +265,14 @@ async def get_portfolio():
                 "unrealized_pnl": unrealized_pnl,
                 "margin_used": margin_used,
                 "margin_ratio": margin_ratio,
-                "volume_24h": volume_24h,
+                "volume_24h": ws_volumes.get("daily_volume") or volume_24h,
+                "total_volume": ws_volumes.get("total_volume"),
+                "monthly_volume": ws_volumes.get("monthly_volume"),
+                "weekly_volume": ws_volumes.get("weekly_volume"),
                 "positions": positions,
                 "active_orders": active_orders,
-                "trades": trades
+                "trades": trades,
+                "ws_trades": ws_trades_list
             }
             accounts_list.append(account_entry)
             
