@@ -135,6 +135,7 @@ async def get_portfolio():
             unrealized_pnl = 0
             margin_used = 0
             margin_ratio = 0
+            volume_24h = 0
             positions = []
             open_orders = []
             trades = []
@@ -159,6 +160,16 @@ async def get_portfolio():
                 
                 open_orders = raw_data.get("open_orders", []) or []
                 trades = raw_data.get("trades", []) or []
+                
+                now = time.time()
+                day_ago = now - 86400
+                for trade in trades:
+                    trade_ts = float(trade.get("timestamp", 0) or 0)
+                    trade_time = trade_ts / 1000 if trade_ts > 10000000000 else trade_ts
+                    if trade_time >= day_ago:
+                        size = abs(float(trade.get("size", 0) or 0))
+                        price = float(trade.get("price", 0) or 0)
+                        volume_24h += size * price
             
             account_entry = {
                 "account_index": str(account_data.get("account_index", "")),
@@ -171,6 +182,7 @@ async def get_portfolio():
                 "unrealized_pnl": unrealized_pnl,
                 "margin_used": margin_used,
                 "margin_ratio": margin_ratio,
+                "volume_24h": volume_24h,
                 "positions": positions,
                 "open_orders": open_orders,
                 "trades": trades
@@ -231,213 +243,338 @@ async def dashboard():
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            background: #0d0d1a;
             color: #fff;
             min-height: 100vh;
-            padding: 20px;
-        }
-        .container { max-width: 1200px; margin: 0 auto; }
-        h1 {
-            text-align: center;
-            margin-bottom: 30px;
-            font-size: 2.5rem;
-            background: linear-gradient(90deg, #00d9ff, #00ff88);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-        }
-        .status-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 20px;
-            margin-bottom: 30px;
-        }
-        .status-card {
-            background: rgba(255,255,255,0.05);
-            border: 1px solid rgba(255,255,255,0.1);
-            border-radius: 16px;
             padding: 24px;
-            backdrop-filter: blur(10px);
         }
-        .status-card h3 {
-            font-size: 0.9rem;
-            color: #888;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            margin-bottom: 10px;
-        }
-        .status-value {
-            font-size: 2rem;
-            font-weight: bold;
-        }
-        .status-value.connected { color: #00ff88; }
-        .status-value.disconnected { color: #ff4757; }
-        .accounts-section {
-            background: rgba(255,255,255,0.05);
-            border: 1px solid rgba(255,255,255,0.1);
-            border-radius: 16px;
-            padding: 24px;
-            margin-bottom: 20px;
-        }
-        .accounts-section h2 {
-            margin-bottom: 20px;
-            color: #00d9ff;
-        }
-        .account-row {
+        .header {
             display: flex;
             justify-content: space-between;
-            padding: 15px;
-            background: rgba(0,0,0,0.2);
+            align-items: center;
+            margin-bottom: 24px;
+            padding-bottom: 16px;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+        .header h1 {
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: #fff;
+        }
+        .header-stats {
+            display: flex;
+            gap: 24px;
+            align-items: center;
+        }
+        .header-stat {
+            text-align: right;
+        }
+        .header-stat-label {
+            font-size: 0.75rem;
+            color: #666;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .header-stat-value {
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: #00ff88;
+        }
+        .header-stat-value.negative { color: #ff4757; }
+        .accounts-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 16px;
+        }
+        @media (max-width: 1200px) {
+            .accounts-grid { grid-template-columns: repeat(2, 1fr); }
+        }
+        @media (max-width: 768px) {
+            .accounts-grid { grid-template-columns: 1fr; }
+        }
+        .account-card {
+            background: #14141f;
+            border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 12px;
+            padding: 20px;
+        }
+        .account-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 16px;
+        }
+        .account-name {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-weight: 600;
+            font-size: 1rem;
+        }
+        .account-name .checkmark {
+            color: #00ff88;
+            font-size: 1rem;
+        }
+        .account-index {
+            font-size: 0.8rem;
+            color: #666;
+            margin-top: 4px;
+        }
+        .live-badge {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            background: rgba(0, 255, 136, 0.1);
+            color: #00ff88;
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 0.75rem;
+            font-weight: 500;
+        }
+        .live-badge .dot {
+            width: 6px;
+            height: 6px;
+            background: #00ff88;
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+        .offline-badge {
+            background: rgba(255, 71, 87, 0.1);
+            color: #ff4757;
+        }
+        .offline-badge .dot {
+            background: #ff4757;
+            animation: none;
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        .account-stats {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin-bottom: 16px;
+        }
+        .stat-item {
+            background: rgba(255,255,255,0.03);
+            padding: 12px;
             border-radius: 8px;
-            margin-bottom: 10px;
         }
-        .account-name { font-weight: bold; }
-        .account-data { color: #888; font-size: 0.9rem; }
-        .log-section {
-            background: rgba(0,0,0,0.3);
-            border: 1px solid rgba(255,255,255,0.1);
-            border-radius: 16px;
-            padding: 24px;
-            max-height: 300px;
-            overflow-y: auto;
+        .stat-label {
+            font-size: 0.7rem;
+            color: #666;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 4px;
         }
-        .log-section h2 { margin-bottom: 15px; color: #00d9ff; }
-        .log-entry {
-            font-family: monospace;
-            font-size: 0.85rem;
-            padding: 8px;
-            border-bottom: 1px solid rgba(255,255,255,0.05);
-            color: #aaa;
+        .stat-value {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: #fff;
         }
-        .log-entry.update { color: #00ff88; }
-        .log-entry.error { color: #ff4757; }
+        .stat-value.positive { color: #00ff88; }
+        .stat-value.negative { color: #ff4757; }
+        .positions-section {
+            border-top: 1px solid rgba(255,255,255,0.08);
+            padding-top: 12px;
+        }
+        .positions-header {
+            font-size: 0.7rem;
+            color: #666;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 8px;
+        }
+        .positions-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+        }
+        .position-tag {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            padding: 4px 8px;
+            border-radius: 6px;
+            font-size: 0.75rem;
+            font-weight: 500;
+        }
+        .position-tag.long {
+            background: rgba(0, 255, 136, 0.15);
+            color: #00ff88;
+        }
+        .position-tag.short {
+            background: rgba(255, 71, 87, 0.15);
+            color: #ff4757;
+        }
+        .no-positions {
+            color: #444;
+            font-size: 0.8rem;
+            font-style: italic;
+        }
+        .loading {
+            text-align: center;
+            padding: 60px;
+            color: #666;
+        }
+        .loading-spinner {
+            width: 40px;
+            height: 40px;
+            border: 3px solid #222;
+            border-top-color: #00ff88;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 16px;
+        }
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
     </style>
 </head>
 <body>
-    <div class="container">
+    <div class="header">
         <h1>Lighter Broadcaster</h1>
-        
-        <div class="status-grid">
-            <div class="status-card">
-                <h3>WebSocket Status</h3>
-                <div class="status-value" id="ws-status">Connecting...</div>
+        <div class="header-stats">
+            <div class="header-stat">
+                <div class="header-stat-label">Total Equity</div>
+                <div class="header-stat-value" id="total-equity">$0.00</div>
             </div>
-            <div class="status-card">
-                <h3>Connected Clients</h3>
-                <div class="status-value" id="client-count">0</div>
+            <div class="header-stat">
+                <div class="header-stat-label">Total PnL</div>
+                <div class="header-stat-value" id="total-pnl">$0.00</div>
             </div>
-            <div class="status-card">
-                <h3>Accounts Monitored</h3>
-                <div class="status-value" id="account-count">0</div>
-            </div>
-            <div class="status-card">
-                <h3>Cache Entries</h3>
-                <div class="status-value" id="cache-count">0</div>
+            <div class="header-stat">
+                <div class="header-stat-label">Accounts</div>
+                <div class="header-stat-value" id="accounts-count">0/0</div>
             </div>
         </div>
-        
-        <div class="accounts-section">
-            <h2>Account Data</h2>
-            <div id="accounts-container">
-                <p style="color: #888;">Loading account data...</p>
-            </div>
-        </div>
-        
-        <div class="log-section">
-            <h2>Live Updates</h2>
-            <div id="log-container"></div>
+    </div>
+    
+    <div class="accounts-grid" id="accounts-container">
+        <div class="loading">
+            <div class="loading-spinner"></div>
+            <p>Loading accounts...</p>
         </div>
     </div>
     
     <script>
-        let ws;
-        const maxLogs = 50;
-        
-        function connect() {
-            const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-            ws = new WebSocket(`${protocol}//${window.location.host}/ws`);
-            
-            ws.onopen = () => {
-                document.getElementById('ws-status').textContent = 'Connected';
-                document.getElementById('ws-status').className = 'status-value connected';
-                addLog('Connected to broadcaster', 'update');
-            };
-            
-            ws.onclose = () => {
-                document.getElementById('ws-status').textContent = 'Disconnected';
-                document.getElementById('ws-status').className = 'status-value disconnected';
-                addLog('Disconnected from broadcaster', 'error');
-                setTimeout(connect, 3000);
-            };
-            
-            ws.onerror = (err) => {
-                addLog('WebSocket error', 'error');
-            };
-            
-            ws.onmessage = (event) => {
-                const data = JSON.parse(event.data);
-                handleMessage(data);
-            };
+        function formatMoney(value) {
+            const num = parseFloat(value) || 0;
+            return '$' + num.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
         }
         
-        function handleMessage(data) {
-            if (data.type === 'initial_data') {
-                updateAccountsDisplay(data.data);
-                addLog('Received initial data', 'update');
-            } else if (data.type === 'lighter_update') {
-                addLog(`Update: ${JSON.stringify(data.data).substring(0, 100)}...`, 'update');
+        function formatAccountName(name) {
+            const match = name.match(/Lighter_(\\d+)_([a-fA-F0-9]+)/);
+            if (match) {
+                return 'Lighter ' + match[1] + ' (' + match[2] + ')';
             }
+            return name;
         }
         
-        function updateAccountsDisplay(data) {
+        function getPositionSymbol(marketIndex) {
+            const markets = {
+                '1': 'BTC', '2': 'ETH', '3': 'SOL', '4': 'AVAX', '5': 'ARB',
+                '6': 'OP', '7': 'MATIC', '8': 'DOGE', '9': 'LINK', '10': 'SUI',
+                '11': 'PEPE', '12': 'WIF', '13': 'NEAR', '14': 'FTM', '15': 'TIA'
+            };
+            return markets[String(marketIndex)] || 'MKT' + marketIndex;
+        }
+        
+        function renderAccounts(data) {
             const container = document.getElementById('accounts-container');
+            const accounts = data.accounts || [];
+            
+            if (accounts.length === 0) {
+                container.innerHTML = '<div class="loading"><p>No accounts configured</p></div>';
+                return;
+            }
+            
             let html = '';
-            
-            for (const [key, value] of Object.entries(data)) {
-                if (key.startsWith('account:')) {
-                    const accountData = value.data;
-                    html += `
-                        <div class="account-row">
-                            <div>
-                                <div class="account-name">Account ${accountData.account_index}</div>
-                                <div class="account-data">${accountData.account_name}</div>
-                            </div>
-                            <div class="account-data">Age: ${value.age.toFixed(1)}s</div>
-                        </div>
-                    `;
+            accounts.forEach(acc => {
+                const isConnected = acc.ws_connected;
+                const equity = parseFloat(acc.equity) || 0;
+                const pnl = parseFloat(acc.unrealized_pnl) || 0;
+                const volume24h = parseFloat(acc.volume_24h) || 0;
+                const positions = acc.positions || [];
+                
+                const pnlClass = pnl >= 0 ? 'positive' : 'negative';
+                const badgeClass = isConnected ? 'live-badge' : 'live-badge offline-badge';
+                const statusText = isConnected ? 'Live' : 'Offline';
+                
+                let positionsHtml = '';
+                if (positions.length > 0) {
+                    positions.forEach(pos => {
+                        const size = parseFloat(pos.signed_size || pos.size || 0);
+                        if (size !== 0) {
+                            const isLong = size > 0;
+                            const tagClass = isLong ? 'long' : 'short';
+                            const direction = isLong ? 'L' : 'S';
+                            const symbol = getPositionSymbol(pos.market_index);
+                            positionsHtml += '<span class="position-tag ' + tagClass + '">' + symbol + ' ' + direction + '</span>';
+                        }
+                    });
                 }
-            }
+                if (!positionsHtml) {
+                    positionsHtml = '<span class="no-positions">No open positions</span>';
+                }
+                
+                html += '<div class="account-card">';
+                html += '  <div class="account-header">';
+                html += '    <div>';
+                html += '      <div class="account-name"><span class="checkmark">&#10003;</span>' + formatAccountName(acc.name) + '</div>';
+                html += '      <div class="account-index">account_' + acc.account_index + '</div>';
+                html += '    </div>';
+                html += '    <div class="' + badgeClass + '"><span class="dot"></span>' + statusText + '</div>';
+                html += '  </div>';
+                html += '  <div class="account-stats">';
+                html += '    <div class="stat-item">';
+                html += '      <div class="stat-label">Equity</div>';
+                html += '      <div class="stat-value">' + formatMoney(equity) + '</div>';
+                html += '    </div>';
+                html += '    <div class="stat-item">';
+                html += '      <div class="stat-label">Unrealized PnL</div>';
+                html += '      <div class="stat-value ' + pnlClass + '">' + formatMoney(pnl) + '</div>';
+                html += '    </div>';
+                html += '    <div class="stat-item">';
+                html += '      <div class="stat-label">Volume 24H</div>';
+                html += '      <div class="stat-value">' + formatMoney(volume24h) + '</div>';
+                html += '    </div>';
+                html += '    <div class="stat-item">';
+                html += '      <div class="stat-label">Positions</div>';
+                html += '      <div class="stat-value">' + positions.filter(p => parseFloat(p.signed_size || p.size || 0) !== 0).length + '</div>';
+                html += '    </div>';
+                html += '  </div>';
+                html += '  <div class="positions-section">';
+                html += '    <div class="positions-header">Open Positions</div>';
+                html += '    <div class="positions-list">' + positionsHtml + '</div>';
+                html += '  </div>';
+                html += '</div>';
+            });
             
-            container.innerHTML = html || '<p style="color: #888;">No accounts loaded yet</p>';
-            document.getElementById('cache-count').textContent = Object.keys(data).length;
+            container.innerHTML = html;
+            
+            const agg = data.aggregated || {};
+            document.getElementById('total-equity').textContent = formatMoney(agg.total_equity || 0);
+            const totalPnl = agg.total_unrealized_pnl || 0;
+            const pnlEl = document.getElementById('total-pnl');
+            pnlEl.textContent = formatMoney(totalPnl);
+            pnlEl.className = 'header-stat-value ' + (totalPnl >= 0 ? '' : 'negative');
+            document.getElementById('accounts-count').textContent = (agg.accounts_connected || 0) + '/' + (agg.accounts_total || 0);
         }
         
-        function addLog(message, type = '') {
-            const container = document.getElementById('log-container');
-            const entry = document.createElement('div');
-            entry.className = `log-entry ${type}`;
-            entry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
-            container.insertBefore(entry, container.firstChild);
-            
-            while (container.children.length > maxLogs) {
-                container.removeChild(container.lastChild);
-            }
-        }
-        
-        async function fetchStatus() {
+        async function fetchPortfolio() {
             try {
-                const res = await fetch('/api/status');
+                const res = await fetch('/api/portfolio');
                 const data = await res.json();
-                document.getElementById('client-count').textContent = data.broadcast_clients;
-                document.getElementById('account-count').textContent = data.accounts_configured;
-                document.getElementById('cache-count').textContent = data.cache.valid_entries;
+                renderAccounts(data);
             } catch (e) {
-                console.error('Failed to fetch status:', e);
+                console.error('Failed to fetch portfolio:', e);
             }
         }
         
-        connect();
-        fetchStatus();
-        setInterval(fetchStatus, 5000);
+        fetchPortfolio();
+        setInterval(fetchPortfolio, 2000);
     </script>
 </body>
 </html>
