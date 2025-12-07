@@ -51,6 +51,7 @@ async def startup():
         if "account_index" in data:
             await cache.set(f"ws_update:{data['account_index']}", data)
     
+    ws_client.set_signer_clients(lighter_client.signer_clients)
     ws_client.add_callback(on_ws_message)
     await ws_client.start()
     

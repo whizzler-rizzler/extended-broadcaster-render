@@ -50,18 +50,13 @@ class LighterClient:
         else:
             return account_data
     
-    def _sync_fetch_account(self, account_api: Any, account_index: int) -> Any:
-        return account_api.account(by="index", value=str(account_index))
-    
     async def fetch_account_data(self, account_name: str, account_index: int) -> Optional[Dict[str, Any]]:
         try:
             account_api = self.account_apis.get(account_name)
             if not account_api:
                 return None
             
-            account_data = await asyncio.to_thread(
-                self._sync_fetch_account, account_api, account_index
-            )
+            account_data = await account_api.account(by="index", value=str(account_index))
             
             serialized_data = self._serialize_account_data(account_data)
             
@@ -84,6 +79,7 @@ class LighterClient:
             data = await self.fetch_account_data(account.name, account.account_index)
             if data:
                 results[str(account.account_index)] = data
+            await asyncio.sleep(0.2)
         return results
     
     async def start_polling(self):

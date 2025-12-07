@@ -1,6 +1,7 @@
 import asyncio
 import logging
-from typing import Optional, Callable, List, Any
+from typing import Optional, Callable, List, Any, Dict
+from datetime import datetime, timedelta
 import lighter
 from src.config import settings
 
@@ -13,6 +14,10 @@ class LighterWebSocketClient:
         self._task: Optional[asyncio.Task] = None
         self._callbacks: List[Callable] = []
         self._connected = False
+        self._signer_clients: Dict[str, lighter.SignerClient] = {}
+    
+    def set_signer_clients(self, signer_clients: Dict[str, lighter.SignerClient]):
+        self._signer_clients = signer_clients
     
     def add_callback(self, callback: Callable):
         self._callbacks.append(callback)
@@ -39,6 +44,20 @@ class LighterWebSocketClient:
         logger.debug(f"Orderbook update received for {orderbook_id}: {data}")
         asyncio.create_task(self._notify_callbacks({"type": "orderbook_update", "orderbook_id": orderbook_id, "data": data}))
     
+    def _generate_auth_token(self) -> Optional[str]:
+        if not self._signer_clients:
+            return None
+        first_signer = next(iter(self._signer_clients.values()), None)
+        if first_signer:
+            try:
+                expiry = datetime.now() + timedelta(hours=8)
+                token = first_signer.create_auth_token_with_expiry(expiry)
+                logger.info("Generated WebSocket auth token")
+                return token
+            except Exception as e:
+                logger.error(f"Failed to generate auth token: {e}")
+        return None
+    
     async def connect(self):
         while self.running:
             try:
@@ -46,16 +65,23 @@ class LighterWebSocketClient:
                 
                 host = settings.lighter_ws_url.replace("wss://", "").replace("/stream", "")
                 
-                self.ws_client = lighter.WsClient(
-                    host=host,
-                    path="/stream",
-                    account_ids=account_ids,
-                    order_book_ids=[],
-                    on_account_update=self._on_account_update,
-                    on_order_book_update=self._on_orderbook_update
-                )
+                auth_token = self._generate_auth_token()
                 
-                logger.info(f"Starting Lighter WebSocket client for accounts: {account_ids}")
+                ws_kwargs = {
+                    "host": host,
+                    "path": "/stream",
+                    "account_ids": account_ids,
+                    "order_book_ids": [],
+                    "on_account_update": self._on_account_update,
+                    "on_order_book_update": self._on_orderbook_update
+                }
+                
+                if auth_token:
+                    ws_kwargs["auth_token"] = auth_token
+                
+                self.ws_client = lighter.WsClient(**ws_kwargs)
+                
+                logger.info(f"Starting Lighter WebSocket client for accounts: {account_ids} (auth: {'yes' if auth_token else 'no'})")
                 self._connected = True
                 
                 await self.ws_client.run_async()
