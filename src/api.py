@@ -430,6 +430,71 @@ async def dashboard():
         @keyframes spin {
             to { transform: rotate(360deg); }
         }
+        .api-section {
+            margin-top: 32px;
+            background: #14141f;
+            border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 12px;
+            padding: 24px;
+        }
+        .api-section h2 {
+            font-size: 1.2rem;
+            margin-bottom: 20px;
+            color: #fff;
+        }
+        .api-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 16px;
+        }
+        @media (max-width: 768px) {
+            .api-grid { grid-template-columns: 1fr; }
+        }
+        .api-card {
+            background: rgba(255,255,255,0.03);
+            border-radius: 8px;
+            padding: 16px;
+        }
+        .api-card h3 {
+            font-size: 0.9rem;
+            color: #00ff88;
+            margin-bottom: 8px;
+        }
+        .api-endpoint {
+            font-family: monospace;
+            font-size: 0.85rem;
+            background: rgba(0,0,0,0.3);
+            padding: 8px 12px;
+            border-radius: 6px;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .api-method {
+            font-size: 0.7rem;
+            font-weight: 600;
+            padding: 2px 6px;
+            border-radius: 4px;
+        }
+        .api-method.get { background: #00ff88; color: #000; }
+        .api-method.ws { background: #9b59b6; color: #fff; }
+        .api-desc {
+            font-size: 0.8rem;
+            color: #888;
+        }
+        .api-sample {
+            margin-top: 12px;
+            background: rgba(0,0,0,0.4);
+            border-radius: 6px;
+            padding: 12px;
+            font-family: monospace;
+            font-size: 0.75rem;
+            color: #aaa;
+            max-height: 200px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+        }
     </style>
 </head>
 <body>
@@ -455,6 +520,52 @@ async def dashboard():
         <div class="loading">
             <div class="loading-spinner"></div>
             <p>Loading accounts...</p>
+        </div>
+    </div>
+    
+    <div class="api-section">
+        <h2>API Endpoints</h2>
+        <div class="api-grid">
+            <div class="api-card">
+                <h3>Portfolio Data</h3>
+                <div class="api-endpoint"><span class="api-method get">GET</span>/api/portfolio</div>
+                <div class="api-desc">Returns all accounts with equity, PnL, positions, volume 24H. Auto-refreshes every 2s.</div>
+                <div class="api-sample" id="portfolio-sample">Loading...</div>
+            </div>
+            <div class="api-card">
+                <h3>All Accounts</h3>
+                <div class="api-endpoint"><span class="api-method get">GET</span>/api/accounts</div>
+                <div class="api-desc">Raw cached account data from Lighter API.</div>
+                <div class="api-sample" id="accounts-sample">Loading...</div>
+            </div>
+            <div class="api-card">
+                <h3>Service Status</h3>
+                <div class="api-endpoint"><span class="api-method get">GET</span>/api/status</div>
+                <div class="api-desc">Polling status, WebSocket connection, cache stats.</div>
+                <div class="api-sample" id="status-sample">Loading...</div>
+            </div>
+            <div class="api-card">
+                <h3>WebSocket Stream</h3>
+                <div class="api-endpoint"><span class="api-method ws">WS</span>/ws</div>
+                <div class="api-desc">Real-time updates from Lighter. Connect with ws://host/ws</div>
+                <div class="api-sample">Messages:
+- initial_data: Full cache on connect
+- lighter_update: Real-time updates
+
+Example:
+{"type": "lighter_update", "data": {...}}</div>
+            </div>
+            <div class="api-card">
+                <h3>Single Account</h3>
+                <div class="api-endpoint"><span class="api-method get">GET</span>/api/accounts/{index}</div>
+                <div class="api-desc">Get specific account by index (e.g. /api/accounts/634023)</div>
+            </div>
+            <div class="api-card">
+                <h3>Health Check</h3>
+                <div class="api-endpoint"><span class="api-method get">GET</span>/health</div>
+                <div class="api-desc">Simple health check for monitoring.</div>
+                <div class="api-sample" id="health-sample">Loading...</div>
+            </div>
         </div>
     </div>
     
@@ -573,8 +684,28 @@ async def dashboard():
             }
         }
         
+        async function fetchApiSamples() {
+            try {
+                const [portfolio, accounts, status, health] = await Promise.all([
+                    fetch('/api/portfolio').then(r => r.json()),
+                    fetch('/api/accounts').then(r => r.json()),
+                    fetch('/api/status').then(r => r.json()),
+                    fetch('/health').then(r => r.json())
+                ]);
+                
+                document.getElementById('portfolio-sample').textContent = JSON.stringify(portfolio, null, 2);
+                document.getElementById('accounts-sample').textContent = JSON.stringify(accounts, null, 2);
+                document.getElementById('status-sample').textContent = JSON.stringify(status, null, 2);
+                document.getElementById('health-sample').textContent = JSON.stringify(health, null, 2);
+            } catch (e) {
+                console.error('Failed to fetch API samples:', e);
+            }
+        }
+        
         fetchPortfolio();
+        fetchApiSamples();
         setInterval(fetchPortfolio, 2000);
+        setInterval(fetchApiSamples, 5000);
     </script>
 </body>
 </html>
