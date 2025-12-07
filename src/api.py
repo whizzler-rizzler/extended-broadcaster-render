@@ -1,5 +1,6 @@
 import asyncio
 import logging
+import time
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect, Request, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse, JSONResponse
@@ -13,6 +14,7 @@ from src.cache import cache
 from src.lighter_client import lighter_client
 from src.websocket_client import ws_client
 from src.websocket_server import manager
+from src.latency import latency_tracker
 
 logger = logging.getLogger(__name__)
 
@@ -111,6 +113,22 @@ async def get_status():
         "accounts_configured": len(settings.accounts),
         "cache": cache_stats
     }
+
+@app.get("/api/latency")
+async def get_latency():
+    cached_data = await cache.get_all()
+    live_accounts = sum(1 for k, v in cached_data.items() 
+                       if k.startswith("account:") and 
+                       (time.time() - v.get("data", v).get("last_update", 0)) < 10)
+    
+    latency_tracker.set_account_stats(
+        active=live_accounts,
+        total=len(settings.accounts),
+        clients=manager.connection_count
+    )
+    latency_tracker.set_ws_status(ws_client.is_connected)
+    
+    return latency_tracker.get_metrics()
 
 @app.get("/api/portfolio")
 async def get_portfolio():
@@ -546,6 +564,157 @@ async def dashboard():
             overflow-y: auto;
             white-space: pre-wrap;
         }
+        .latency-section {
+            margin-top: 32px;
+            background: #14141f;
+            border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 12px;
+            padding: 24px;
+        }
+        .latency-section h2 {
+            font-size: 1.2rem;
+            margin-bottom: 20px;
+            color: #ff6b35;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .latency-section h2::before {
+            content: '';
+            display: inline-block;
+            width: 4px;
+            height: 20px;
+            background: #ff6b35;
+            border-radius: 2px;
+        }
+        .latency-panel {
+            background: rgba(255,255,255,0.02);
+            border-radius: 8px;
+            padding: 16px;
+            margin-bottom: 16px;
+        }
+        .latency-panel-header {
+            font-size: 0.75rem;
+            color: #888;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .latency-panel-header .icon { font-size: 1rem; }
+        .latency-metrics {
+            display: grid;
+            grid-template-columns: repeat(6, 1fr);
+            gap: 12px;
+        }
+        @media (max-width: 1200px) {
+            .latency-metrics { grid-template-columns: repeat(3, 1fr); }
+        }
+        @media (max-width: 768px) {
+            .latency-metrics { grid-template-columns: repeat(2, 1fr); }
+        }
+        .latency-metric {
+            background: rgba(0,0,0,0.3);
+            border-radius: 8px;
+            padding: 12px;
+            text-align: center;
+        }
+        .latency-metric-label {
+            font-size: 0.65rem;
+            color: #666;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 4px;
+        }
+        .latency-metric-value {
+            font-size: 1.3rem;
+            font-weight: 700;
+            color: #00ff88;
+        }
+        .latency-metric-value.warning { color: #ffa502; }
+        .latency-metric-value.error { color: #ff4757; }
+        .latency-metric-value.neutral { color: #aaa; }
+        .latency-metric-unit {
+            font-size: 0.7rem;
+            color: #666;
+            margin-left: 2px;
+        }
+        .latency-charts {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+            margin-top: 16px;
+        }
+        @media (max-width: 900px) {
+            .latency-charts { grid-template-columns: 1fr; }
+        }
+        .latency-chart {
+            background: rgba(0,0,0,0.2);
+            border-radius: 8px;
+            padding: 16px;
+        }
+        .latency-chart-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+        .latency-chart-title {
+            font-size: 0.85rem;
+            color: #fff;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .latency-chart-stats {
+            display: flex;
+            gap: 16px;
+            font-size: 0.7rem;
+        }
+        .latency-chart-stat { color: #666; }
+        .latency-chart-stat span { color: #fff; font-weight: 600; }
+        .latency-bars {
+            display: flex;
+            align-items: flex-end;
+            gap: 3px;
+            height: 60px;
+            padding: 4px 0;
+        }
+        .latency-bar {
+            flex: 1;
+            min-width: 8px;
+            border-radius: 2px 2px 0 0;
+            transition: height 0.3s ease;
+        }
+        .latency-bar.green { background: linear-gradient(to top, #00cc6a, #00ff88); }
+        .latency-bar.yellow { background: linear-gradient(to top, #cc9900, #ffcc00); }
+        .latency-bar.red { background: linear-gradient(to top, #cc3333, #ff4757); }
+        .latency-status-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 16px;
+            background: rgba(0,0,0,0.3);
+            border-radius: 8px;
+            margin-top: 16px;
+            font-size: 0.8rem;
+        }
+        .latency-status-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            color: #888;
+        }
+        .latency-status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+        }
+        .latency-status-dot.connected { background: #00ff88; box-shadow: 0 0 8px #00ff8866; }
+        .latency-status-dot.disconnected { background: #ff4757; }
+        .latency-status-value { color: #fff; font-weight: 500; }
     </style>
 </head>
 <body>
@@ -571,6 +740,107 @@ async def dashboard():
         <div class="loading">
             <div class="loading-spinner"></div>
             <p>Loading accounts...</p>
+        </div>
+    </div>
+    
+    <div class="latency-section">
+        <h2>LATENCY MONITOR</h2>
+        
+        <div class="latency-panel">
+            <div class="latency-panel-header"><span class="icon">&#9881;</span> FRONTEND POLLING</div>
+            <div class="latency-metrics">
+                <div class="latency-metric">
+                    <div class="latency-metric-label">WS Interval (avg)</div>
+                    <div class="latency-metric-value neutral" id="ws-interval">N/A</div>
+                </div>
+                <div class="latency-metric">
+                    <div class="latency-metric-label">Time Since WS</div>
+                    <div class="latency-metric-value neutral" id="time-since-ws">N/A</div>
+                </div>
+                <div class="latency-metric">
+                    <div class="latency-metric-label">REST Interval (avg)</div>
+                    <div class="latency-metric-value" id="rest-interval">0<span class="latency-metric-unit">ms</span></div>
+                </div>
+                <div class="latency-metric">
+                    <div class="latency-metric-label">Time Since REST</div>
+                    <div class="latency-metric-value" id="time-since-rest">0<span class="latency-metric-unit">ms</span></div>
+                </div>
+                <div class="latency-metric">
+                    <div class="latency-metric-label">Stats Poll Interval</div>
+                    <div class="latency-metric-value" id="stats-poll-interval">0<span class="latency-metric-unit">ms</span></div>
+                </div>
+                <div class="latency-metric">
+                    <div class="latency-metric-label">Stats Fetch Time</div>
+                    <div class="latency-metric-value" id="stats-fetch-time">0<span class="latency-metric-unit">ms</span></div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="latency-panel">
+            <div class="latency-panel-header"><span class="icon">&#9741;</span> BACKEND POLLING (Broadcaster -> Lighter API)</div>
+            <div class="latency-metrics" style="grid-template-columns: repeat(5, 1fr);">
+                <div class="latency-metric">
+                    <div class="latency-metric-label">API Poll Rate</div>
+                    <div class="latency-metric-value" id="api-poll-rate">N/A</div>
+                </div>
+                <div class="latency-metric">
+                    <div class="latency-metric-label">Positions Age</div>
+                    <div class="latency-metric-value" id="positions-age">0<span class="latency-metric-unit">ms</span></div>
+                </div>
+                <div class="latency-metric">
+                    <div class="latency-metric-label">Balance Age</div>
+                    <div class="latency-metric-value" id="balance-age">0<span class="latency-metric-unit">ms</span></div>
+                </div>
+                <div class="latency-metric">
+                    <div class="latency-metric-label">Active Accounts</div>
+                    <div class="latency-metric-value" id="active-accounts">0<span class="latency-metric-unit">/0</span></div>
+                </div>
+                <div class="latency-metric">
+                    <div class="latency-metric-label">Connected Clients</div>
+                    <div class="latency-metric-value" id="connected-clients">0</div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="latency-charts">
+            <div class="latency-chart">
+                <div class="latency-chart-header">
+                    <div class="latency-chart-title"><span>&#128246;</span> WebSocket Message Intervals</div>
+                    <div class="latency-chart-stats">
+                        <div class="latency-chart-stat">Min: <span id="ws-min">0ms</span></div>
+                        <div class="latency-chart-stat">Avg: <span id="ws-avg">0ms</span></div>
+                        <div class="latency-chart-stat">Max: <span id="ws-max">0ms</span></div>
+                    </div>
+                </div>
+                <div class="latency-chart-stat" style="margin-bottom: 8px;">Samples: <span id="ws-samples">0</span></div>
+                <div class="latency-bars" id="ws-chart"></div>
+            </div>
+            <div class="latency-chart">
+                <div class="latency-chart-header">
+                    <div class="latency-chart-title"><span>&#128462;</span> REST Polling Intervals</div>
+                    <div class="latency-chart-stats">
+                        <div class="latency-chart-stat">Min: <span id="rest-min">0ms</span></div>
+                        <div class="latency-chart-stat">Avg: <span id="rest-avg">0ms</span></div>
+                        <div class="latency-chart-stat">Max: <span id="rest-max">0ms</span></div>
+                    </div>
+                </div>
+                <div class="latency-chart-stat" style="margin-bottom: 8px;">Samples: <span id="rest-samples">0</span></div>
+                <div class="latency-bars" id="rest-chart"></div>
+            </div>
+        </div>
+        
+        <div class="latency-status-bar">
+            <div class="latency-status-item">
+                <span class="latency-status-dot" id="ws-status-dot"></span>
+                <span id="ws-status-text">WS: Disconnected</span>
+                <span class="latency-status-value" id="ws-msg-count">WS msgs: 0</span>
+                <span class="latency-status-value" id="rest-req-count">REST reqs: 0</span>
+            </div>
+            <div class="latency-status-item">
+                <span>WS: <span class="latency-status-value" id="ts-ws">--:--:--</span></span>
+                <span>REST: <span class="latency-status-value" id="ts-rest">--:--:--</span></span>
+                <span>Stats: <span class="latency-status-value" id="ts-stats">--:--:--</span></span>
+            </div>
         </div>
     </div>
     
@@ -812,10 +1082,133 @@ Example:
             }
         }
         
+        function formatMs(value) {
+            if (value === null || value === undefined) return 'N/A';
+            return Math.round(value) + 'ms';
+        }
+        
+        function formatTimestamp(ts) {
+            if (!ts) return '--:--:--';
+            const d = new Date(ts * 1000);
+            return d.toLocaleTimeString('pl-PL', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+        }
+        
+        function getLatencyClass(value, thresholds) {
+            if (value === null || value === undefined) return 'neutral';
+            if (value <= thresholds.good) return '';
+            if (value <= thresholds.warning) return 'warning';
+            return 'error';
+        }
+        
+        function renderLatencyBars(containerId, samples, maxValue) {
+            const container = document.getElementById(containerId);
+            if (!container) return;
+            
+            if (!samples || samples.length === 0) {
+                container.innerHTML = '<div style="color: #666; font-size: 0.75rem;">No data yet</div>';
+                return;
+            }
+            
+            const max = maxValue || Math.max(...samples, 1);
+            let html = '';
+            samples.forEach(val => {
+                const height = Math.max(5, (val / max) * 100);
+                let colorClass = 'green';
+                if (val > 1000) colorClass = 'red';
+                else if (val > 500) colorClass = 'yellow';
+                html += '<div class="latency-bar ' + colorClass + '" style="height: ' + height + '%;"></div>';
+            });
+            container.innerHTML = html;
+        }
+        
+        function renderLatencyMonitor(data) {
+            const fp = data.frontend_polling || {};
+            const bp = data.backend_polling || {};
+            const ws = data.websocket || {};
+            const rest = data.rest || {};
+            const ts = data.timestamps || {};
+            
+            const wsInt = document.getElementById('ws-interval');
+            wsInt.innerHTML = ws.interval_avg ? formatMs(ws.interval_avg) : 'N/A';
+            wsInt.className = 'latency-metric-value ' + (ws.connected ? '' : 'neutral');
+            
+            const timeSinceWs = document.getElementById('time-since-ws');
+            timeSinceWs.innerHTML = fp.time_since_ws !== null ? formatMs(fp.time_since_ws) : 'N/A';
+            timeSinceWs.className = 'latency-metric-value ' + getLatencyClass(fp.time_since_ws, {good: 2000, warning: 5000});
+            
+            const restInt = document.getElementById('rest-interval');
+            restInt.innerHTML = formatMs(fp.rest_interval_avg);
+            restInt.className = 'latency-metric-value ' + getLatencyClass(fp.rest_interval_avg, {good: 500, warning: 1000});
+            
+            const timeSinceRest = document.getElementById('time-since-rest');
+            timeSinceRest.innerHTML = formatMs(fp.time_since_rest);
+            timeSinceRest.className = 'latency-metric-value ' + getLatencyClass(fp.time_since_rest, {good: 1000, warning: 3000});
+            
+            const statsInt = document.getElementById('stats-poll-interval');
+            statsInt.innerHTML = formatMs(fp.stats_poll_interval);
+            statsInt.className = 'latency-metric-value ' + getLatencyClass(fp.stats_poll_interval, {good: 3000, warning: 5000});
+            
+            const statsFetch = document.getElementById('stats-fetch-time');
+            statsFetch.innerHTML = formatMs(fp.stats_fetch_time);
+            statsFetch.className = 'latency-metric-value ' + getLatencyClass(fp.stats_fetch_time, {good: 200, warning: 500});
+            
+            const apiPoll = document.getElementById('api-poll-rate');
+            apiPoll.innerHTML = bp.api_poll_rate !== null ? formatMs(bp.api_poll_rate) : 'N/A';
+            apiPoll.className = 'latency-metric-value ' + getLatencyClass(bp.api_poll_rate, {good: 500, warning: 1000});
+            
+            const posAge = document.getElementById('positions-age');
+            posAge.innerHTML = formatMs(bp.positions_age);
+            posAge.className = 'latency-metric-value ' + getLatencyClass(bp.positions_age, {good: 2000, warning: 5000});
+            
+            const balAge = document.getElementById('balance-age');
+            balAge.innerHTML = formatMs(bp.balance_age);
+            balAge.className = 'latency-metric-value ' + getLatencyClass(bp.balance_age, {good: 2000, warning: 5000});
+            
+            document.getElementById('active-accounts').innerHTML = bp.active_accounts + '<span class="latency-metric-unit">/' + bp.total_accounts + '</span>';
+            document.getElementById('connected-clients').textContent = bp.connected_clients;
+            
+            document.getElementById('ws-min').textContent = formatMs(ws.interval_min);
+            document.getElementById('ws-avg').textContent = formatMs(ws.interval_avg);
+            document.getElementById('ws-max').textContent = formatMs(ws.interval_max);
+            document.getElementById('ws-samples').textContent = (ws.samples || []).length;
+            
+            document.getElementById('rest-min').textContent = formatMs(rest.interval_min);
+            document.getElementById('rest-avg').textContent = formatMs(rest.interval_avg);
+            document.getElementById('rest-max').textContent = formatMs(rest.interval_max);
+            document.getElementById('rest-samples').textContent = (rest.samples || []).length;
+            
+            renderLatencyBars('ws-chart', ws.samples, ws.interval_max || 5000);
+            renderLatencyBars('rest-chart', rest.samples, rest.interval_max || 1000);
+            
+            const wsDot = document.getElementById('ws-status-dot');
+            wsDot.className = 'latency-status-dot ' + (ws.connected ? 'connected' : 'disconnected');
+            document.getElementById('ws-status-text').textContent = ws.connected ? 'WS: Connected' : 'WS: Disconnected';
+            document.getElementById('ws-msg-count').textContent = 'WS msgs: ' + ws.message_count;
+            document.getElementById('rest-req-count').textContent = 'REST reqs: ' + rest.request_count;
+            
+            document.getElementById('ts-ws').textContent = formatTimestamp(ts.ws);
+            document.getElementById('ts-rest').textContent = formatTimestamp(ts.rest);
+            document.getElementById('ts-stats').textContent = formatTimestamp(ts.stats);
+        }
+        
+        async function fetchLatency() {
+            try {
+                const start = performance.now();
+                const res = await fetch('/api/latency');
+                const data = await res.json();
+                const fetchTime = performance.now() - start;
+                renderLatencyMonitor(data);
+            } catch (e) {
+                console.error('Failed to fetch latency:', e);
+            }
+        }
+        
         fetchPortfolio();
         fetchApiSamples();
+        fetchLatency();
         setInterval(fetchPortfolio, 500);
         setInterval(fetchApiSamples, 5000);
+        setInterval(fetchLatency, 2000);
     </script>
 </body>
 </html>

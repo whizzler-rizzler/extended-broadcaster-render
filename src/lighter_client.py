@@ -7,6 +7,7 @@ import lighter
 from lighter.configuration import Configuration
 from src.config import AccountConfig, settings
 from src.cache import cache
+from src.latency import latency_tracker
 
 logger = logging.getLogger(__name__)
 
@@ -122,7 +123,10 @@ class LighterClient:
             if not account_api:
                 return None
             
+            start_time = time.time()
             account_data = await account_api.account(by="index", value=str(account_index))
+            latency_ms = (time.time() - start_time) * 1000
+            latency_tracker.record_rest_poll(latency_ms)
             
             serialized_data = self._serialize_account_data(account_data)
             
@@ -130,6 +134,9 @@ class LighterClient:
             
             current_time = time.time()
             self.last_update_times[account_index] = current_time
+            
+            latency_tracker.update_balance_time()
+            latency_tracker.update_positions_time()
             
             data = {
                 "account_index": account_index,
