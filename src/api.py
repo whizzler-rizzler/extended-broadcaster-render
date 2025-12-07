@@ -390,9 +390,28 @@ async def dashboard():
         }
         .positions-list {
             display: flex;
-            flex-wrap: wrap;
+            flex-direction: column;
             gap: 6px;
         }
+        .position-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 6px 8px;
+            background: rgba(255,255,255,0.02);
+            border-radius: 6px;
+        }
+        .position-details {
+            font-size: 0.8rem;
+            color: #aaa;
+            flex: 1;
+        }
+        .position-pnl {
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+        .position-pnl.positive { color: #00ff88; }
+        .position-pnl.negative { color: #ff4757; }
         .position-tag {
             display: flex;
             align-items: center;
@@ -657,13 +676,19 @@ Example:
                 let positionsHtml = '';
                 if (positions.length > 0) {
                     positions.forEach(pos => {
-                        const size = parseFloat(pos.signed_size || pos.size || 0);
+                        const size = parseFloat(pos.position || pos.signed_size || pos.size || 0);
+                        const sign = parseInt(pos.sign) || (size >= 0 ? 1 : -1);
+                        const signedSize = size * sign;
                         if (size !== 0) {
-                            const isLong = size > 0;
+                            const isLong = signedSize > 0;
                             const tagClass = isLong ? 'long' : 'short';
-                            const direction = isLong ? 'L' : 'S';
-                            const symbol = getPositionSymbol(pos.market_index);
-                            positionsHtml += '<span class="position-tag ' + tagClass + '">' + symbol + ' ' + direction + '</span>';
+                            const direction = isLong ? 'LONG' : 'SHORT';
+                            const symbol = pos.symbol || getPositionSymbol(pos.market_id || pos.market_index);
+                            const entryPrice = parseFloat(pos.avg_entry_price || pos.entry_price || 0);
+                            const pnl = parseFloat(pos.unrealized_pnl || 0);
+                            const pnlClass = pnl >= 0 ? 'positive' : 'negative';
+                            const pnlSign = pnl >= 0 ? '+' : '';
+                            positionsHtml += '<div class="position-row"><span class="position-tag ' + tagClass + '">' + symbol + ' ' + direction + '</span><span class="position-details">' + size.toFixed(4) + ' @ ' + formatMoney(entryPrice) + '</span><span class="position-pnl ' + pnlClass + '">' + pnlSign + formatMoney(pnl) + '</span></div>';
                         }
                     });
                 }
@@ -674,15 +699,15 @@ Example:
                 let ordersHtml = '';
                 if (activeOrders.length > 0) {
                     activeOrders.slice(0, 5).forEach(order => {
-                        const symbol = getPositionSymbol(order.market_index);
+                        const symbol = getPositionSymbol(order.market_id || order.market_index);
                         const side = order.is_ask ? 'S' : 'L';
                         const sideClass = order.is_ask ? 'short' : 'long';
                         const price = parseFloat(order.price) || 0;
-                        const size = parseFloat(order.remaining_base_amount) || 0;
+                        const size = parseFloat(order.remaining_base_amount || order.size) || 0;
                         ordersHtml += '<div class="order-row"><span class="position-tag ' + sideClass + '">' + symbol + ' ' + side + '</span><span class="order-details">' + size.toFixed(4) + ' @ ' + formatMoney(price) + '</span></div>';
                     });
                     if (activeOrders.length > 5) {
-                        ordersHtml += '<div class="order-row more">+' + (activeOrders.length - 5) + ' more orders</div>';
+                        ordersHtml += '<div class="order-row more">+' + (activeOrders.length - 5) + ' więcej zleceń</div>';
                     }
                 } else {
                     ordersHtml = '<span class="no-positions">Brak otwartych zleceń</span>';
@@ -691,8 +716,8 @@ Example:
                 let tradesHtml = '';
                 if (trades.length > 0) {
                     trades.slice(0, 3).forEach(trade => {
-                        const symbol = getPositionSymbol(trade.market_index);
-                        const size = parseFloat(trade.size) || 0;
+                        const symbol = getPositionSymbol(trade.market_id || trade.market_index);
+                        const size = parseFloat(trade.size || trade.signed_size) || 0;
                         const price = parseFloat(trade.price) || 0;
                         const isBuy = size > 0;
                         const sideClass = isBuy ? 'long' : 'short';
@@ -732,8 +757,9 @@ Example:
                 html += '      <div class="stat-value">' + activeOrders.length + '</div>';
                 html += '    </div>';
                 html += '  </div>';
+                const openPositionsCount = positions.filter(p => parseFloat(p.position || p.signed_size || p.size || 0) !== 0).length;
                 html += '  <div class="positions-section">';
-                html += '    <div class="positions-header">Otwarte Pozycje (' + positions.filter(p => parseFloat(p.signed_size || p.size || 0) !== 0).length + ')</div>';
+                html += '    <div class="positions-header">Otwarte Pozycje (' + openPositionsCount + ')</div>';
                 html += '    <div class="positions-list">' + positionsHtml + '</div>';
                 html += '  </div>';
                 html += '  <div class="positions-section">';
