@@ -17,24 +17,35 @@ class LighterClient:
         self.account_apis: Dict[str, lighter.AccountApi] = {}
         self.running = False
         self._poll_task: Optional[asyncio.Task] = None
-        self._http_session: Optional[aiohttp.ClientSession] = None
+        self._orders_poll_task: Optional[asyncio.Task] = None
+        self._http_sessions: Dict[str, aiohttp.ClientSession] = {}
+        self._account_proxies: Dict[str, Optional[str]] = {}
         self.last_update_times: Dict[int, float] = {}
+        self.last_orders_update: Dict[int, float] = {}
+        self._cached_orders: Dict[int, List[Dict[str, Any]]] = {}
     
-    async def _get_http_session(self) -> aiohttp.ClientSession:
-        if self._http_session is None or self._http_session.closed:
-            self._http_session = aiohttp.ClientSession()
-        return self._http_session
+    async def _get_http_session_for_account(self, account_name: str) -> aiohttp.ClientSession:
+        if account_name not in self._http_sessions or self._http_sessions[account_name].closed:
+            proxy = self._account_proxies.get(account_name)
+            connector = aiohttp.TCPConnector(limit=10)
+            self._http_sessions[account_name] = aiohttp.ClientSession(connector=connector)
+        return self._http_sessions[account_name]
     
-    async def fetch_active_orders(self, account_index: int, market_id: int) -> List[Dict[str, Any]]:
+    async def fetch_active_orders(self, account_name: str, account_index: int, market_id: int) -> List[Dict[str, Any]]:
         try:
-            session = await self._get_http_session()
+            session = await self._get_http_session_for_account(account_name)
             url = f"{settings.lighter_base_url}/api/v1/accountActiveOrders"
             params = {"account_index": account_index, "market_id": market_id}
             
-            async with session.get(url, params=params) as resp:
+            proxy = self._account_proxies.get(account_name)
+            
+            async with session.get(url, params=params, proxy=proxy) as resp:
                 if resp.status == 200:
                     data = await resp.json()
                     return data.get("orders", [])
+                elif resp.status == 429:
+                    logger.warning(f"Rate limited (429) for account {account_name} market {market_id}")
+                    return []
                 elif resp.status != 400:
                     logger.warning(f"Active orders request failed for market {market_id}: {resp.status}")
                 return []
@@ -42,14 +53,22 @@ class LighterClient:
             logger.error(f"Error fetching active orders for {account_index}: {e}")
             return []
     
-    async def fetch_all_active_orders(self, account_index: int) -> List[Dict[str, Any]]:
+    async def fetch_all_active_orders(self, account_name: str, account_index: int, position_markets: List[int] = None) -> List[Dict[str, Any]]:
         all_orders = []
-        main_markets = [1, 2, 3, 4, 5]
+        main_markets = {1, 2, 3}
         
-        for market_id in main_markets:
-            orders = await self.fetch_active_orders(account_index, market_id)
+        if position_markets:
+            markets_to_check = main_markets.union(set(position_markets))
+        else:
+            markets_to_check = main_markets
+        
+        for market_id in sorted(markets_to_check):
+            orders = await self.fetch_active_orders(account_name, account_index, market_id)
             all_orders.extend(orders)
-            await asyncio.sleep(0.1)
+            await asyncio.sleep(0.15)
+        
+        self._cached_orders[account_index] = all_orders
+        self.last_orders_update[account_index] = time.time()
         return all_orders
     
     async def initialize(self, accounts: List[AccountConfig]):
@@ -57,6 +76,8 @@ class LighterClient:
             try:
                 config = Configuration()
                 config.host = settings.lighter_base_url
+                
+                self._account_proxies[account.name] = account.proxy_url
                 
                 if account.proxy_url:
                     config.proxy = account.proxy_url
@@ -105,7 +126,7 @@ class LighterClient:
             
             serialized_data = self._serialize_account_data(account_data)
             
-            active_orders = await self.fetch_all_active_orders(account_index)
+            active_orders = self._cached_orders.get(account_index, [])
             
             current_time = time.time()
             self.last_update_times[account_index] = current_time
@@ -131,12 +152,50 @@ class LighterClient:
             data = await self.fetch_account_data(account.name, account.account_index)
             if data:
                 results[str(account.account_index)] = data
-            await asyncio.sleep(0.5)
+            await asyncio.sleep(0.3)
         return results
+    
+    def _get_position_markets(self, account_index: int) -> List[int]:
+        try:
+            entry = cache._cache.get(f"account:{account_index}")
+            if entry is None:
+                return []
+            cached_data = entry.data
+            if cached_data is None:
+                return []
+            raw_data = cached_data.get("raw_data", {})
+            if isinstance(raw_data, dict):
+                acc_list = raw_data.get("accounts", [])
+                if acc_list:
+                    positions = acc_list[0].get("positions", [])
+                    return [int(pos.get("market_id", 0)) for pos in positions if float(pos.get("signed_size", 0) or 0) != 0]
+        except Exception:
+            pass
+        return []
+    
+    async def poll_active_orders(self):
+        logger.info("Starting active orders polling (every 2s)")
+        while self.running:
+            try:
+                for account in settings.accounts:
+                    if not self.running:
+                        break
+                    position_markets = self._get_position_markets(account.account_index)
+                    await self.fetch_all_active_orders(account.name, account.account_index, position_markets)
+                    await asyncio.sleep(0.3)
+                
+                await asyncio.sleep(2.0)
+            except asyncio.CancelledError:
+                break
+            except Exception as e:
+                logger.error(f"Orders polling error: {e}")
+                await asyncio.sleep(2)
     
     async def start_polling(self):
         self.running = True
-        logger.info(f"Starting polling with interval: {settings.poll_interval}s")
+        logger.info(f"Starting account polling with interval: {settings.poll_interval}s")
+        
+        self._orders_poll_task = asyncio.create_task(self.poll_active_orders())
         
         while self.running:
             try:
@@ -150,6 +209,12 @@ class LighterClient:
     
     async def stop_polling(self):
         self.running = False
+        if self._orders_poll_task:
+            self._orders_poll_task.cancel()
+            try:
+                await self._orders_poll_task
+            except asyncio.CancelledError:
+                pass
         if self._poll_task:
             self._poll_task.cancel()
             try:
@@ -159,8 +224,10 @@ class LighterClient:
     
     async def close(self):
         await self.stop_polling()
-        if self._http_session and not self._http_session.closed:
-            await self._http_session.close()
+        for session in self._http_sessions.values():
+            if session and not session.closed:
+                await session.close()
+        self._http_sessions.clear()
         for client in self.api_clients.values():
             try:
                 if hasattr(client, 'close'):
