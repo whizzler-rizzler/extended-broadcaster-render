@@ -69,14 +69,20 @@ def load_accounts_from_env() -> List[AccountConfig]:
             proxy_url = None
         
         if account_index and private_key:
-            accounts.append(AccountConfig(
-                name=prefix,
-                account_index=int(account_index),
-                api_key_index=int(api_key_index) if api_key_index else 2,
-                private_key=private_key,
-                public_key=public_key or "",
-                proxy_url=convert_proxy_format(proxy_url) if proxy_url else None
-            ))
+            try:
+                acc_idx = int(account_index)
+                api_idx = int(api_key_index) if api_key_index else 2
+                accounts.append(AccountConfig(
+                    name=prefix,
+                    account_index=acc_idx,
+                    api_key_index=api_idx,
+                    private_key=private_key,
+                    public_key=public_key or "",
+                    proxy_url=convert_proxy_format(proxy_url) if proxy_url else None
+                ))
+            except ValueError as e:
+                print(f"Warning: Skipping account {prefix} - invalid account_index or api_key_index: {e}")
+                continue
     
     return accounts
 
