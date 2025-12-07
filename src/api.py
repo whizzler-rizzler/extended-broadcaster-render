@@ -122,13 +122,19 @@ async def get_portfolio():
     total_unrealized_pnl = 0
     total_margin_used = 0
     total_positions = 0
-    total_open_orders = 0
+    total_active_orders = 0
     total_trades = 0
+    
+    now = time.time()
     
     for key, value in cached_data.items():
         if key.startswith("account:"):
-            account_data = value.get("data", {})
+            account_data = value.get("data", value)
             raw_data = account_data.get("raw_data", {})
+            active_orders = account_data.get("active_orders", []) or []
+            last_update = account_data.get("last_update", 0)
+            
+            is_live = (now - last_update) < 10
             
             equity = 0
             available_balance = 0
@@ -137,7 +143,6 @@ async def get_portfolio():
             margin_ratio = 0
             volume_24h = 0
             positions = []
-            open_orders = []
             trades = []
             
             if isinstance(raw_data, dict):
@@ -158,10 +163,8 @@ async def get_portfolio():
                     
                     positions = pos_list
                 
-                open_orders = raw_data.get("open_orders", []) or []
                 trades = raw_data.get("trades", []) or []
                 
-                now = time.time()
                 day_ago = now - 86400
                 for trade in trades:
                     trade_ts = float(trade.get("timestamp", 0) or 0)
@@ -174,9 +177,8 @@ async def get_portfolio():
             account_entry = {
                 "account_index": str(account_data.get("account_index", "")),
                 "name": account_data.get("account_name", ""),
-                "ws_connected": ws_client.is_connected,
-                "last_update": int(time.time()),
-                "last_disconnect_reason": None,
+                "is_live": is_live,
+                "last_update": int(last_update),
                 "equity": equity,
                 "available_balance": available_balance,
                 "unrealized_pnl": unrealized_pnl,
@@ -184,7 +186,7 @@ async def get_portfolio():
                 "margin_ratio": margin_ratio,
                 "volume_24h": volume_24h,
                 "positions": positions,
-                "open_orders": open_orders,
+                "active_orders": active_orders,
                 "trades": trades
             }
             accounts_list.append(account_entry)
@@ -193,7 +195,7 @@ async def get_portfolio():
             total_unrealized_pnl += unrealized_pnl
             total_margin_used += margin_used
             total_positions += len(positions)
-            total_open_orders += len(open_orders)
+            total_active_orders += len(active_orders)
             total_trades += len(trades)
     
     return {
@@ -203,12 +205,12 @@ async def get_portfolio():
             "total_unrealized_pnl": total_unrealized_pnl,
             "total_margin_used": total_margin_used,
             "total_positions": total_positions,
-            "total_open_orders": total_open_orders,
+            "total_active_orders": total_active_orders,
             "total_trades": total_trades,
-            "accounts_connected": len([a for a in accounts_list if a["ws_connected"]]),
+            "accounts_live": len([a for a in accounts_list if a["is_live"]]),
             "accounts_total": len(settings.accounts)
         },
-        "timestamp": int(time.time())
+        "timestamp": int(now)
     }
 
 @app.websocket("/ws")
@@ -413,6 +415,36 @@ async def dashboard():
             font-size: 0.8rem;
             font-style: italic;
         }
+        .orders-list {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+        .order-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 6px 8px;
+            background: rgba(255,255,255,0.02);
+            border-radius: 6px;
+        }
+        .order-row.more {
+            color: #666;
+            font-size: 0.75rem;
+            font-style: italic;
+        }
+        .order-details {
+            font-size: 0.8rem;
+            color: #aaa;
+            flex: 1;
+        }
+        .trade-time {
+            font-size: 0.7rem;
+            color: #666;
+        }
+        .positions-section + .positions-section {
+            margin-top: 12px;
+        }
         .loading {
             text-align: center;
             padding: 60px;
@@ -592,6 +624,13 @@ Example:
             return markets[String(marketIndex)] || 'MKT' + marketIndex;
         }
         
+        function formatTime(timestamp) {
+            if (!timestamp) return '-';
+            const ts = timestamp > 10000000000 ? timestamp / 1000 : timestamp;
+            const d = new Date(ts * 1000);
+            return d.toLocaleTimeString('pl-PL', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+        }
+        
         function renderAccounts(data) {
             const container = document.getElementById('accounts-container');
             const accounts = data.accounts || [];
@@ -603,15 +642,17 @@ Example:
             
             let html = '';
             accounts.forEach(acc => {
-                const isConnected = acc.ws_connected;
+                const isLive = acc.is_live;
                 const equity = parseFloat(acc.equity) || 0;
                 const pnl = parseFloat(acc.unrealized_pnl) || 0;
                 const volume24h = parseFloat(acc.volume_24h) || 0;
                 const positions = acc.positions || [];
+                const activeOrders = acc.active_orders || [];
+                const trades = acc.trades || [];
                 
                 const pnlClass = pnl >= 0 ? 'positive' : 'negative';
-                const badgeClass = isConnected ? 'live-badge' : 'live-badge offline-badge';
-                const statusText = isConnected ? 'Live' : 'Offline';
+                const badgeClass = isLive ? 'live-badge' : 'live-badge offline-badge';
+                const statusText = isLive ? 'Live' : 'Offline';
                 
                 let positionsHtml = '';
                 if (positions.length > 0) {
@@ -627,7 +668,42 @@ Example:
                     });
                 }
                 if (!positionsHtml) {
-                    positionsHtml = '<span class="no-positions">No open positions</span>';
+                    positionsHtml = '<span class="no-positions">Brak otwartych pozycji</span>';
+                }
+                
+                let ordersHtml = '';
+                if (activeOrders.length > 0) {
+                    activeOrders.slice(0, 5).forEach(order => {
+                        const symbol = getPositionSymbol(order.market_index);
+                        const side = order.is_ask ? 'S' : 'L';
+                        const sideClass = order.is_ask ? 'short' : 'long';
+                        const price = parseFloat(order.price) || 0;
+                        const size = parseFloat(order.remaining_base_amount) || 0;
+                        ordersHtml += '<div class="order-row"><span class="position-tag ' + sideClass + '">' + symbol + ' ' + side + '</span><span class="order-details">' + size.toFixed(4) + ' @ ' + formatMoney(price) + '</span></div>';
+                    });
+                    if (activeOrders.length > 5) {
+                        ordersHtml += '<div class="order-row more">+' + (activeOrders.length - 5) + ' more orders</div>';
+                    }
+                } else {
+                    ordersHtml = '<span class="no-positions">Brak otwartych zleceń</span>';
+                }
+                
+                let tradesHtml = '';
+                if (trades.length > 0) {
+                    trades.slice(0, 3).forEach(trade => {
+                        const symbol = getPositionSymbol(trade.market_index);
+                        const size = parseFloat(trade.size) || 0;
+                        const price = parseFloat(trade.price) || 0;
+                        const isBuy = size > 0;
+                        const sideClass = isBuy ? 'long' : 'short';
+                        const sideText = isBuy ? 'BUY' : 'SELL';
+                        tradesHtml += '<div class="order-row"><span class="position-tag ' + sideClass + '">' + symbol + ' ' + sideText + '</span><span class="order-details">' + Math.abs(size).toFixed(4) + ' @ ' + formatMoney(price) + '</span><span class="trade-time">' + formatTime(trade.timestamp) + '</span></div>';
+                    });
+                    if (trades.length > 3) {
+                        tradesHtml += '<div class="order-row more">+' + (trades.length - 3) + ' więcej transakcji</div>';
+                    }
+                } else {
+                    tradesHtml = '<span class="no-positions">Brak transakcji</span>';
                 }
                 
                 html += '<div class="account-card">';
@@ -652,13 +728,21 @@ Example:
                 html += '      <div class="stat-value">' + formatMoney(volume24h) + '</div>';
                 html += '    </div>';
                 html += '    <div class="stat-item">';
-                html += '      <div class="stat-label">Positions</div>';
-                html += '      <div class="stat-value">' + positions.filter(p => parseFloat(p.signed_size || p.size || 0) !== 0).length + '</div>';
+                html += '      <div class="stat-label">Active Orders</div>';
+                html += '      <div class="stat-value">' + activeOrders.length + '</div>';
                 html += '    </div>';
                 html += '  </div>';
                 html += '  <div class="positions-section">';
-                html += '    <div class="positions-header">Open Positions</div>';
+                html += '    <div class="positions-header">Otwarte Pozycje (' + positions.filter(p => parseFloat(p.signed_size || p.size || 0) !== 0).length + ')</div>';
                 html += '    <div class="positions-list">' + positionsHtml + '</div>';
+                html += '  </div>';
+                html += '  <div class="positions-section">';
+                html += '    <div class="positions-header">Otwarte Zlecenia (' + activeOrders.length + ')</div>';
+                html += '    <div class="orders-list">' + ordersHtml + '</div>';
+                html += '  </div>';
+                html += '  <div class="positions-section">';
+                html += '    <div class="positions-header">Historia Transakcji (' + trades.length + ')</div>';
+                html += '    <div class="orders-list">' + tradesHtml + '</div>';
                 html += '  </div>';
                 html += '</div>';
             });
@@ -671,7 +755,7 @@ Example:
             const pnlEl = document.getElementById('total-pnl');
             pnlEl.textContent = formatMoney(totalPnl);
             pnlEl.className = 'header-stat-value ' + (totalPnl >= 0 ? '' : 'negative');
-            document.getElementById('accounts-count').textContent = (agg.accounts_connected || 0) + '/' + (agg.accounts_total || 0);
+            document.getElementById('accounts-count').textContent = (agg.accounts_live || 0) + '/' + (agg.accounts_total || 0);
         }
         
         async function fetchPortfolio() {

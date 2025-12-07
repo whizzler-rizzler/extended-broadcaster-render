@@ -1,6 +1,8 @@
 import asyncio
 import logging
+import time
 from typing import Dict, Any, Optional, List, Union
+import aiohttp
 import lighter
 from lighter.configuration import Configuration
 from src.config import AccountConfig, settings
@@ -15,6 +17,40 @@ class LighterClient:
         self.account_apis: Dict[str, lighter.AccountApi] = {}
         self.running = False
         self._poll_task: Optional[asyncio.Task] = None
+        self._http_session: Optional[aiohttp.ClientSession] = None
+        self.last_update_times: Dict[int, float] = {}
+    
+    async def _get_http_session(self) -> aiohttp.ClientSession:
+        if self._http_session is None or self._http_session.closed:
+            self._http_session = aiohttp.ClientSession()
+        return self._http_session
+    
+    async def fetch_active_orders(self, account_index: int, market_id: int) -> List[Dict[str, Any]]:
+        try:
+            session = await self._get_http_session()
+            url = f"{settings.lighter_base_url}/api/v1/accountActiveOrders"
+            params = {"account_index": account_index, "market_id": market_id}
+            
+            async with session.get(url, params=params) as resp:
+                if resp.status == 200:
+                    data = await resp.json()
+                    return data.get("orders", [])
+                elif resp.status != 400:
+                    logger.warning(f"Active orders request failed for market {market_id}: {resp.status}")
+                return []
+        except Exception as e:
+            logger.error(f"Error fetching active orders for {account_index}: {e}")
+            return []
+    
+    async def fetch_all_active_orders(self, account_index: int) -> List[Dict[str, Any]]:
+        all_orders = []
+        main_markets = [1, 2, 3, 4, 5]
+        
+        for market_id in main_markets:
+            orders = await self.fetch_active_orders(account_index, market_id)
+            all_orders.extend(orders)
+            await asyncio.sleep(0.1)
+        return all_orders
     
     async def initialize(self, accounts: List[AccountConfig]):
         for account in accounts:
@@ -69,10 +105,17 @@ class LighterClient:
             
             serialized_data = self._serialize_account_data(account_data)
             
+            active_orders = await self.fetch_all_active_orders(account_index)
+            
+            current_time = time.time()
+            self.last_update_times[account_index] = current_time
+            
             data = {
                 "account_index": account_index,
                 "account_name": account_name,
-                "raw_data": serialized_data
+                "raw_data": serialized_data,
+                "active_orders": active_orders,
+                "last_update": current_time
             }
             
             await cache.set(f"account:{account_index}", data)
@@ -116,6 +159,8 @@ class LighterClient:
     
     async def close(self):
         await self.stop_polling()
+        if self._http_session and not self._http_session.closed:
+            await self._http_session.close()
         for client in self.api_clients.values():
             try:
                 if hasattr(client, 'close'):
