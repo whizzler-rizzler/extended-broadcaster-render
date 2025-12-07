@@ -79,8 +79,9 @@ class LatencyTracker:
         self.last_stats_update = time.time()
     
     def set_ws_status(self, connected: bool):
+        was_connected = self.ws_connected
         self.ws_connected = connected
-        if connected:
+        if connected and not was_connected:
             self.ws_connection_time = time.time()
     
     def update_positions_time(self):
