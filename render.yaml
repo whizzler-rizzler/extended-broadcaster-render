@@ -1,0 +1,23 @@
+services:
+  - type: web
+    name: lighter-broadcaster
+    runtime: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: python main.py
+    envVars:
+      - key: PYTHON_VERSION
+        value: "3.11"
+      - key: PORT
+        value: "10000"
+      - key: HOST
+        value: "0.0.0.0"
+      - key: LIGHTER_BASE_URL
+        value: "https://mainnet.zklighter.elliot.ai"
+      - key: LIGHTER_WS_URL
+        value: "wss://mainnet.zklighter.elliot.ai/stream"
+      - key: POLL_INTERVAL
+        value: "0.5"
+      - key: CACHE_TTL
+        value: "5"
+      - key: RATE_LIMIT
+        value: "100/minute"
