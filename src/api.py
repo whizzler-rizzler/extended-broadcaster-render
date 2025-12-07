@@ -85,15 +85,52 @@ async def startup():
             parts = channel.replace("account_all_trades:", "").replace("account_all_trades/", "")
             try:
                 account_id = int(parts)
-                trades = data.get("trades", {})
+                new_trades = data.get("trades", {})
                 volumes = {
                     "total_volume": data.get("total_volume"),
                     "monthly_volume": data.get("monthly_volume"),
                     "weekly_volume": data.get("weekly_volume"),
                     "daily_volume": data.get("daily_volume")
                 }
+                
+                MAX_TRADES_PER_MARKET = 500
+                
+                existing = await cache.get(f"ws_trades:{account_id}")
+                existing_data = existing.get("data", existing) if existing else {}
+                existing_trades = existing_data.get("trades", {}) if existing_data else {}
+                
+                if not isinstance(existing_trades, dict):
+                    existing_trades = {}
+                if not isinstance(new_trades, dict):
+                    new_trades = {}
+                
+                for market_id, market_trades in new_trades.items():
+                    if not isinstance(market_trades, list):
+                        continue
+                    
+                    if market_id in existing_trades:
+                        if not isinstance(existing_trades[market_id], list):
+                            existing_trades[market_id] = []
+                        
+                        existing_ids = set()
+                        for t in existing_trades[market_id]:
+                            trade_key = t.get("id") or t.get("trade_id") or t.get("timestamp")
+                            if trade_key:
+                                existing_ids.add(trade_key)
+                        
+                        for trade in market_trades:
+                            trade_key = trade.get("id") or trade.get("trade_id") or trade.get("timestamp")
+                            if trade_key and trade_key not in existing_ids:
+                                existing_trades[market_id].append(trade)
+                                existing_ids.add(trade_key)
+                        
+                        if len(existing_trades[market_id]) > MAX_TRADES_PER_MARKET:
+                            existing_trades[market_id] = existing_trades[market_id][-MAX_TRADES_PER_MARKET:]
+                    else:
+                        existing_trades[market_id] = market_trades[-MAX_TRADES_PER_MARKET:]
+                
                 await cache.set(f"ws_trades:{account_id}", {
-                    "trades": trades,
+                    "trades": existing_trades,
                     "volumes": volumes,
                     "timestamp": time.time()
                 }, ttl=3600)
