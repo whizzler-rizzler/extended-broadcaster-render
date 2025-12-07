@@ -184,18 +184,23 @@ class LighterClient:
         logger.info("Starting active orders polling (every 2s)")
         while self.running:
             try:
+                total_orders = 0
                 for account in settings.accounts:
                     if not self.running:
                         break
                     position_markets = self._get_position_markets(account.account_index)
-                    await self.fetch_all_active_orders(account.name, account.account_index, position_markets)
-                    await asyncio.sleep(0.3)
+                    orders = await self.fetch_all_active_orders(account.name, account.account_index, position_markets)
+                    total_orders += len(orders)
+                    await asyncio.sleep(0.2)
+                
+                if total_orders > 0:
+                    logger.info(f"Fetched {total_orders} active orders across all accounts")
                 
                 await asyncio.sleep(2.0)
             except asyncio.CancelledError:
                 break
             except Exception as e:
-                logger.error(f"Orders polling error: {e}")
+                logger.error(f"Orders polling error: {e}", exc_info=True)
                 await asyncio.sleep(2)
     
     async def start_polling(self):
