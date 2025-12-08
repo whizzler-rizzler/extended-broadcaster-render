@@ -11,13 +11,16 @@ This service monitors Lighter.xyz accounts using REST API polling (2x per second
 ```
 src/
   __init__.py
-  api.py          - FastAPI application with REST endpoints and WebSocket server
-  cache.py        - In-memory caching layer with TTL support
-  config.py       - Configuration and environment variable loading
-  lighter_client.py - Lighter SDK wrapper for REST API polling
+  api.py              - FastAPI application with REST endpoints and WebSocket server
+  cache.py            - In-memory caching layer with TTL support
+  config.py           - Configuration and environment variable loading
+  lighter_client.py   - Lighter SDK wrapper for REST API polling
+  supabase_client.py  - Supabase integration for data persistence
   websocket_client.py - WebSocket client for real-time Lighter updates
   websocket_server.py - WebSocket server for broadcasting to clients
-main.py           - Application entry point
+mFrontend/            - React frontend (Vite)
+main.py               - Application entry point
+supabase_schema.sql   - SQL schema for Supabase tables
 ```
 
 ## Features
@@ -30,14 +33,19 @@ main.py           - Application entry point
 - **WebSocket Broadcasting**: Pushes updates to connected clients
 - **Status Dashboard**: Visual display of connections, positions, and orders
 - **Proxy Support**: Both REST API and WebSocket connections use configured proxies
+- **Supabase Persistence**: Optional data persistence to Supabase (snapshots, positions, orders, trades)
+- **React Frontend**: Modern dashboard built with Vite/React
 
 ## API Endpoints
 
-- `GET /` - Status dashboard
+- `GET /` - React dashboard
 - `GET /health` - Health check
 - `GET /api/status` - Service status and metrics
 - `GET /api/accounts` - All cached accounts
 - `GET /api/accounts/{index}` - Specific account data
+- `GET /api/history/accounts/{index}` - Account historical snapshots (Supabase)
+- `GET /api/history/trades/{index}` - Trade history (Supabase)
+- `GET /api/supabase/status` - Supabase connection status
 - `WS /ws` - WebSocket for real-time updates
 
 ## Configuration
@@ -55,6 +63,10 @@ Other settings:
 - `POLL_INTERVAL` - Polling interval in seconds (default: 0.5)
 - `CACHE_TTL` - Cache TTL in seconds (default: 5)
 - `RATE_LIMIT` - API rate limit (default: 100/minute)
+
+Supabase settings (optional):
+- `Supabase_Url` - Supabase project URL
+- `Supabase_service_role` - Supabase service role key (for server-side access)
 
 ## Deployment
 

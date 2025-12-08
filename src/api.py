@@ -18,6 +18,7 @@ from src.lighter_client import lighter_client
 from src.websocket_client import ws_client
 from src.websocket_server import manager
 from src.latency import latency_tracker
+from src.supabase_client import supabase_client
 
 logger = logging.getLogger(__name__)
 
@@ -48,6 +49,10 @@ async def rate_limit_handler(request: Request, exc: RateLimitExceeded):
 async def startup():
     logging.basicConfig(level=logging.INFO)
     logger.info("Starting Lighter Broadcaster...")
+    
+    supabase_client.initialize()
+    if supabase_client.is_initialized:
+        logger.info("Supabase persistence enabled")
     
     await lighter_client.initialize(settings.accounts)
     
@@ -555,6 +560,37 @@ async def force_ws_reconnect(request: Request, account_index: int = None):
         count = await ws_client.force_reconnect_all()
         return {"success": True, "reconnected_count": count}
 
+
+@app.get("/api/history/accounts/{account_index}")
+@limiter.limit(settings.rate_limit)
+async def get_account_history(request: Request, account_index: int, limit: int = 100):
+    """Get historical snapshots for an account from Supabase"""
+    if not supabase_client.is_initialized:
+        raise HTTPException(status_code=503, detail="Supabase persistence not configured")
+    
+    history = await supabase_client.get_account_history(account_index, limit)
+    return {"account_index": account_index, "snapshots": history, "count": len(history)}
+
+
+@app.get("/api/history/trades/{account_index}")
+@limiter.limit(settings.rate_limit)
+async def get_trade_history(request: Request, account_index: int, limit: int = 50):
+    """Get historical trades for an account from Supabase"""
+    if not supabase_client.is_initialized:
+        raise HTTPException(status_code=503, detail="Supabase persistence not configured")
+    
+    trades = await supabase_client.get_recent_trades(account_index, limit)
+    return {"account_index": account_index, "trades": trades, "count": len(trades)}
+
+
+@app.get("/api/supabase/status")
+@limiter.limit(settings.rate_limit)
+async def get_supabase_status(request: Request):
+    """Check Supabase connection status"""
+    return {
+        "initialized": supabase_client.is_initialized,
+        "persistence_enabled": supabase_client.is_initialized
+    }
 
 
 if FRONTEND_DIR.exists():
