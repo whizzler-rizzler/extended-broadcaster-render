@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
 import { AccountCard } from './components/AccountCard';
 import type { PortfolioData, WsHealthData, Position } from './types';
-import { fetchPortfolio, fetchWsHealth, fetchLatency, reconnectWs, fetchRestHealth, fetchErrors, clearErrors, reconnectRest } from './api';
-import type { LatencyData, RestHealthData, ErrorsData } from './api';
+import { fetchPortfolio, fetchWsHealth, fetchLatency, reconnectWs, fetchRestHealth, fetchErrors, clearErrors, reconnectRest, fetchRawWsMessages } from './api';
+import type { LatencyData, RestHealthData, ErrorsData, RawWsData } from './api';
 import { formatMoney, getPositionSymbol } from './utils';
 import './App.css';
 
@@ -12,23 +12,26 @@ function App() {
   const [restHealth, setRestHealth] = useState<RestHealthData | null>(null);
   const [latency, setLatency] = useState<LatencyData | null>(null);
   const [errors, setErrors] = useState<ErrorsData | null>(null);
+  const [rawWsMessages, setRawWsMessages] = useState<RawWsData | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const load = async () => {
       try {
-        const [portfolioData, healthData, restHealthData, latencyData, errorsData] = await Promise.all([
+        const [portfolioData, healthData, restHealthData, latencyData, errorsData, rawWsData] = await Promise.all([
           fetchPortfolio(),
           fetchWsHealth().catch(() => null),
           fetchRestHealth().catch(() => null),
           fetchLatency().catch(() => null),
-          fetchErrors().catch(() => null)
+          fetchErrors().catch(() => null),
+          fetchRawWsMessages().catch(() => null)
         ]);
         setPortfolio(portfolioData);
         setWsHealth(healthData);
         setRestHealth(restHealthData);
         setLatency(latencyData);
         setErrors(errorsData);
+        setRawWsMessages(rawWsData);
         setError(null);
       } catch (e) {
         setError('Failed to load portfolio');
@@ -37,7 +40,7 @@ function App() {
     };
 
     load();
-    const interval = setInterval(load, 5000);
+    const interval = setInterval(load, 500);
     return () => clearInterval(interval);
   }, []);
 
@@ -208,6 +211,7 @@ function App() {
                     </span>
                     <span className="ws-msg-age">{conn.success_rate}%</span>
                     <span className="ws-msgs">{conn.total_requests} req</span>
+                    <span className="ws-rpm">{conn.requests_per_minute}/min</span>
                     {conn.failed_requests > 0 && <span className="ws-error">{conn.failed_requests} fail</span>}
                   </div>
                 ))}
@@ -246,6 +250,39 @@ function App() {
             </>
           ) : (
             <div className="no-data">Loading errors...</div>
+          )}
+        </div>
+
+        <div className="section-panel raw-ws-panel wide">
+          <h2>
+            <span className="raw-ws-dot"></span>
+            RAW WEBSOCKET DEBUG
+            <button className="reconnect-btn" onClick={() => handleReconnectWs()}>Reconnect</button>
+            <span className={`ws-status-badge ${rawWsMessages?.connected_count === rawWsMessages?.total_connections ? 'connected' : ''}`}>
+              {rawWsMessages?.connected_count === rawWsMessages?.total_connections ? 'Polaczono' : 'Rozlaczono'}
+            </span>
+            <span className="event-count">lacznie eventow: {rawWsMessages?.total_events || 0}</span>
+          </h2>
+          {rawWsMessages ? (
+            <div className="raw-ws-list">
+              {rawWsMessages.messages.length > 0 ? (
+                rawWsMessages.messages.map((msg, i) => (
+                  <div key={i} className="raw-ws-item">
+                    <div className="raw-ws-header">
+                      <span className="raw-ws-index">#{msg.account_name.replace('Lighter_', '').split('_')[0]}</span>
+                      <span className="raw-ws-time">{msg.time_str}</span>
+                    </div>
+                    <div className="raw-ws-content">
+                      {JSON.stringify(msg.data)}
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <div className="no-data">Brak wiadomosci WebSocket</div>
+              )}
+            </div>
+          ) : (
+            <div className="no-data">Loading raw WS messages...</div>
           )}
         </div>
 

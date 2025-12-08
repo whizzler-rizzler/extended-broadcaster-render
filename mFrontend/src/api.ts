@@ -85,6 +85,7 @@ export interface RestHealthConnection {
   consecutive_failures: number;
   uptime_seconds: number;
   last_error: string;
+  requests_per_minute: number;
 }
 
 export interface RestHealthData {
@@ -152,5 +153,26 @@ export async function reconnectRest(accountIndex?: number): Promise<{ success: b
     : `${API_BASE}/api/rest/reconnect`;
   const res = await fetch(url, { method: 'POST' });
   if (!res.ok) throw new Error('Failed to reconnect');
+  return res.json();
+}
+
+export interface RawWsMessage {
+  timestamp: number;
+  time_str: string;
+  account_index: number;
+  account_name: string;
+  data: Record<string, unknown>;
+}
+
+export interface RawWsData {
+  total_events: number;
+  connected_count: number;
+  total_connections: number;
+  messages: RawWsMessage[];
+}
+
+export async function fetchRawWsMessages(): Promise<RawWsData> {
+  const res = await fetch(`${API_BASE}/api/ws/raw-messages?limit=20`);
+  if (!res.ok) throw new Error('Failed to fetch raw WS messages');
   return res.json();
 }

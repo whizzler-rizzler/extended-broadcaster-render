@@ -380,3 +380,102 @@
     grid-template-columns: 1fr;
   }
 }
+
+.ws-rpm {
+  color: #00d4ff;
+  font-size: 0.7rem;
+  font-weight: 500;
+}
+
+.raw-ws-panel {
+  background: #0a0a0a;
+  border: 1px solid #1a1a1a;
+}
+
+.raw-ws-panel h2 {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.raw-ws-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #ffcc00;
+  display: inline-block;
+  animation: pulse 1.5s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+.ws-status-badge {
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 0.7rem;
+  font-weight: 500;
+  background: rgba(255,71,87,0.2);
+  color: #ff4757;
+}
+
+.ws-status-badge.connected {
+  background: rgba(0,255,136,0.2);
+  color: #00ff88;
+}
+
+.event-count {
+  color: #666;
+  font-size: 0.75rem;
+  font-weight: normal;
+}
+
+.raw-ws-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.raw-ws-item {
+  background: #111;
+  border: 1px solid #222;
+  border-radius: 6px;
+  padding: 10px;
+}
+
+.raw-ws-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.raw-ws-index {
+  color: #00ff88;
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+.raw-ws-time {
+  color: #ff4757;
+  font-family: monospace;
+  font-size: 0.8rem;
+}
+
+.raw-ws-content {
+  font-family: monospace;
+  font-size: 0.7rem;
+  color: #aaa;
+  word-break: break-all;
+  white-space: pre-wrap;
+  max-height: 150px;
+  overflow-y: auto;
+  background: #0a0a0a;
+  padding: 8px;
+  border-radius: 4px;
+}

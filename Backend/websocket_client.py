@@ -2,6 +2,7 @@ import asyncio
 import logging
 import json
 import time
+from collections import deque
 from typing import Optional, Callable, List, Any, Dict
 import aiohttp
 from aiohttp_socks import ProxyConnector
@@ -10,6 +11,8 @@ from Backend.config import settings, AccountConfig
 from Backend.error_collector import error_collector
 
 logger = logging.getLogger(__name__)
+
+MAX_RAW_MESSAGES = 50
 
 PING_INTERVAL = 30
 PONG_TIMEOUT = 60
@@ -40,6 +43,7 @@ class AccountWebSocketConnection:
         self._phase_attempts: int = 0
         self._last_successful_connect: float = 0
         self._connection_start_time: float = 0
+        self._raw_messages: deque = deque(maxlen=MAX_RAW_MESSAGES)
     
     def add_callback(self, callback: Callable):
         if callback not in self._callbacks:
@@ -140,8 +144,25 @@ class AccountWebSocketConnection:
             "retry_phase": self._retry_phase,
             "phase_attempts": self._phase_attempts,
             "uptime_seconds": round(uptime, 1) if uptime > 0 else 0,
-            "last_successful_connect": self._last_successful_connect
+            "last_successful_connect": self._last_successful_connect,
+            "raw_messages_count": len(self._raw_messages)
         }
+    
+    def get_raw_messages(self, limit: int = 20) -> List[Dict[str, Any]]:
+        """Return recent raw messages"""
+        messages = list(self._raw_messages)
+        messages = sorted(messages, key=lambda m: m["timestamp"], reverse=True)[:limit]
+        now = time.time()
+        result = []
+        for msg in messages:
+            result.append({
+                "timestamp": msg["timestamp"],
+                "time_str": time.strftime("%H:%M:%S", time.localtime(msg["timestamp"])) + f":{int((msg['timestamp'] % 1) * 1000):03d}",
+                "account_index": msg["account_index"],
+                "account_name": msg["account_name"],
+                "data": msg["data"]
+            })
+        return result
     
     async def connect(self):
         account_id = self.account.account_index
@@ -202,6 +223,12 @@ class AccountWebSocketConnection:
                             self._total_messages += 1
                             try:
                                 data = json.loads(msg.data)
+                                self._raw_messages.append({
+                                    "timestamp": time.time(),
+                                    "account_index": self.account.account_index,
+                                    "account_name": self.account.name,
+                                    "data": data
+                                })
                                 channel = data.get("channel", "")
                                 msg_type = data.get("type", "")
                                 if "orders" in channel or "positions" in channel or "trades" in channel:
@@ -415,5 +442,20 @@ class LighterWebSocketClient:
             if await self.force_reconnect(acc_id):
                 count += 1
         return count
+    
+    def get_all_raw_messages(self, limit: int = 30) -> Dict[str, Any]:
+        """Get raw messages from all connections"""
+        all_messages = []
+        for conn in self._connections.values():
+            all_messages.extend(conn.get_raw_messages(limit))
+        
+        all_messages = sorted(all_messages, key=lambda m: m["timestamp"], reverse=True)[:limit]
+        
+        return {
+            "total_events": len(all_messages),
+            "connected_count": sum(1 for c in self._connections.values() if c.is_connected),
+            "total_connections": len(self._connections),
+            "messages": all_messages
+        }
 
 ws_client = LighterWebSocketClient()

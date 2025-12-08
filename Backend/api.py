@@ -688,6 +688,13 @@ async def get_errors(request: Request, limit: int = 50, source: str = None):
     }
 
 
+@app.get("/api/ws/raw-messages")
+@limiter.limit(settings.rate_limit)
+async def get_ws_raw_messages(request: Request, limit: int = 30):
+    """Get raw WebSocket messages for debugging"""
+    return ws_client.get_all_raw_messages(limit=limit)
+
+
 @app.post("/api/errors/clear")
 @limiter.limit("5/minute")
 async def clear_errors(request: Request):

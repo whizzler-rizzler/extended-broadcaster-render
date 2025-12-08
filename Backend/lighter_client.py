@@ -1,6 +1,7 @@
 import asyncio
 import logging
 import time
+from collections import deque
 from typing import Dict, Any, Optional, List, Union
 import aiohttp
 import lighter
@@ -12,6 +13,8 @@ from Backend.supabase_client import supabase_client
 from Backend.error_collector import error_collector
 
 logger = logging.getLogger(__name__)
+
+MAX_REQUEST_HISTORY = 300
 
 SNAPSHOT_INTERVAL = 60
 
@@ -37,23 +40,28 @@ class AccountRestConnection:
         self._connection_start_time: float = time.time()
         self._consecutive_failures: int = 0
         self._last_error: str = ""
+        self._request_timestamps: deque = deque(maxlen=MAX_REQUEST_HISTORY)
     
     def record_success(self):
         """Record a successful request"""
+        now = time.time()
         self._total_requests += 1
         self._successful_requests += 1
-        self._last_successful_request = time.time()
+        self._last_successful_request = now
         self._connected = True
         self._consecutive_failures = 0
+        self._request_timestamps.append(now)
         self._reset_retry_state()
     
     def record_failure(self, error: str = ""):
         """Record a failed request"""
+        now = time.time()
         self._total_requests += 1
         self._failed_requests += 1
-        self._last_failed_request = time.time()
+        self._last_failed_request = now
         self._consecutive_failures += 1
         self._last_error = error
+        self._request_timestamps.append(now)
         
         if self._consecutive_failures >= 3:
             self._connected = False
@@ -107,8 +115,15 @@ class AccountRestConnection:
             "phase_attempts": self._phase_attempts,
             "consecutive_failures": self._consecutive_failures,
             "uptime_seconds": round(uptime, 1),
-            "last_error": self._last_error[:100] if self._last_error else ""
+            "last_error": self._last_error[:100] if self._last_error else "",
+            "requests_per_minute": self.get_requests_per_minute()
         }
+    
+    def get_requests_per_minute(self) -> int:
+        """Count requests in the last 60 seconds"""
+        now = time.time()
+        cutoff = now - 60
+        return sum(1 for ts in self._request_timestamps if ts > cutoff)
 
 
 class LighterClient:
