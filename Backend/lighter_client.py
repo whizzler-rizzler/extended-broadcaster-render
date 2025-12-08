@@ -195,6 +195,18 @@ class LighterClient:
             if supabase_client.is_initialized and (current_time - last_snapshot) >= SNAPSHOT_INTERVAL:
                 exchange = self._get_exchange_for_account(account_name)
                 asyncio.create_task(supabase_client.save_account_snapshot(account_index, data, exchange))
+                
+                positions = []
+                if isinstance(serialized_data, dict):
+                    acc_list = serialized_data.get("accounts", [])
+                    if acc_list:
+                        positions = acc_list[0].get("positions", [])
+                if positions:
+                    asyncio.create_task(supabase_client.save_positions(account_index, positions, exchange))
+                
+                if active_orders:
+                    asyncio.create_task(supabase_client.save_orders(account_index, active_orders, exchange))
+                
                 self._last_snapshot_times[account_index] = current_time
             
             return data
