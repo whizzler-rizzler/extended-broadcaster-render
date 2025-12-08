@@ -1,0 +1,38 @@
+kend.api:Cached 0 orders for account 497888
+INFO:Backend.api:Cached 0 orders for account 637416
+INFO:Backend.websocket_client:[Lighter_1_aE42d3] WebSocket connected! (reconnects: 0)
+INFO:Backend.websocket_client:[Lighter_1_aE42d3] Subscribed to positions, orders, trades
+INFO:Backend.websocket_client:[Lighter_6_05A739] WebSocket connected! (reconnects: 0)
+INFO:Backend.websocket_client:[Lighter_6_05A739] Subscribed to positions, orders, trades
+INFO:Backend.websocket_client:[Lighter_8_7B8f14] WebSocket connected! (reconnects: 0)
+INFO:Backend.websocket_client:[Lighter_8_7B8f14] Subscribed to positions, orders, trades
+INFO:Backend.api:Cached 1 orders for account 191948
+INFO:Backend.api:Cached 0 orders for account 634023
+INFO:Backend.api:Cached 0 orders for account 199339
+INFO:     10.209.23.32:59094 - "GET /health HTTP/1.1" 200 OK
+INFO:     10.209.23.32:59100 - "GET /health HTTP/1.1" 200 OK
+INFO:     10.209.25.211:57784 - "GET /health HTTP/1.1" 200 OK
+     ==> Your service is live 🎉
+     ==> 
+     ==> ///////////////////////////////////////////////////////////
+     ==> 
+     ==> Available at your primary URL https://lighter-broadcaster.onrender.com
+     ==> 
+     ==> ///////////////////////////////////////////////////////////
+INFO:     34.82.57.203:0 - "GET / HTTP/1.1" 200 OK
+INFO:     10.209.23.32:35692 - "GET /health HTTP/1.1" 200 OK
+INFO:     10.209.25.211:60252 - "GET /health HTTP/1.1" 200 OK
+INFO:     10.209.23.32:35700 - "GET /health HTTP/1.1" 200 OK
+INFO:     10.209.25.211:60262 - "GET /health HTTP/1.1" 200 OK
+INFO:     10.209.23.32:53996 - "GET /health HTTP/1.1" 200 OK
+INFO:     10.209.25.211:42848 - "GET /health HTTP/1.1" 200 OK
+INFO:     10.209.23.32:54000 - "GET /health HTTP/1.1" 200 OK
+INFO:     10.209.23.32:54014 - "GET /health HTTP/1.1" 200 OK
+INFO:     10.209.25.211:42862 - "GET /health HTTP/1.1" 200 OK
+INFO:     10.209.23.32:52542 - "GET /health HTTP/1.1" 200 OK
+INFO:     10.209.25.211:39106 - "GET /health HTTP/1.1" 200 OK
+INFO:     10.209.23.32:52548 - "GET /health HTTP/1.1" 200 OK
+INFO:     10.209.25.211:39114 - "GET /health HTTP/1.1" 200 OK
+INFO:     10.209.23.32:59810 - "GET /health HTTP/1.1" 200 OK
+INFO:     10.209.25.211:48582 - "GET /health HTTP/1.1" 200 OK
+Need better ways to work with logs? Try theRender CLI, Render MCP Server, or set up a log stream integration 
