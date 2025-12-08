@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
 import { AccountCard } from './components/AccountCard';
 import type { PortfolioData, WsHealthData, Position } from './types';
-import { fetchPortfolio, fetchWsHealth, fetchLatency, reconnectWs, fetchRestHealth, fetchErrors, clearErrors, reconnectRest, fetchRawWsMessages } from './api';
-import type { LatencyData, RestHealthData, ErrorsData, RawWsData } from './api';
+import { fetchPortfolio, fetchWsHealth, fetchLatency, reconnectWs, fetchRestHealth, fetchErrors, clearErrors, reconnectRest, fetchRawWsMessages, fetchControlStatus, pauseDataCollection, resumeDataCollection } from './api';
+import type { LatencyData, RestHealthData, ErrorsData, RawWsData, ControlStatus } from './api';
 import { formatMoney, getPositionSymbol } from './utils';
 import './App.css';
 
@@ -13,18 +13,20 @@ function App() {
   const [latency, setLatency] = useState<LatencyData | null>(null);
   const [errors, setErrors] = useState<ErrorsData | null>(null);
   const [rawWsMessages, setRawWsMessages] = useState<RawWsData | null>(null);
+  const [controlStatus, setControlStatus] = useState<ControlStatus | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const load = async () => {
       try {
-        const [portfolioData, healthData, restHealthData, latencyData, errorsData, rawWsData] = await Promise.all([
+        const [portfolioData, healthData, restHealthData, latencyData, errorsData, rawWsData, controlData] = await Promise.all([
           fetchPortfolio(),
           fetchWsHealth().catch(() => null),
           fetchRestHealth().catch(() => null),
           fetchLatency().catch(() => null),
           fetchErrors().catch(() => null),
-          fetchRawWsMessages().catch(() => null)
+          fetchRawWsMessages().catch(() => null),
+          fetchControlStatus().catch(() => null)
         ]);
         setPortfolio(portfolioData);
         setWsHealth(healthData);
@@ -32,6 +34,7 @@ function App() {
         setLatency(latencyData);
         setErrors(errorsData);
         setRawWsMessages(rawWsData);
+        setControlStatus(controlData);
         setError(null);
       } catch (e) {
         setError('Failed to load portfolio');
@@ -88,10 +91,30 @@ function App() {
     }
   };
 
+  const handleToggleCollection = async () => {
+    try {
+      if (controlStatus?.paused) {
+        await resumeDataCollection();
+      } else {
+        await pauseDataCollection();
+      }
+      const newStatus = await fetchControlStatus();
+      setControlStatus(newStatus);
+    } catch (e) {
+      console.error('Toggle collection failed:', e);
+    }
+  };
+
   return (
     <div className="app">
       <header className="header">
         <h1>Lighter Broadcaster Dashboard</h1>
+        <button 
+          className={`control-btn ${controlStatus?.paused ? 'paused' : 'running'}`}
+          onClick={handleToggleCollection}
+        >
+          {controlStatus?.paused ? 'WZNOW' : 'PAUZA'}
+        </button>
         <div className="header-stats">
           <div className="header-stat">
             <div className="header-stat-label">Total Equity</div>

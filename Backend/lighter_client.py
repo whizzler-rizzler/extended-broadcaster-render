@@ -131,6 +131,8 @@ class LighterClient:
         self.signer_clients: Dict[str, lighter.SignerClient] = {}
         self.account_apis: Dict[str, lighter.AccountApi] = {}
         self.running = False
+        self._paused = False
+        self._pause_event = asyncio.Event()
         self._poll_task: Optional[asyncio.Task] = None
         self._http_sessions: Dict[str, aiohttp.ClientSession] = {}
         self._account_proxies: Dict[str, Optional[str]] = {}
@@ -141,6 +143,7 @@ class LighterClient:
         self._account_exchanges: Dict[str, str] = {}
         self._rest_connections: Dict[int, AccountRestConnection] = {}
         self._start_time: float = 0
+        self._pause_event.set()
     
     def _get_exchange_for_account(self, account_name: str) -> str:
         if account_name in self._account_exchanges:
@@ -415,6 +418,9 @@ class LighterClient:
         
         while self.running:
             try:
+                await self._pause_event.wait()
+                if not self.running:
+                    break
                 await self.fetch_all_accounts()
                 await asyncio.sleep(settings.poll_interval)
             except asyncio.CancelledError:
@@ -422,6 +428,26 @@ class LighterClient:
             except Exception as e:
                 logger.error(f"Polling error: {e}")
                 await asyncio.sleep(1)
+    
+    async def pause(self):
+        """Pause REST API polling"""
+        if not self._paused:
+            self._paused = True
+            self._pause_event.clear()
+            logger.info("REST polling paused")
+        return self._paused
+    
+    async def resume(self):
+        """Resume REST API polling"""
+        if self._paused:
+            self._paused = False
+            self._pause_event.set()
+            logger.info("REST polling resumed")
+        return not self._paused
+    
+    @property
+    def is_paused(self) -> bool:
+        return self._paused
     
     async def stop_polling(self):
         self.running = False

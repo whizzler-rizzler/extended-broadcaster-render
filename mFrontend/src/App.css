@@ -46,6 +46,36 @@
   color: #ff4757;
 }
 
+.control-btn {
+  padding: 10px 20px;
+  border: none;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.control-btn.running {
+  background: #ff4757;
+  color: #fff;
+}
+
+.control-btn.running:hover {
+  background: #ff6b7a;
+}
+
+.control-btn.paused {
+  background: #00ff88;
+  color: #000;
+}
+
+.control-btn.paused:hover {
+  background: #33ff9f;
+}
+
 .error {
   background: rgba(255, 71, 87, 0.1);
   color: #ff4757;

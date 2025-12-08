@@ -176,3 +176,29 @@ export async function fetchRawWsMessages(): Promise<RawWsData> {
   if (!res.ok) throw new Error('Failed to fetch raw WS messages');
   return res.json();
 }
+
+export interface ControlStatus {
+  rest_paused: boolean;
+  ws_paused: boolean;
+  paused: boolean;
+  rest_running: boolean;
+  ws_running: boolean;
+}
+
+export async function fetchControlStatus(): Promise<ControlStatus> {
+  const res = await fetch(`${API_BASE}/api/control/status`);
+  if (!res.ok) throw new Error('Failed to fetch control status');
+  return res.json();
+}
+
+export async function pauseDataCollection(): Promise<{ success: boolean }> {
+  const res = await fetch(`${API_BASE}/api/control/pause`, { method: 'POST' });
+  if (!res.ok) throw new Error('Failed to pause');
+  return res.json();
+}
+
+export async function resumeDataCollection(): Promise<{ success: boolean }> {
+  const res = await fetch(`${API_BASE}/api/control/resume`, { method: 'POST' });
+  if (!res.ok) throw new Error('Failed to resume');
+  return res.json();
+}

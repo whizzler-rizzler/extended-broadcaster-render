@@ -330,6 +330,7 @@ class LighterWebSocketClient:
     
     def __init__(self):
         self.running = False
+        self._paused = False
         self._connections: Dict[int, AccountWebSocketConnection] = {}
         self._callbacks: List[Callable] = []
         self._signer_clients: Dict[str, lighter.SignerClient] = {}
@@ -457,5 +458,32 @@ class LighterWebSocketClient:
             "total_connections": len(self._connections),
             "messages": all_messages
         }
+    
+    async def pause(self):
+        """Pause all WebSocket connections"""
+        if not self._paused:
+            self._paused = True
+            logger.info("Pausing all WebSocket connections...")
+            stop_tasks = [conn.stop() for conn in self._connections.values()]
+            if stop_tasks:
+                await asyncio.gather(*stop_tasks, return_exceptions=True)
+            logger.info("All WebSocket connections paused")
+        return self._paused
+    
+    async def resume(self):
+        """Resume all WebSocket connections"""
+        if self._paused:
+            self._paused = False
+            logger.info("Resuming all WebSocket connections...")
+            for conn in self._connections.values():
+                conn.running = True
+                conn._reset_retry_state()
+                conn._task = asyncio.create_task(conn.connect())
+            logger.info("All WebSocket connections resumed")
+        return not self._paused
+    
+    @property
+    def is_paused(self) -> bool:
+        return self._paused
 
 ws_client = LighterWebSocketClient()

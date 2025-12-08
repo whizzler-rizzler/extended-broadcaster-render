@@ -778,6 +778,46 @@ async def clear_errors(request: Request):
     return {"success": True, "message": "Error log cleared"}
 
 
+@app.get("/api/control/status")
+async def get_control_status():
+    """Get current data collection status"""
+    return {
+        "rest_paused": lighter_client.is_paused,
+        "ws_paused": ws_client.is_paused,
+        "paused": lighter_client.is_paused and ws_client.is_paused,
+        "rest_running": lighter_client.running,
+        "ws_running": ws_client.running
+    }
+
+
+@app.post("/api/control/pause")
+@limiter.limit("10/minute")
+async def pause_data_collection(request: Request):
+    """Pause all data collection (REST polling and WebSocket)"""
+    await lighter_client.pause()
+    await ws_client.pause()
+    logger.info("Data collection paused by user")
+    return {
+        "success": True,
+        "rest_paused": lighter_client.is_paused,
+        "ws_paused": ws_client.is_paused
+    }
+
+
+@app.post("/api/control/resume")
+@limiter.limit("10/minute")
+async def resume_data_collection(request: Request):
+    """Resume all data collection (REST polling and WebSocket)"""
+    await lighter_client.resume()
+    await ws_client.resume()
+    logger.info("Data collection resumed by user")
+    return {
+        "success": True,
+        "rest_paused": lighter_client.is_paused,
+        "ws_paused": ws_client.is_paused
+    }
+
+
 async def proxy_request(path: str, request: Request) -> Response:
     """Proxy API requests to remote backend in FRONTEND_ONLY mode"""
     if not settings.remote_api_base:
