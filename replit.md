@@ -111,6 +111,15 @@ Other settings:
 - `CACHE_TTL` - Cache TTL in seconds (default: 5)
 - `RATE_LIMIT` - API rate limit (default: 100/minute)
 
+Broadcaster mode settings:
+- `BROADCASTER_MODE` - Operating mode: `COLLECTOR` (default) or `FRONTEND_ONLY`
+  - `COLLECTOR`: Full mode - polls Lighter API, connects WebSocket, caches data, serves frontend
+  - `FRONTEND_ONLY`: Lightweight mode - only serves frontend, proxies API requests to remote backend
+- `REMOTE_API_BASE` - URL of remote backend (required for FRONTEND_ONLY mode), e.g. `https://your-render-app.onrender.com`
+
+Frontend build settings:
+- `VITE_API_BASE` - Build-time API base URL for frontend (empty string for same-origin, or full URL for cross-origin)
+
 Supabase settings (optional):
 - `Supabase_Url` - Supabase project URL
 - `Supabase_service_role` - Supabase service role key (for server-side access)

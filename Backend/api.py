@@ -48,6 +48,65 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+@app.middleware("http")
+async def frontend_only_proxy_middleware(request: Request, call_next):
+    """In FRONTEND_ONLY mode, proxy all /api/* requests to remote backend"""
+    if settings.is_frontend_only() and request.url.path.startswith("/api/"):
+        if not settings.remote_api_base:
+            return JSONResponse(
+                status_code=503,
+                content={"error": "REMOTE_API_BASE not configured"}
+            )
+        
+        global _proxy_session
+        if not _proxy_session:
+            return JSONResponse(
+                status_code=503,
+                content={"error": "Proxy session not initialized"}
+            )
+        
+        target_url = f"{settings.remote_api_base.rstrip('/')}{request.url.path}"
+        if request.url.query:
+            target_url += f"?{request.url.query}"
+        
+        try:
+            method = request.method.lower()
+            timeout = aiohttp.ClientTimeout(total=30)
+            
+            if method == "get":
+                async with _proxy_session.get(target_url, timeout=timeout) as resp:
+                    content = await resp.read()
+                    return Response(
+                        content=content,
+                        status_code=resp.status,
+                        headers={"Content-Type": resp.headers.get("Content-Type", "application/json")}
+                    )
+            elif method == "post":
+                body = await request.body()
+                async with _proxy_session.post(target_url, data=body, timeout=timeout) as resp:
+                    content = await resp.read()
+                    return Response(
+                        content=content,
+                        status_code=resp.status,
+                        headers={"Content-Type": resp.headers.get("Content-Type", "application/json")}
+                    )
+            else:
+                async with _proxy_session.request(method, target_url, timeout=timeout) as resp:
+                    content = await resp.read()
+                    return Response(
+                        content=content,
+                        status_code=resp.status,
+                        headers={"Content-Type": resp.headers.get("Content-Type", "application/json")}
+                    )
+        except aiohttp.ClientError as e:
+            logger.error(f"Proxy middleware error for {target_url}: {e}")
+            return JSONResponse(
+                status_code=502,
+                content={"error": f"Backend proxy error: {str(e)}"}
+            )
+    
+    return await call_next(request)
+
 @app.exception_handler(RateLimitExceeded)
 async def rate_limit_handler(request: Request, exc: RateLimitExceeded):
     return JSONResponse(
