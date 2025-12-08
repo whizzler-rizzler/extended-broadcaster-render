@@ -22,6 +22,12 @@ from Backend.supabase_client import supabase_client
 
 logger = logging.getLogger(__name__)
 
+def _get_exchange_for_account_id(account_id: int) -> str:
+    for account in settings.accounts:
+        if account.account_index == account_id:
+            return account.exchange
+    return "lighter"
+
 limiter = Limiter(key_func=get_remote_address)
 app = FastAPI(title="Lighter Broadcaster", version="1.0.0")
 
@@ -114,6 +120,8 @@ async def startup():
                 if not isinstance(new_trades, dict):
                     new_trades = {}
                 
+                exchange = _get_exchange_for_account_id(account_id)
+                
                 for market_id, market_trades in new_trades.items():
                     if not isinstance(market_trades, list):
                         continue
@@ -133,11 +141,16 @@ async def startup():
                             if trade_key and trade_key not in existing_ids:
                                 existing_trades[market_id].append(trade)
                                 existing_ids.add(trade_key)
+                                if supabase_client.is_initialized:
+                                    asyncio.create_task(supabase_client.save_trade(account_id, trade, exchange))
                         
                         if len(existing_trades[market_id]) > MAX_TRADES_PER_MARKET:
                             existing_trades[market_id] = existing_trades[market_id][-MAX_TRADES_PER_MARKET:]
                     else:
                         existing_trades[market_id] = market_trades[-MAX_TRADES_PER_MARKET:]
+                        if supabase_client.is_initialized:
+                            for trade in market_trades:
+                                asyncio.create_task(supabase_client.save_trade(account_id, trade, exchange))
                 
                 await cache.set(f"ws_trades:{account_id}", {
                     "trades": existing_trades,
@@ -323,9 +336,13 @@ async def get_portfolio():
             
             all_trades = ws_trades_list if ws_trades_list else trades
             
+            account_index_val = account_data.get("account_index", 0)
+            exchange = _get_exchange_for_account_id(account_index_val)
+            
             account_entry = {
-                "account_index": str(account_data.get("account_index", "")),
+                "account_index": str(account_index_val),
                 "name": account_data.get("account_name", ""),
+                "exchange": exchange,
                 "is_live": is_live,
                 "last_update": int(last_update),
                 "equity": equity,

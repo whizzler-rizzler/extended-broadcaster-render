@@ -1,10 +1,12 @@
 -- Supabase Schema for Lighter Broadcaster
 -- Run this in Supabase SQL Editor to create required tables
+-- Supports multiple exchanges: Lighter, Extended, Paradex, etc.
 
 -- Account snapshots table - stores periodic account state
 CREATE TABLE IF NOT EXISTS account_snapshots (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     account_index INTEGER NOT NULL,
+    exchange VARCHAR(50) NOT NULL DEFAULT 'lighter',
     timestamp TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     equity DECIMAL,
     margin DECIMAL,
@@ -17,12 +19,14 @@ CREATE TABLE IF NOT EXISTS account_snapshots (
 );
 
 CREATE INDEX idx_account_snapshots_account ON account_snapshots(account_index);
+CREATE INDEX idx_account_snapshots_exchange ON account_snapshots(exchange);
 CREATE INDEX idx_account_snapshots_timestamp ON account_snapshots(timestamp DESC);
 
 -- Positions table - stores position history
 CREATE TABLE IF NOT EXISTS positions (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     account_index INTEGER NOT NULL,
+    exchange VARCHAR(50) NOT NULL DEFAULT 'lighter',
     timestamp TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     market VARCHAR(50),
     side VARCHAR(10),
@@ -35,6 +39,7 @@ CREATE TABLE IF NOT EXISTS positions (
 );
 
 CREATE INDEX idx_positions_account ON positions(account_index);
+CREATE INDEX idx_positions_exchange ON positions(exchange);
 CREATE INDEX idx_positions_timestamp ON positions(timestamp DESC);
 CREATE INDEX idx_positions_market ON positions(market);
 
@@ -42,6 +47,7 @@ CREATE INDEX idx_positions_market ON positions(market);
 CREATE TABLE IF NOT EXISTS orders (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     account_index INTEGER NOT NULL,
+    exchange VARCHAR(50) NOT NULL DEFAULT 'lighter',
     timestamp TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     order_id VARCHAR(100),
     market VARCHAR(50),
@@ -56,6 +62,7 @@ CREATE TABLE IF NOT EXISTS orders (
 );
 
 CREATE INDEX idx_orders_account ON orders(account_index);
+CREATE INDEX idx_orders_exchange ON orders(exchange);
 CREATE INDEX idx_orders_timestamp ON orders(timestamp DESC);
 CREATE INDEX idx_orders_order_id ON orders(order_id);
 CREATE INDEX idx_orders_market ON orders(market);
@@ -64,6 +71,7 @@ CREATE INDEX idx_orders_market ON orders(market);
 CREATE TABLE IF NOT EXISTS trades (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     account_index INTEGER NOT NULL,
+    exchange VARCHAR(50) NOT NULL DEFAULT 'lighter',
     timestamp TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     trade_id VARCHAR(100),
     market VARCHAR(50),
@@ -76,6 +84,7 @@ CREATE TABLE IF NOT EXISTS trades (
 );
 
 CREATE INDEX idx_trades_account ON trades(account_index);
+CREATE INDEX idx_trades_exchange ON trades(exchange);
 CREATE INDEX idx_trades_timestamp ON trades(timestamp DESC);
 CREATE INDEX idx_trades_trade_id ON trades(trade_id);
 CREATE INDEX idx_trades_market ON trades(market);

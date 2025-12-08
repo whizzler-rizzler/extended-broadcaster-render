@@ -36,15 +36,13 @@ class SupabaseClient:
     def _insert_sync(self, table: str, data: Any):
         return self._client.table(table).insert(data).execute()
     
-    def _select_sync(self, table: str, account_index: int, limit: int):
-        return self._client.table(table)\
-            .select("*")\
-            .eq("account_index", account_index)\
-            .order("timestamp", desc=True)\
-            .limit(limit)\
-            .execute()
+    def _select_sync(self, table: str, account_index: int, limit: int, exchange: Optional[str] = None):
+        query = self._client.table(table).select("*").eq("account_index", account_index)
+        if exchange:
+            query = query.eq("exchange", exchange)
+        return query.order("timestamp", desc=True).limit(limit).execute()
     
-    async def save_account_snapshot(self, account_index: int, data: Dict[str, Any]) -> bool:
+    async def save_account_snapshot(self, account_index: int, data: Dict[str, Any], exchange: str = "lighter") -> bool:
         if not self.is_initialized:
             return False
         
@@ -55,6 +53,7 @@ class SupabaseClient:
             
             snapshot = {
                 "account_index": account_index,
+                "exchange": exchange,
                 "timestamp": datetime.now(timezone.utc).isoformat(),
                 "equity": account_info.get("equity"),
                 "margin": account_info.get("margin"),
@@ -66,13 +65,13 @@ class SupabaseClient:
             }
             
             await asyncio.to_thread(self._insert_sync, "account_snapshots", snapshot)
-            logger.debug(f"Saved snapshot for account {account_index}")
+            logger.debug(f"Saved snapshot for account {account_index} ({exchange})")
             return True
         except Exception as e:
             logger.error(f"Failed to save account snapshot: {e}")
             return False
     
-    async def save_positions(self, account_index: int, positions: List[Dict]) -> bool:
+    async def save_positions(self, account_index: int, positions: List[Dict], exchange: str = "lighter") -> bool:
         if not self.is_initialized or not positions:
             return False
         
@@ -83,6 +82,7 @@ class SupabaseClient:
             for pos in positions:
                 records.append({
                     "account_index": account_index,
+                    "exchange": exchange,
                     "timestamp": timestamp,
                     "market": pos.get("market_name") or pos.get("market"),
                     "side": pos.get("side"),
@@ -95,13 +95,13 @@ class SupabaseClient:
             
             if records:
                 await asyncio.to_thread(self._insert_sync, "positions", records)
-                logger.debug(f"Saved {len(records)} positions for account {account_index}")
+                logger.debug(f"Saved {len(records)} positions for account {account_index} ({exchange})")
             return True
         except Exception as e:
             logger.error(f"Failed to save positions: {e}")
             return False
     
-    async def save_orders(self, account_index: int, orders: List[Dict]) -> bool:
+    async def save_orders(self, account_index: int, orders: List[Dict], exchange: str = "lighter") -> bool:
         if not self.is_initialized or not orders:
             return False
         
@@ -112,6 +112,7 @@ class SupabaseClient:
             for order in orders:
                 records.append({
                     "account_index": account_index,
+                    "exchange": exchange,
                     "timestamp": timestamp,
                     "order_id": order.get("id") or order.get("order_id"),
                     "market": order.get("market_name") or order.get("market"),
@@ -126,19 +127,20 @@ class SupabaseClient:
             
             if records:
                 await asyncio.to_thread(self._insert_sync, "orders", records)
-                logger.debug(f"Saved {len(records)} orders for account {account_index}")
+                logger.debug(f"Saved {len(records)} orders for account {account_index} ({exchange})")
             return True
         except Exception as e:
             logger.error(f"Failed to save orders: {e}")
             return False
     
-    async def save_trade(self, account_index: int, trade: Dict) -> bool:
+    async def save_trade(self, account_index: int, trade: Dict, exchange: str = "lighter") -> bool:
         if not self.is_initialized:
             return False
         
         try:
             record = {
                 "account_index": account_index,
+                "exchange": exchange,
                 "timestamp": datetime.now(timezone.utc).isoformat(),
                 "trade_id": trade.get("id") or trade.get("trade_id"),
                 "market": trade.get("market_name") or trade.get("market"),
@@ -150,29 +152,29 @@ class SupabaseClient:
             }
             
             await asyncio.to_thread(self._insert_sync, "trades", record)
-            logger.debug(f"Saved trade for account {account_index}")
+            logger.debug(f"Saved trade for account {account_index} ({exchange})")
             return True
         except Exception as e:
             logger.error(f"Failed to save trade: {e}")
             return False
     
-    async def get_account_history(self, account_index: int, limit: int = 100) -> List[Dict]:
+    async def get_account_history(self, account_index: int, limit: int = 100, exchange: Optional[str] = None) -> List[Dict]:
         if not self.is_initialized:
             return []
         
         try:
-            result = await asyncio.to_thread(self._select_sync, "account_snapshots", account_index, limit)
+            result = await asyncio.to_thread(self._select_sync, "account_snapshots", account_index, limit, exchange)
             return result.data if result.data else []
         except Exception as e:
             logger.error(f"Failed to get account history: {e}")
             return []
     
-    async def get_recent_trades(self, account_index: int, limit: int = 50) -> List[Dict]:
+    async def get_recent_trades(self, account_index: int, limit: int = 50, exchange: Optional[str] = None) -> List[Dict]:
         if not self.is_initialized:
             return []
         
         try:
-            result = await asyncio.to_thread(self._select_sync, "trades", account_index, limit)
+            result = await asyncio.to_thread(self._select_sync, "trades", account_index, limit, exchange)
             return result.data if result.data else []
         except Exception as e:
             logger.error(f"Failed to get recent trades: {e}")

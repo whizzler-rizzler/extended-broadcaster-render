@@ -27,6 +27,15 @@ class LighterClient:
         self.last_orders_update: Dict[int, float] = {}
         self._cached_orders: Dict[int, List[Dict[str, Any]]] = {}
         self._last_snapshot_times: Dict[int, float] = {}
+        self._account_exchanges: Dict[str, str] = {}
+    
+    def _get_exchange_for_account(self, account_name: str) -> str:
+        if account_name in self._account_exchanges:
+            return self._account_exchanges[account_name]
+        for account in settings.accounts:
+            if account.name == account_name:
+                return account.exchange
+        return "lighter"
     
     async def _get_http_session_for_account(self, account_name: str) -> aiohttp.ClientSession:
         if account_name not in self._http_sessions or self._http_sessions[account_name].closed:
@@ -184,7 +193,8 @@ class LighterClient:
             
             last_snapshot = self._last_snapshot_times.get(account_index, 0)
             if supabase_client.is_initialized and (current_time - last_snapshot) >= SNAPSHOT_INTERVAL:
-                asyncio.create_task(supabase_client.save_account_snapshot(account_index, data))
+                exchange = self._get_exchange_for_account(account_name)
+                asyncio.create_task(supabase_client.save_account_snapshot(account_index, data, exchange))
                 self._last_snapshot_times[account_index] = current_time
             
             return data

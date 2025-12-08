@@ -12,6 +12,7 @@ class AccountConfig(BaseModel):
     private_key: str
     public_key: str
     proxy_url: Optional[str] = None
+    exchange: str = "lighter"
 
 def convert_proxy_format(raw_proxy: str) -> str:
     """Convert ip:port:user:pass to http://user:pass@ip:port format"""
@@ -41,15 +42,21 @@ class Settings(BaseModel):
     
     accounts: List[AccountConfig] = []
 
+SUPPORTED_EXCHANGES = ["Lighter", "Extended", "Paradex", "Hyperliquid", "dYdX", "GMX"]
+
 def load_accounts_from_env() -> List[AccountConfig]:
     accounts = []
     env_vars = os.environ
     
     account_prefixes = set()
-    for key in env_vars:
-        if key.startswith("Lighter_") and "_Account_Index" in key:
-            prefix = key.replace("_Account_Index", "")
-            account_prefixes.add(prefix)
+    exchange_map = {}
+    
+    for exchange_name in SUPPORTED_EXCHANGES:
+        for key in env_vars:
+            if key.startswith(f"{exchange_name}_") and "_Account_Index" in key:
+                prefix = key.replace("_Account_Index", "")
+                account_prefixes.add(prefix)
+                exchange_map[prefix] = exchange_name.lower()
     
     for prefix in sorted(account_prefixes):
         account_index = env_vars.get(f"{prefix}_Account_Index")
@@ -57,12 +64,15 @@ def load_accounts_from_env() -> List[AccountConfig]:
         private_key = env_vars.get(f"{prefix}_PRIVATE")
         public_key = env_vars.get(f"{prefix}_PUBLIC")
         
+        exchange = exchange_map.get(prefix, "lighter")
+        
         parts = prefix.split("_")
         if len(parts) >= 2:
+            exchange_prefix = parts[0]
             account_num = parts[1]
             proxy_url = None
             for key in env_vars:
-                if f"Lighter_{account_num}_PROXY" in key and "_URL" in key:
+                if f"{exchange_prefix}_{account_num}_PROXY" in key and "_URL" in key:
                     proxy_url = env_vars.get(key)
                     break
         else:
@@ -78,7 +88,8 @@ def load_accounts_from_env() -> List[AccountConfig]:
                     api_key_index=api_idx,
                     private_key=private_key,
                     public_key=public_key or "",
-                    proxy_url=convert_proxy_format(proxy_url) if proxy_url else None
+                    proxy_url=convert_proxy_format(proxy_url) if proxy_url else None,
+                    exchange=exchange
                 ))
             except ValueError as e:
                 print(f"Warning: Skipping account {prefix} - invalid account_index or api_key_index: {e}")
