@@ -40,7 +40,7 @@ class Settings(BaseModel):
     host: str = "0.0.0.0"
     port: int = 5000
     
-    poll_interval: float = 0.5
+    poll_interval: float = 1.0
     cache_ttl: int = 5
     
     rate_limit: str = "100/minute"

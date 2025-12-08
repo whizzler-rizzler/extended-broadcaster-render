@@ -18,7 +18,7 @@ services:
       - key: LIGHTER_WS_URL
         value: "wss://mainnet.zklighter.elliot.ai/stream"
       - key: POLL_INTERVAL
-        value: "0.5"
+        value: "1.0"
       - key: CACHE_TTL
         value: "5"
       - key: RATE_LIMIT
