@@ -10,6 +10,10 @@ from src.config import settings, AccountConfig
 
 logger = logging.getLogger(__name__)
 
+PING_INTERVAL = 30
+PONG_TIMEOUT = 60
+HEALTH_CHECK_INTERVAL = 10
+
 class AccountWebSocketConnection:
     """Single WebSocket connection for one account through its proxy"""
     
@@ -22,6 +26,11 @@ class AccountWebSocketConnection:
         self._connected = False
         self._callbacks: List[Callable] = []
         self._task: Optional[asyncio.Task] = None
+        self._ping_task: Optional[asyncio.Task] = None
+        self._last_pong_time: float = 0
+        self._last_message_time: float = 0
+        self._reconnect_count: int = 0
+        self._total_messages: int = 0
     
     def add_callback(self, callback: Callable):
         if callback not in self._callbacks:
@@ -52,6 +61,54 @@ class AccountWebSocketConnection:
             logger.error(f"Failed to generate auth token for {self.account.name}: {e}")
             return None
     
+    async def _ping_loop(self):
+        """Send ping every PING_INTERVAL seconds and check for pong timeout"""
+        while self.running and self._connected:
+            try:
+                await asyncio.sleep(PING_INTERVAL)
+                
+                if not self._ws or self._ws.closed:
+                    logger.warning(f"[{self.account.name}] Ping: WS closed, triggering reconnect")
+                    self._connected = False
+                    break
+                
+                time_since_last_activity = time.time() - max(self._last_pong_time, self._last_message_time)
+                if time_since_last_activity > PONG_TIMEOUT:
+                    logger.warning(f"[{self.account.name}] No activity for {time_since_last_activity:.0f}s, triggering reconnect")
+                    self._connected = False
+                    if self._ws and not self._ws.closed:
+                        await self._ws.close()
+                    break
+                
+                await self._ws.ping()
+                logger.debug(f"[{self.account.name}] Ping sent")
+                
+            except asyncio.CancelledError:
+                break
+            except Exception as e:
+                logger.warning(f"[{self.account.name}] Ping error: {e}")
+                self._connected = False
+                break
+    
+    def _handle_pong(self):
+        """Called when pong is received"""
+        self._last_pong_time = time.time()
+        logger.debug(f"[{self.account.name}] Pong received")
+    
+    def get_health_status(self) -> Dict[str, Any]:
+        """Return health status of this connection"""
+        now = time.time()
+        return {
+            "account_id": self.account.account_index,
+            "account_name": self.account.name,
+            "connected": self._connected,
+            "last_message_age": now - self._last_message_time if self._last_message_time > 0 else -1,
+            "last_pong_age": now - self._last_pong_time if self._last_pong_time > 0 else -1,
+            "reconnect_count": self._reconnect_count,
+            "total_messages": self._total_messages,
+            "has_proxy": bool(self.account.proxy_url)
+        }
+    
     async def connect(self):
         retry_count = 0
         max_retries = 5
@@ -81,13 +138,16 @@ class AccountWebSocketConnection:
                 async with self._session.ws_connect(
                     ws_url,
                     headers=headers,
-                    heartbeat=30,
                     timeout=aiohttp.ClientWSTimeout(ws_close=10)
                 ) as ws:
                     self._ws = ws
                     self._connected = True
+                    self._last_pong_time = time.time()
+                    self._last_message_time = time.time()
                     retry_count = 0
-                    logger.info(f"[{self.account.name}] WebSocket connected!")
+                    logger.info(f"[{self.account.name}] WebSocket connected! (reconnects: {self._reconnect_count})")
+                    
+                    self._ping_task = asyncio.create_task(self._ping_loop())
                     
                     auth_token = self._generate_auth_token()
                     if not auth_token:
@@ -104,6 +164,8 @@ class AccountWebSocketConnection:
                     
                     async for msg in ws:
                         if msg.type == aiohttp.WSMsgType.TEXT:
+                            self._last_message_time = time.time()
+                            self._total_messages += 1
                             try:
                                 data = json.loads(msg.data)
                                 channel = data.get("channel", "")
@@ -118,33 +180,51 @@ class AccountWebSocketConnection:
                                 logger.warning(f"[{self.account.name}] Invalid JSON from WS")
                             except Exception as e:
                                 logger.error(f"[{self.account.name}] Error processing WS message: {e}")
+                        elif msg.type == aiohttp.WSMsgType.PONG:
+                            self._handle_pong()
                         elif msg.type == aiohttp.WSMsgType.ERROR:
                             logger.error(f"[{self.account.name}] WebSocket error: {ws.exception()}")
                             break
                         elif msg.type == aiohttp.WSMsgType.CLOSED:
                             logger.warning(f"[{self.account.name}] WebSocket closed by server")
                             break
+                    
+                    if self._ping_task:
+                        self._ping_task.cancel()
+                        try:
+                            await self._ping_task
+                        except asyncio.CancelledError:
+                            pass
                 
             except aiohttp.ClientError as e:
                 retry_count += 1
+                self._reconnect_count += 1
                 logger.warning(f"[{self.account.name}] WS connection error (attempt {retry_count}/{max_retries}): {e}")
                 self._connected = False
             except Exception as e:
                 retry_count += 1
+                self._reconnect_count += 1
                 logger.warning(f"[{self.account.name}] WS error (attempt {retry_count}/{max_retries}): {e}")
                 self._connected = False
             finally:
+                if self._ping_task:
+                    self._ping_task.cancel()
+                    try:
+                        await self._ping_task
+                    except asyncio.CancelledError:
+                        pass
+                    self._ping_task = None
                 if self._session and not self._session.closed:
                     await self._session.close()
                     self._session = None
             
             if retry_count >= max_retries:
-                logger.warning(f"[{self.account.name}] WS unavailable after max retries. REST polling continues.")
-                self.running = False
-                return
+                logger.warning(f"[{self.account.name}] WS max retries reached. Resetting counter and continuing...")
+                retry_count = 0
+                await asyncio.sleep(60)
             
             if self.running:
-                wait_time = min(5 * retry_count, 30)
+                wait_time = min(5 * (retry_count + 1), 30)
                 logger.info(f"[{self.account.name}] Reconnecting WS in {wait_time}s...")
                 await asyncio.sleep(wait_time)
     
@@ -155,6 +235,13 @@ class AccountWebSocketConnection:
     async def stop(self):
         self.running = False
         self._connected = False
+        if self._ping_task:
+            self._ping_task.cancel()
+            try:
+                await self._ping_task
+            except asyncio.CancelledError:
+                pass
+            self._ping_task = None
         if self._ws:
             try:
                 await self._ws.close()
@@ -237,5 +324,51 @@ class LighterWebSocketClient:
     
     def get_connection_status(self) -> Dict[int, bool]:
         return {acc_id: conn.is_connected for acc_id, conn in self._connections.items()}
+    
+    def get_all_health_status(self) -> Dict[str, Any]:
+        """Get health status for all connections"""
+        connections_health = []
+        connected_count = 0
+        total_messages = 0
+        total_reconnects = 0
+        
+        for conn in self._connections.values():
+            health = conn.get_health_status()
+            connections_health.append(health)
+            if health["connected"]:
+                connected_count += 1
+            total_messages += health["total_messages"]
+            total_reconnects += health["reconnect_count"]
+        
+        return {
+            "total_connections": len(self._connections),
+            "connected_count": connected_count,
+            "disconnected_count": len(self._connections) - connected_count,
+            "total_messages_received": total_messages,
+            "total_reconnect_attempts": total_reconnects,
+            "connections": connections_health
+        }
+    
+    async def force_reconnect(self, account_id: int) -> bool:
+        """Force reconnect a specific account connection"""
+        conn = self._connections.get(account_id)
+        if not conn:
+            logger.warning(f"No connection found for account {account_id}")
+            return False
+        
+        logger.info(f"Force reconnecting account {account_id}...")
+        await conn.stop()
+        conn.running = True
+        conn._task = asyncio.create_task(conn.connect())
+        return True
+    
+    async def force_reconnect_all(self) -> int:
+        """Force reconnect all connections"""
+        logger.info("Force reconnecting all WebSocket connections...")
+        count = 0
+        for acc_id in list(self._connections.keys()):
+            if await self.force_reconnect(acc_id):
+                count += 1
+        return count
 
 ws_client = LighterWebSocketClient()
