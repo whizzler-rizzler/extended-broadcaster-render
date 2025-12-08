@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import { AccountCard } from './components/AccountCard';
 import type { PortfolioData, WsHealthData, Position } from './types';
-import { fetchPortfolio, fetchWsHealth, fetchLatency, LatencyData, reconnectWs } from './api';
+import { fetchPortfolio, fetchWsHealth, fetchLatency, reconnectWs } from './api';
+import type { LatencyData } from './api';
 import { formatMoney, getPositionSymbol } from './utils';
 import './App.css';
 
