@@ -58,3 +58,8 @@ externalPort = 8000
 
 [userenv.shared]
 POLL_INTERVAL = "0.25"
+
+[deployment]
+build = ["sh", "-c", "pip install -r MergedApp/backend/requirements.txt"]
+run = ["sh", "-c", "cd MergedApp/backend && uvicorn main:app --host 0.0.0.0 --port 80"]
+deploymentTarget = "gce"
