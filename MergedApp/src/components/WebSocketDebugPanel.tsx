@@ -22,8 +22,8 @@ export const WebSocketDebugPanel = () => {
   const connect = useCallback(() => {
     if (wsRef.current?.readyState === WebSocket.OPEN) return;
 
-    const PYTHON_PROXY_URL = import.meta.env.VITE_PYTHON_PROXY_URL || 'https://ws-trader-pulse.onrender.com';
-    const wsUrl = PYTHON_PROXY_URL.replace(/^https/, 'wss').replace(/^http/, 'ws') + '/ws/broadcast';
+    const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const wsUrl = `${wsProtocol}//${window.location.host}/ws/broadcast`;
     
     console.log('🔍 Debug panel connecting to:', wsUrl);
     

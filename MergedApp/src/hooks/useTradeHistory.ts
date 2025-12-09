@@ -21,7 +21,7 @@ interface TradeHistoryData {
   lastUpdate: Date;
 }
 
-const API_URL = 'https://ws-trader-pulse.onrender.com/api/cached-accounts';
+const API_URL = '/api/cached-accounts';
 const POLL_INTERVAL = 5000; // 5 seconds
 
 export const useTradeHistory = () => {

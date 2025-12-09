@@ -90,7 +90,7 @@ export const RestAPIDebugPanel = ({ accounts }: RestAPIDebugPanelProps) => {
       : 0;
 
     return {
-      endpoint: `https://ws-trader-pulse.onrender.com/api/account/${account.id.slice(0, 8)}`,
+      endpoint: `/api/account/${account.id.slice(0, 8)}`,
       pollingRates: {
         positions: '4x/sec (250ms)',
         balance: '4x/sec (250ms)',

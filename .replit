@@ -17,23 +17,43 @@ author = "agent"
 
 [[workflows.workflow.tasks]]
 task = "workflow.run"
-args = "Extended Frontend"
+args = "MergedApp Backend"
+
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "MergedApp Frontend"
 
 [[workflows.workflow]]
-name = "Extended Frontend"
+name = "MergedApp Backend"
 author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "cd MergedApp/backend && uvicorn main:app --host 0.0.0.0 --port 8000"
+waitForPort = 8000
+
+[workflows.workflow.metadata]
+outputType = "console"
+
+[[workflows.workflow]]
+name = "MergedApp Frontend"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "cd MergedApp && npm run dev"
+waitForPort = 5000
 
 [workflows.workflow.metadata]
 outputType = "webview"
 
-[[workflows.workflow.tasks]]
-task = "shell.exec"
-args = "cd Frontend_broadcaster && npm run dev"
-waitForPort = 5000
-
 [[ports]]
 localPort = 5000
 externalPort = 80
+
+[[ports]]
+localPort = 44401
+externalPort = 3000
 
 [userenv]
 

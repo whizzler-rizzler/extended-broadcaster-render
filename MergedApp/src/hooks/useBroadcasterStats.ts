@@ -36,7 +36,7 @@ interface BroadcasterStatsData {
   lastPollDuration: number;
 }
 
-const API_URL = 'https://ws-trader-pulse.onrender.com/api/broadcaster/stats';
+const API_URL = '/api/broadcaster/stats';
 const POLL_INTERVAL = 2000;
 
 export const useBroadcasterStats = () => {

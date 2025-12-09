@@ -51,7 +51,7 @@ export const useAccountRestAPI = () => {
 
   const fetchAccountData = async () => {
     try {
-      const response = await fetch('https://ws-trader-pulse.onrender.com/api/cached-account');
+      const response = await fetch('/api/cached-account');
       
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
