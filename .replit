@@ -60,7 +60,7 @@ externalPort = 8000
 [userenv.shared]
 POLL_INTERVAL = "0.25"
 BROADCASTER_MODE = "FRONTEND_ONLY"
-REMOTE_API_BASE = "https://bradcaster-extended--kut.replit.app"
+REMOTE_API_BASE = "https://bradcaster-extended--kubagro12345.replit.app"
 
 [deployment]
 build = ["sh", "-c", "pip install -r MergedApp/backend/requirements.txt"]

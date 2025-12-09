@@ -1,0 +1,118 @@
+[Startup] Initializing multi-account broadcaster for 10 accounts...
+
+2025-12-09 22:46:18.45
+138cae57
+User
+📋 [Extended 3 (74eF87)] Orders changed - broadcasting
+2025-12-09 22:46:18.45
+138cae57
+User
+⚠️ [Extended 6 (05A739)][/user/positions-history] HTTP 404 (proxy: http://ilbefxoi:mhaamz128...)
+2025-12-09 22:46:18.45
+138cae57
+User
+✅ Account 1 proxy: 92.112.64.106:5580 (user: ilbefxoi)
+2025-12-09 22:46:18.45
+138cae57
+User
+📊 [Extended 3 (74eF87)] Changes: positions - broadcasting
+2025-12-09 22:46:18.45
+138cae57
+User
+📊 [Extended 5 (fe69Ac)] Changes: positions, balance - broadcasting
+2025-12-09 22:46:18.45
+138cae57
+User
+📊 [Extended 7 (1eE2a4)] Changes: positions, balance - broadcasting
+2025-12-09 22:46:18.45
+138cae57
+User
+✅ [Startup] Supabase persistence enabled
+2025-12-09 22:46:18.45
+138cae57
+User
+⚠️ [Extended 10 (0f08fC)][/user/balance] HTTP 404 (proxy: http://ilbefxoi:mhaamz128...)
+2025-12-09 22:46:18.45
+138cae57
+User
+✅ Loaded Account 3: Extended_3_74eF87 (via proxy)
+2025-12-09 22:46:18.45
+138cae57
+User
+⚠️ [Extended 7 (1eE2a4)][/user/positions-history] HTTP 404 (proxy: http://ilbefxoi:mhaamz128...)
+2025-12-09 22:46:18.45
+138cae57
+User
+⚠️ [Extended 5 (fe69Ac)][/user/positions-history] HTTP 404 (proxy: http://ilbefxoi:mhaamz128...)
+2025-12-09 22:46:18.45
+138cae57
+User
+📊 [Extended 8 (7B8f14)] Changes: positions, balance - broadcasting
+2025-12-09 22:46:18.45
+138cae57
+User
+✅ Account 10 proxy: 23.26.44.242:8208 (user: ilbefxoi)
+2025-12-09 22:46:18.45
+138cae57
+User
+✅ Loaded Account 8: Extended_8_7B8f14 (via proxy)
+2025-12-09 22:46:18.45
+138cae57
+User
+⚠️ [Extended 2 (61658C)][/user/positions-history] HTTP 404 (proxy: http://ilbefxoi:mhaamz128...)
+2025-12-09 22:46:18.45
+138cae57
+User
+🔒 Accounts with proxy: 10/10
+2025-12-09 22:46:18.45
+138cae57
+User
+📋 [Extended 1 (aE42d3)] Orders changed - broadcasting
+2025-12-09 22:46:18.45
+138cae57
+User
+⚡ Polling rates: positions/balance/orders 4x/s, trades 1x/s
+2025-12-09 22:46:18.45
+138cae57
+User
+✅ Loaded Account 6: Extended_6_05A739 (via proxy)
+2025-12-09 22:46:18.45
+138cae57
+User
+✅ Loaded Account 7: Extended_7_1eE2a4 (via proxy)
+2025-12-09 22:46:36.11
+138cae57
+System
+a port configuration was specified but the required port was never opened
+2025-12-09 22:47:06.43
+138cae57
+System
+starting up user application
+2025-12-09 22:47:06.43
+138cae57
+System
+metasidecar: loaded enterprise status from environment is_enterprise=false
+2025-12-09 22:47:06.43
+138cae57
+System
+forwarding local port 5000 to external port 80 (mapped as 1104)
+2025-12-09 22:47:09.80
+138cae57
+User
+INFO: Started server process [18]
+2025-12-09 22:47:09.80
+138cae57
+User
+INFO: Waiting for application startup.
+2025-12-09 22:47:10.24
+138cae57
+User
+INFO: Application startup complete.
+2025-12-09 22:47:10.26
+138cae57
+User
+INFO: Uvicorn running on http://0.0.0.0:80 (Press CTRL+C to quit)
+2025-12-09 22:48:40.11
+138cae57
+System
+starting up user application
