@@ -36,5 +36,10 @@ localPort = 5000
 externalPort = 80
 
 [[ports]]
-localPort = 46549
+localPort = 34573
 externalPort = 3000
+
+[userenv]
+
+[userenv.shared]
+POLL_INTERVAL = "0.25"
