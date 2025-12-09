@@ -17,22 +17,11 @@ author = "agent"
 
 [[workflows.workflow.tasks]]
 task = "workflow.run"
-args = "MergedApp Backend"
+args = "MergedApp Frontend"
 
 [[workflows.workflow.tasks]]
 task = "workflow.run"
-args = "MergedApp Frontend"
-
-[[workflows.workflow]]
-name = "MergedApp Backend"
-author = "agent"
-
-[workflows.workflow.metadata]
-outputType = "console"
-
-[[workflows.workflow.tasks]]
-task = "shell.exec"
-args = "cd MergedApp/backend && uvicorn main:app --host 0.0.0.0 --port 8000"
+args = "MergedApp Backend"
 
 [[workflows.workflow]]
 name = "MergedApp Frontend"
@@ -46,6 +35,18 @@ waitForPort = 5000
 [workflows.workflow.metadata]
 outputType = "webview"
 
+[[workflows.workflow]]
+name = "MergedApp Backend"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "cd MergedApp/backend && uvicorn main:app --host 0.0.0.0 --port 8000"
+waitForPort = 8000
+
+[workflows.workflow.metadata]
+outputType = "console"
+
 [[ports]]
 localPort = 5000
 externalPort = 80
@@ -58,6 +59,8 @@ externalPort = 8000
 
 [userenv.shared]
 POLL_INTERVAL = "0.25"
+BROADCASTER_MODE = "FRONTEND_ONLY"
+REMOTE_API_BASE = "https://bradcaster-extended--kut.replit.app"
 
 [deployment]
 build = ["sh", "-c", "pip install -r MergedApp/backend/requirements.txt"]

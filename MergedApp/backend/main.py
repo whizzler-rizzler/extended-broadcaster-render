@@ -12,6 +12,17 @@ from supabase_client import supabase_client
 
 app = FastAPI(title="Extended API Multi-Account Broadcaster")
 
+# ============= BROADCASTER MODE CONFIGURATION =============
+BROADCASTER_MODE = os.getenv("BROADCASTER_MODE", "COLLECTOR")
+REMOTE_API_BASE = os.getenv("REMOTE_API_BASE", "").rstrip("/")
+IS_FRONTEND_ONLY = BROADCASTER_MODE == "FRONTEND_ONLY"
+
+if IS_FRONTEND_ONLY:
+    print(f"🌐 Running in FRONTEND_ONLY mode")
+    print(f"📡 Proxying API requests to: {REMOTE_API_BASE}")
+else:
+    print(f"🔄 Running in COLLECTOR mode - polling Extended API directly")
+
 # CORS configuration
 app.add_middleware(
     CORSMiddleware,
@@ -122,12 +133,15 @@ def load_accounts() -> List[AccountConfig]:
     
     return accounts
 
-ACCOUNTS = load_accounts()
-
-if not ACCOUNTS:
-    raise ValueError("No account API keys configured! Set ACCOUNT_1_API_KEY or EXTENDED_API_KEY")
-
-print(f"🎯 Total accounts configured: {len(ACCOUNTS)}")
+# Load accounts only in COLLECTOR mode
+if not IS_FRONTEND_ONLY:
+    ACCOUNTS = load_accounts()
+    if not ACCOUNTS:
+        raise ValueError("No account API keys configured! Set ACCOUNT_1_API_KEY or EXTENDED_API_KEY")
+    print(f"🎯 Total accounts configured: {len(ACCOUNTS)}")
+else:
+    ACCOUNTS = []
+    print("🌐 FRONTEND_ONLY mode - no local accounts loaded")
 
 # ============= BROADCASTER GLOBAL STATE =============
 # Cache for each account - keyed by account ID
@@ -140,6 +154,24 @@ BROADCAST_CLIENTS: Set[WebSocket] = set()
 
 # Poller state tracking
 TRADES_POLL_COUNTER = 0
+
+
+# ============= PROXY FUNCTION FOR FRONTEND_ONLY MODE =============
+async def proxy_to_remote(endpoint: str) -> Dict[str, Any]:
+    """Proxy request to remote backend in FRONTEND_ONLY mode."""
+    if not REMOTE_API_BASE:
+        raise HTTPException(status_code=503, detail="REMOTE_API_BASE not configured")
+    
+    try:
+        async with aiohttp.ClientSession() as session:
+            url = f"{REMOTE_API_BASE}{endpoint}"
+            async with session.get(url, timeout=aiohttp.ClientTimeout(total=30.0)) as resp:
+                if resp.status == 200:
+                    return await resp.json()
+                else:
+                    raise HTTPException(status_code=resp.status, detail=f"Remote API error: {resp.status}")
+    except aiohttp.ClientError as e:
+        raise HTTPException(status_code=503, detail=f"Remote API connection error: {str(e)}")
 
 
 # ============= UTILITY FUNCTIONS =============
@@ -370,6 +402,11 @@ async def background_poller():
 # ============= STARTUP EVENT =============
 @app.on_event("startup")
 async def startup_broadcaster():
+    if IS_FRONTEND_ONLY:
+        print(f"🌐 [Startup] FRONTEND_ONLY mode - proxying to {REMOTE_API_BASE}")
+        print("✅ [Startup] Frontend-only broadcaster initialized (no polling)")
+        return
+    
     print(f"⚡ [Startup] Initializing multi-account broadcaster for {len(ACCOUNTS)} accounts...")
     
     # Initialize Supabase persistence
@@ -385,9 +422,18 @@ async def startup_broadcaster():
 # ============= REST API ENDPOINTS =============
 @app.get("/health")
 async def health_check():
+    if IS_FRONTEND_ONLY:
+        return {
+            "status": "ok",
+            "service": "extended-multi-account-broadcaster",
+            "mode": "FRONTEND_ONLY",
+            "remote_api": REMOTE_API_BASE
+        }
+    
     return {
         "status": "ok",
         "service": "extended-multi-account-broadcaster",
+        "mode": "COLLECTOR",
         "accounts_configured": len(ACCOUNTS),
         "broadcaster": {
             "connected_clients": len(BROADCAST_CLIENTS),
@@ -415,6 +461,9 @@ async def get_cached_accounts():
     ✅ Frontend can call 100x/s if needed
     ✅ Zero Extended API calls
     """
+    if IS_FRONTEND_ONLY:
+        return await proxy_to_remote("/api/cached-accounts")
+    
     current_time = time.time()
     
     accounts_data = {}
@@ -448,6 +497,9 @@ async def get_cached_account():
     """
     Return cached data for the first/primary account (backward compatibility).
     """
+    if IS_FRONTEND_ONLY:
+        return await proxy_to_remote("/api/cached-account")
+    
     if not ACCOUNTS:
         raise HTTPException(status_code=404, detail="No accounts configured")
     
@@ -474,6 +526,9 @@ async def get_cached_account():
 @app.get("/api/cached-account/{account_id}")
 async def get_cached_account_by_id(account_id: str):
     """Return cached data for a specific account by ID."""
+    if IS_FRONTEND_ONLY:
+        return await proxy_to_remote(f"/api/cached-account/{account_id}")
+    
     if account_id not in BROADCASTER_CACHES:
         raise HTTPException(status_code=404, detail=f"Account {account_id} not found")
     
@@ -503,6 +558,9 @@ async def get_cached_account_by_id(account_id: str):
 @app.get("/api/broadcaster/stats")
 async def broadcaster_stats():
     """Get broadcaster statistics and monitoring info."""
+    if IS_FRONTEND_ONLY:
+        return await proxy_to_remote("/api/broadcaster/stats")
+    
     current_time = time.time()
     
     accounts_stats = []
@@ -585,6 +643,9 @@ async def websocket_broadcast(websocket: WebSocket):
 @app.get("/api/account/{account_id}/history")
 async def get_account_history(account_id: int, limit: int = 100):
     """Get historical snapshots from Supabase."""
+    if IS_FRONTEND_ONLY:
+        return await proxy_to_remote(f"/api/account/{account_id}/history?limit={limit}")
+    
     if not supabase_client.is_initialized:
         raise HTTPException(status_code=503, detail="Supabase persistence not enabled")
     
@@ -595,6 +656,12 @@ async def get_account_history(account_id: int, limit: int = 100):
 @app.get("/api/trades/recent")
 async def get_recent_trades(account_id: Optional[int] = None, limit: int = 100):
     """Get recent trades from Supabase."""
+    if IS_FRONTEND_ONLY:
+        query = f"/api/trades/recent?limit={limit}"
+        if account_id is not None:
+            query += f"&account_id={account_id}"
+        return await proxy_to_remote(query)
+    
     if not supabase_client.is_initialized:
         raise HTTPException(status_code=503, detail="Supabase persistence not enabled")
     
@@ -616,6 +683,12 @@ async def get_stats_periods(account_id: Optional[int] = None):
     Get trading statistics for 24h, 7d, and 30d periods.
     Each period includes: total_pnl, total_volume, trades_count, wins, losses, win_rate
     """
+    if IS_FRONTEND_ONLY:
+        query = "/api/stats/periods"
+        if account_id is not None:
+            query += f"?account_id={account_id}"
+        return await proxy_to_remote(query)
+    
     if not supabase_client.is_initialized:
         raise HTTPException(status_code=503, detail="Supabase persistence not enabled")
     
@@ -633,6 +706,9 @@ async def get_stats_summary():
     Get summary statistics for all accounts.
     Includes: current equity (from cache), PnL for 24h/7d/30d, total volume.
     """
+    if IS_FRONTEND_ONLY:
+        return await proxy_to_remote("/api/stats/summary")
+    
     if not supabase_client.is_initialized:
         raise HTTPException(status_code=503, detail="Supabase persistence not enabled")
     
@@ -683,6 +759,12 @@ async def get_trades_list(account_id: Optional[int] = None, limit: int = 100):
     Get list of trades with PnL and volume.
     Returns: market, side, position_size, entry_price, exit_price, realized_pnl, volume, timestamp
     """
+    if IS_FRONTEND_ONLY:
+        query = f"/api/trades?limit={limit}"
+        if account_id is not None:
+            query += f"&account_id={account_id}"
+        return await proxy_to_remote(query)
+    
     if not supabase_client.is_initialized:
         raise HTTPException(status_code=503, detail="Supabase persistence not enabled")
     
