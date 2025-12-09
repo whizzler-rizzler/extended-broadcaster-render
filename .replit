@@ -55,12 +55,16 @@ externalPort = 80
 localPort = 8000
 externalPort = 8000
 
+[[ports]]
+localPort = 33445
+externalPort = 3000
+
 [userenv]
 
 [userenv.shared]
 POLL_INTERVAL = "0.25"
 BROADCASTER_MODE = "FRONTEND_ONLY"
-REMOTE_API_BASE = "https://bradcaster-extended--kubagro12345.replit.app"
+REMOTE_API_BASE = "https://ws-trader-pulse.onrender.com"
 
 [deployment]
 build = ["sh", "-c", "pip install -r MergedApp/backend/requirements.txt"]
