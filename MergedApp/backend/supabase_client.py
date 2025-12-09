@@ -13,6 +13,7 @@ class SupabaseClient:
         self._initialized = False
         self._url: Optional[str] = None
         self._key: Optional[str] = None
+        self._saved_trade_ids: set = set()
     
     def initialize(self) -> bool:
         self._url = os.getenv("Supabase_Url")
@@ -162,15 +163,24 @@ class SupabaseClient:
             return False
         
         try:
-            # Handle both 'size' and 'qty' field names (Extended API uses 'qty')
-            size = trade.get("size") or trade.get("qty")
-            value = trade.get("value")
+            # Get trade_id and check for duplicates
+            trade_id = str(trade.get("id") or trade.get("trade_id") or "")
+            if not trade_id:
+                logger.warning(f"Trade without ID, skipping: {trade}")
+                return False
             
-            # Use original trade timestamp if available (createdAt, timestamp, time)
-            # Fall back to current time only if no original timestamp
-            original_time = trade.get("createdAt") or trade.get("timestamp") or trade.get("time")
+            # Skip if already saved (prevent duplicates)
+            cache_key = f"{account_index}_{trade_id}"
+            if cache_key in self._saved_trade_ids:
+                logger.debug(f"Trade {trade_id} already saved, skipping duplicate")
+                return False
+            
+            # Handle position size (qty, size, position)
+            position_size = trade.get("qty") or trade.get("size") or trade.get("position")
+            
+            # Use original trade timestamp (closedAt, createdAt, timestamp, time)
+            original_time = trade.get("closedAt") or trade.get("createdAt") or trade.get("timestamp") or trade.get("time")
             if original_time:
-                # Handle Unix timestamp (seconds or milliseconds)
                 if isinstance(original_time, (int, float)):
                     if original_time > 1e12:  # milliseconds
                         original_time = original_time / 1000
@@ -184,18 +194,23 @@ class SupabaseClient:
                 "account_index": account_index,
                 "exchange": exchange,
                 "timestamp": timestamp,
-                "trade_id": trade.get("id") or trade.get("trade_id"),
+                "trade_id": trade_id,
                 "market": trade.get("market_name") or trade.get("market"),
                 "side": trade.get("side"),
-                "price": trade.get("price"),
-                "size": size,
-                "value": value,
-                "fee": trade.get("fee"),
+                "exit_type": trade.get("exitType") or trade.get("exit_type") or "Trade",
+                "position_size": position_size,
+                "entry_price": trade.get("entryPrice") or trade.get("entry_price"),
+                "exit_price": trade.get("exitPrice") or trade.get("exit_price") or trade.get("price"),
+                "realized_pnl": trade.get("realizedPnl") or trade.get("realized_pnl") or trade.get("pnl"),
+                "trade_pnl": trade.get("tradePnl") or trade.get("trade_pnl"),
+                "funding_fees": trade.get("fundingFees") or trade.get("funding_fees"),
+                "trading_fees": trade.get("tradingFees") or trade.get("trading_fees") or trade.get("fee"),
                 "raw_data": trade
             }
             
             await asyncio.to_thread(self._insert_sync, "trades", record)
-            logger.debug(f"Saved trade for account {account_index} ({exchange}): size={size}, value={value}")
+            self._saved_trade_ids.add(cache_key)
+            logger.info(f"Saved trade {trade_id} for account {account_index}: {trade.get('side')} {position_size} @ {record['exit_price']}")
             return True
         except Exception as e:
             logger.error(f"Failed to save trade: {e}")
