@@ -373,7 +373,7 @@ async def get_portfolio():
                 acc_list = raw_data.get("accounts", [])
                 if acc_list and len(acc_list) > 0:
                     acc = acc_list[0]
-                    equity = float(acc.get("collateral", 0) or 0)
+                    equity = float(acc.get("total_asset_value", 0) or acc.get("collateral", 0) or 0)
                     available_balance = float(acc.get("available_balance", 0) or 0)
                     margin_used = equity - available_balance
                     
