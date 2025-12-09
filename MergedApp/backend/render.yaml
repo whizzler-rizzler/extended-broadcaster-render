@@ -1,0 +1,56 @@
+services:
+  - type: web
+    name: extended-broadcaster
+    runtime: python
+    region: frankfurt
+    plan: starter
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn main:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: PYTHON_VERSION
+        value: "3.11"
+      - key: Supabase_Url
+        sync: false
+      - key: Supabase_service_role
+        sync: false
+      - key: Extended_1_aE42d3_API_KEY
+        sync: false
+      - key: Extended_1_PROXY_1_URL
+        sync: false
+      - key: Extended_2_61658C_API_KEY
+        sync: false
+      - key: Extended_2_PROXY_2_URL
+        sync: false
+      - key: Extended_3_74eF87_API_KEY
+        sync: false
+      - key: Extended_3_PROXY_3_URL
+        sync: false
+      - key: Extended_4_1112E1_API_KEY
+        sync: false
+      - key: Extended_4_PROXY_4_URL
+        sync: false
+      - key: Extended_5_fe69Ac_API_KEY
+        sync: false
+      - key: Extended_5_PROXY_5_URL
+        sync: false
+      - key: Extended_6_05A739_API_KEY
+        sync: false
+      - key: Extended_6_PROXY_6_URL
+        sync: false
+      - key: Extended_7_1eE2a4_API_KEY
+        sync: false
+      - key: Extended_7_PROXY_7_URL
+        sync: false
+      - key: Extended_8_7B8f14_API_KEY
+        sync: false
+      - key: Extended_8_PROXY_8_URL
+        sync: false
+      - key: Extended_9_1A04d3_API_KEY
+        sync: false
+      - key: Extended_9_PROXY_9_URL
+        sync: false
+      - key: Extended_10_0f08fC_API_KEY
+        sync: false
+      - key: Extended_10_PROXY_10_URL
+        sync: false
+    healthCheckPath: /health
