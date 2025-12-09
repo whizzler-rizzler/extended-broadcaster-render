@@ -158,44 +158,43 @@ class SupabaseClient:
             logger.error(f"Failed to save orders: {e}")
             return False
     
-    async def save_trade(self, account_index: int, trade: Dict, exchange: str = "lighter") -> bool:
+    async def save_trade(self, account_index: int, trade: Dict, exchange: str = "extended") -> bool:
+        """Save closed position from /user/positions-history endpoint."""
         if not self.is_initialized:
             return False
         
         try:
-            # Get trade_id and check for duplicates
-            trade_id = str(trade.get("id") or trade.get("trade_id") or "")
+            trade_id = str(trade.get("id") or "")
             if not trade_id:
                 logger.warning(f"Trade without ID, skipping: {trade}")
                 return False
             
-            # Skip if already saved (prevent duplicates)
             cache_key = f"{account_index}_{trade_id}"
             if cache_key in self._saved_trade_ids:
                 logger.debug(f"Trade {trade_id} already saved, skipping duplicate")
                 return False
             
-            # Handle position size (qty, size, position)
-            position_size = trade.get("qty") or trade.get("size") or trade.get("position")
+            position_size = trade.get("size") or trade.get("qty")
             
-            # Use original trade timestamp (closedAt, createdAt, timestamp, time)
-            original_time = trade.get("closedAt") or trade.get("createdAt") or trade.get("timestamp") or trade.get("time")
-            if original_time:
-                if isinstance(original_time, (int, float)):
-                    if original_time > 1e12:  # milliseconds
-                        original_time = original_time / 1000
-                    timestamp = datetime.fromtimestamp(original_time, tz=timezone.utc).isoformat()
+            closed_time = trade.get("closedTime") or trade.get("closedAt") or trade.get("createdTime")
+            if closed_time:
+                if isinstance(closed_time, (int, float)):
+                    if closed_time > 1e12:
+                        closed_time = closed_time / 1000
+                    timestamp = datetime.fromtimestamp(closed_time, tz=timezone.utc).isoformat()
                 else:
-                    timestamp = str(original_time)
+                    timestamp = str(closed_time)
             else:
                 timestamp = datetime.now(timezone.utc).isoformat()
             
-            exit_price = trade.get("exitPrice") or trade.get("exit_price") or trade.get("price")
+            entry_price = trade.get("openPrice") or trade.get("entryPrice")
+            exit_price = trade.get("exitPrice")
+            realized_pnl = trade.get("realisedPnl") or trade.get("realizedPnl")
             
             volume = None
             if position_size is not None and exit_price is not None:
                 try:
-                    volume = float(position_size) * float(exit_price)
+                    volume = abs(float(position_size)) * float(exit_price)
                 except (ValueError, TypeError):
                     volume = None
             
@@ -204,23 +203,22 @@ class SupabaseClient:
                 "exchange": exchange,
                 "timestamp": timestamp,
                 "trade_id": trade_id,
-                "market": trade.get("market_name") or trade.get("market"),
+                "market": trade.get("market"),
                 "side": trade.get("side"),
-                "exit_type": trade.get("exitType") or trade.get("exit_type") or "Trade",
+                "exit_type": trade.get("exitType") or "TRADE",
                 "position_size": position_size,
-                "entry_price": trade.get("entryPrice") or trade.get("entry_price"),
+                "entry_price": entry_price,
                 "exit_price": exit_price,
-                "realized_pnl": trade.get("realizedPnl") or trade.get("realized_pnl") or trade.get("pnl"),
-                "trade_pnl": trade.get("tradePnl") or trade.get("trade_pnl"),
-                "funding_fees": trade.get("fundingFees") or trade.get("funding_fees"),
-                "trading_fees": trade.get("tradingFees") or trade.get("trading_fees") or trade.get("fee"),
+                "realized_pnl": realized_pnl,
+                "leverage": trade.get("leverage"),
                 "volume": volume,
                 "raw_data": trade
             }
             
             await asyncio.to_thread(self._insert_sync, "trades", record)
             self._saved_trade_ids.add(cache_key)
-            logger.info(f"Saved trade {trade_id} for account {account_index}: {trade.get('side')} {position_size} @ {record['exit_price']}")
+            pnl_str = f"PnL: {realized_pnl}" if realized_pnl else ""
+            logger.info(f"Saved trade {trade_id} for account {account_index}: {trade.get('side')} {position_size} {trade.get('market')} {pnl_str}")
             return True
         except Exception as e:
             logger.error(f"Failed to save trade: {e}")
