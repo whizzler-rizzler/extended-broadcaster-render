@@ -130,6 +130,10 @@ class SupabaseClient:
             records = []
             
             for order in orders:
+                # Handle both 'size' and 'qty' field names
+                size = order.get("size") or order.get("qty")
+                filled = order.get("filled") or order.get("filledQty")
+                
                 records.append({
                     "account_index": account_index,
                     "exchange": exchange,
@@ -139,8 +143,8 @@ class SupabaseClient:
                     "side": order.get("side"),
                     "order_type": order.get("type") or order.get("order_type"),
                     "price": order.get("price"),
-                    "size": order.get("size"),
-                    "filled": order.get("filled"),
+                    "size": size,
+                    "filled": filled,
                     "status": order.get("status"),
                     "raw_data": order
                 })
@@ -158,6 +162,10 @@ class SupabaseClient:
             return False
         
         try:
+            # Handle both 'size' and 'qty' field names (Extended API uses 'qty')
+            size = trade.get("size") or trade.get("qty")
+            value = trade.get("value")
+            
             record = {
                 "account_index": account_index,
                 "exchange": exchange,
@@ -166,13 +174,14 @@ class SupabaseClient:
                 "market": trade.get("market_name") or trade.get("market"),
                 "side": trade.get("side"),
                 "price": trade.get("price"),
-                "size": trade.get("size"),
+                "size": size,
+                "value": value,
                 "fee": trade.get("fee"),
                 "raw_data": trade
             }
             
             await asyncio.to_thread(self._insert_sync, "trades", record)
-            logger.debug(f"Saved trade for account {account_index} ({exchange})")
+            logger.debug(f"Saved trade for account {account_index} ({exchange}): size={size}, value={value}")
             return True
         except Exception as e:
             logger.error(f"Failed to save trade: {e}")
