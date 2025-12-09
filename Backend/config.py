@@ -71,12 +71,29 @@ def load_accounts_from_env() -> List[AccountConfig]:
                 prefix = key.replace("_Account_Index", "")
                 account_prefixes.add(prefix)
                 exchange_map[prefix] = exchange_name.lower()
+            elif key.startswith(f"{exchange_name}_") and "_VAULT_NUMBER" in key:
+                prefix = key.rsplit("_VAULT_NUMBER", 1)[0]
+                account_prefixes.add(prefix)
+                exchange_map[prefix] = exchange_name.lower()
     
     for prefix in sorted(account_prefixes):
         account_index = env_vars.get(f"{prefix}_Account_Index")
+        if not account_index:
+            account_index = env_vars.get(f"{prefix}_VAULT_NUMBER")
+        
         api_key_index = env_vars.get(f"{prefix}_API_KEY_Index")
+        if not api_key_index:
+            api_key_index = env_vars.get(f"{prefix}_CLIENT_ID")
+        
         private_key = env_vars.get(f"{prefix}_PRIVATE")
+        if not private_key:
+            private_key = env_vars.get(f"{prefix}_STARKNET_PRIVATE")
+        
         public_key = env_vars.get(f"{prefix}_PUBLIC")
+        if not public_key:
+            public_key = env_vars.get(f"{prefix}_STARKNET_PUBLIC")
+        
+        api_key = env_vars.get(f"{prefix}_API_KEY")
         
         exchange = exchange_map.get(prefix, "lighter")
         
@@ -105,10 +122,12 @@ def load_accounts_from_env() -> List[AccountConfig]:
                     proxy_url=convert_proxy_format(proxy_url) if proxy_url else None,
                     exchange=exchange
                 ))
+                print(f"Loaded account: {prefix} (index: {acc_idx}, exchange: {exchange})")
             except ValueError as e:
                 print(f"Warning: Skipping account {prefix} - invalid account_index or api_key_index: {e}")
                 continue
     
+    print(f"Total accounts loaded: {len(accounts)}")
     return accounts
 
 def get_settings() -> Settings:
