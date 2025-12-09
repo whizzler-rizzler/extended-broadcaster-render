@@ -11,17 +11,19 @@ class SupabaseClient:
     def __init__(self):
         self._client: Optional[Client] = None
         self._initialized = False
+        self._url: Optional[str] = None
+        self._key: Optional[str] = None
     
     def initialize(self) -> bool:
-        url = os.getenv("Supabase_Url")
-        key = os.getenv("Supabase_service_role")
+        self._url = os.getenv("Supabase_Url")
+        self._key = os.getenv("Supabase_service_role")
         
-        if not url or not key:
+        if not self._url or not self._key:
             logger.warning("Supabase credentials not found, persistence disabled")
             return False
         
         try:
-            self._client = create_client(url, key)
+            self._client = create_client(self._url, self._key)
             self._initialized = True
             logger.info("Supabase client initialized successfully")
             return True
@@ -29,12 +31,30 @@ class SupabaseClient:
             logger.error(f"Failed to initialize Supabase: {e}")
             return False
     
+    def _reconnect(self) -> bool:
+        """Reconnect to Supabase if connection was lost."""
+        if self._url and self._key:
+            try:
+                self._client = create_client(self._url, self._key)
+                logger.info("Supabase client reconnected")
+                return True
+            except Exception as e:
+                logger.error(f"Failed to reconnect to Supabase: {e}")
+                return False
+        return False
+    
     @property
     def is_initialized(self) -> bool:
         return self._initialized and self._client is not None
     
-    def _insert_sync(self, table: str, data: Any):
-        return self._client.table(table).insert(data).execute()
+    def _insert_sync(self, table: str, data: Any, retry: bool = True):
+        try:
+            return self._client.table(table).insert(data).execute()
+        except Exception as e:
+            if retry and "disconnected" in str(e).lower():
+                if self._reconnect():
+                    return self._insert_sync(table, data, retry=False)
+            raise
     
     def _select_sync(self, table: str, account_index: int, limit: int, exchange: Optional[str] = None):
         query = self._client.table(table).select("*").eq("account_index", account_index)
