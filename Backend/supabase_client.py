@@ -179,6 +179,20 @@ class SupabaseClient:
         except Exception as e:
             logger.error(f"Failed to get recent trades: {e}")
             return []
+    
+    def _select_all_trades_sync(self, limit: int):
+        return self._client.table("trades").select("*").order("timestamp", desc=True).limit(limit).execute()
+    
+    async def get_all_recent_trades(self, limit: int = 100) -> List[Dict]:
+        if not self.is_initialized:
+            return []
+        
+        try:
+            result = await asyncio.to_thread(self._select_all_trades_sync, limit)
+            return result.data if result.data else []
+        except Exception as e:
+            logger.error(f"Failed to get all recent trades: {e}")
+            return []
 
 
 supabase_client = SupabaseClient()
