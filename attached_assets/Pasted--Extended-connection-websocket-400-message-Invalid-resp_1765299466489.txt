@@ -1,0 +1,103 @@
+
+Extended
+connection
+websocket
+400, message='Invalid response status', url='wss://mainnet.zklighter.elliot.ai/stream'
+16:57:21
+Extended
+connection
+websocket
+400, message='Invalid response status', url='wss://mainnet.zklighter.elliot.ai/stream'
+16:57:21
+Extended
+connection
+websocket
+400, message='Invalid response status', url='wss://mainnet.zklighter.elliot.ai/stream'
+16:57:21
+Extended
+connection
+websocket
+400, message='Invalid response status', url='wss://mainnet.zklighter.elliot.ai/stream'
+16:57:21
+Extended
+connection
+websocket
+400, message='Invalid response status', url='wss://mainnet.zklighter.elliot.ai/stream'
+16:57:21
+Extended
+connection
+websocket
+400, message='Invalid response status', url='wss://mainnet.zklighter.elliot.ai/stream'
+16:57:21
+Extended
+connection
+websocket
+400, message='Invalid response status', url='wss://mainnet.zklighter.elliot.ai/stream'
+16:57:21
+Extended
+connection
+websocket
+400, message='Invalid response status', url='wss://mainnet.zklighter.elliot.ai/stream'
+16:57:21
+Extended
+connection
+websocket
+400, message='Invalid response status', url='wss://mainnet.zklighter.elliot.ai/stream'
+16:57:21
+Extended
+connection
+websocket
+400, message='Invalid response status', url='wss://mainnet.zklighter.elliot.ai/stream'
+16:56:20
+Extended
+connection
+websocket
+400, message='Invalid response status', url='wss://mainnet.zklighter.elliot.ai/stream'
+16:56:20
+Extended
+connection
+websocket
+400, message='Invalid response status', url='wss://mainnet.zklighter.elliot.ai/stream'
+16:56:20
+Extended
+connection
+websocket
+400, message='Invalid response status', url='wss://mainnet.zklighter.elliot.ai/stream'
+16:56:20
+Extended
+connection
+websocket
+400, message='Invalid response status', url='wss://mainnet.zklighter.elliot.ai/stream'
+16:56:20
+Extended
+connection
+websocket
+400, message='Invalid response status', url='wss://mainnet.zklighter.elliot.ai/stream'
+16:56:20
+Extended
+connection
+websocket
+400, message='Invalid response status', url='wss://mainnet.zklighter.elliot.ai/stream'
+16:56:20
+Extended
+connection
+websocket
+400, message='Invalid response status', url='wss://mainnet.zklighter.elliot.ai/stream'
+16:56:20
+Extended
+connection
+websocket
+400, message='Invalid response status', url='wss://mainnet.zklighter.elliot.ai/stream'
+16:56:20
+Extended
+connection
+websocket
+400, message='Invalid response status', url='wss://mainnet.zklighter.elliot.ai/stream'
+16:56:20
+Extended
+connection
+websocket
+400, message='Invalid response status', url='wss://mainnet.zklighter.elliot.ai/stream'
+RAW WEBSOCKET DEBUGReconnect
+0/10 polaczonych
+lacznie event

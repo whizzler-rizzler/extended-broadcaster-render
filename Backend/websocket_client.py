@@ -360,11 +360,17 @@ class LighterWebSocketClient:
             logger.warning("No accounts configured, WebSocket client not started")
             return
         
-        logger.info(f"Starting {len(settings.accounts)} parallel WebSocket connections...")
+        logger.info(f"Starting WebSocket connections for accounts with valid signers...")
         
         start_tasks = []
+        skipped_count = 0
         for account in settings.accounts:
             signer = self._signer_clients.get(account.name)
+            if not signer:
+                logger.info(f"[{account.name}] Skipping WebSocket - no SignerClient available (Extended accounts don't support WS auth)")
+                skipped_count += 1
+                continue
+            
             conn = AccountWebSocketConnection(account, signer)
             
             for callback in self._callbacks:
@@ -373,8 +379,11 @@ class LighterWebSocketClient:
             self._connections[account.account_index] = conn
             start_tasks.append(conn.start())
         
-        await asyncio.gather(*start_tasks, return_exceptions=True)
-        logger.info(f"All {len(start_tasks)} WebSocket connections started in parallel")
+        if start_tasks:
+            await asyncio.gather(*start_tasks, return_exceptions=True)
+            logger.info(f"Started {len(start_tasks)} WebSocket connections (skipped {skipped_count} without signer)")
+        else:
+            logger.info(f"No WebSocket connections started - all {skipped_count} accounts lack valid signers")
     
     async def stop(self):
         self.running = False
