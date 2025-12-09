@@ -166,10 +166,24 @@ class SupabaseClient:
             size = trade.get("size") or trade.get("qty")
             value = trade.get("value")
             
+            # Use original trade timestamp if available (createdAt, timestamp, time)
+            # Fall back to current time only if no original timestamp
+            original_time = trade.get("createdAt") or trade.get("timestamp") or trade.get("time")
+            if original_time:
+                # Handle Unix timestamp (seconds or milliseconds)
+                if isinstance(original_time, (int, float)):
+                    if original_time > 1e12:  # milliseconds
+                        original_time = original_time / 1000
+                    timestamp = datetime.fromtimestamp(original_time, tz=timezone.utc).isoformat()
+                else:
+                    timestamp = str(original_time)
+            else:
+                timestamp = datetime.now(timezone.utc).isoformat()
+            
             record = {
                 "account_index": account_index,
                 "exchange": exchange,
-                "timestamp": datetime.now(timezone.utc).isoformat(),
+                "timestamp": timestamp,
                 "trade_id": trade.get("id") or trade.get("trade_id"),
                 "market": trade.get("market_name") or trade.get("market"),
                 "side": trade.get("side"),
