@@ -741,6 +741,17 @@ async def get_trade_history(request: Request, account_index: int, limit: int = 5
     return {"account_index": account_index, "trades": trades, "count": len(trades)}
 
 
+@app.get("/api/history/trades")
+@limiter.limit(settings.rate_limit)
+async def get_all_trades(request: Request, limit: int = 10000):
+    """Get all recent trades from all accounts from Supabase"""
+    if not supabase_client.is_initialized:
+        raise HTTPException(status_code=503, detail="Supabase persistence not configured")
+    
+    trades = await supabase_client.get_all_recent_trades(limit)
+    return {"trades": trades, "count": len(trades)}
+
+
 @app.get("/api/supabase/status")
 @limiter.limit(settings.rate_limit)
 async def get_supabase_status(request: Request):
