@@ -1,0 +1,7 @@
+project_id = "ujtavgmgeefutsadbyzv"
+
+[functions.crypto-aggregator]
+verify_jwt = false
+
+[functions.crypto-data-stream]
+verify_jwt = false
