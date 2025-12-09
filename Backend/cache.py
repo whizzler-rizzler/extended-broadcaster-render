@@ -76,4 +76,5 @@ class DataCache:
                 "expired_entries": expired_entries
             }
 
-cache = DataCache()
+from Backend.config import settings
+cache = DataCache(default_ttl=settings.cache_ttl)

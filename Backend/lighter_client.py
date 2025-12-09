@@ -264,6 +264,7 @@ class LighterClient:
                 config.host = settings.lighter_base_url
                 
                 self._account_proxies[account.name] = account.proxy_url
+                self._account_exchanges[account.name] = account.exchange
                 
                 if account.proxy_url:
                     config.proxy = account.proxy_url
@@ -273,8 +274,17 @@ class LighterClient:
                 self.api_clients[account.name] = api_client
                 self.account_apis[account.name] = lighter.AccountApi(api_client)
                 
+                self._rest_connections[account.account_index] = AccountRestConnection(account.name, account.account_index)
+                
+                logger.info(f"Initialized REST client for account: {account.name} (index: {account.account_index})")
+                
+            except Exception as e:
+                logger.error(f"Failed to initialize REST client for {account.name}: {e}")
+                self._rest_connections[account.account_index] = AccountRestConnection(account.name, account.account_index)
+            
+            try:
                 if account.private_key:
-                    api_private_keys = {account.api_key_index: account.private_key}
+                    api_private_keys = {0: account.private_key}
                     signer = lighter.SignerClient(
                         url=settings.lighter_base_url,
                         account_index=account.account_index,
@@ -285,12 +295,9 @@ class LighterClient:
                         if hasattr(signer.api_client, 'rest_client'):
                             signer.api_client.rest_client.proxy = account.proxy_url
                     self.signer_clients[account.name] = signer
-                
-                self._rest_connections[account.account_index] = AccountRestConnection(account.name, account.account_index)
-                
-                logger.info(f"Initialized client for account: {account.name} (index: {account.account_index})")
+                    logger.info(f"Initialized SignerClient for account: {account.name}")
             except Exception as e:
-                logger.error(f"Failed to initialize client for {account.name}: {e}")
+                logger.warning(f"SignerClient not available for {account.name} (signing disabled): {e}")
     
     def _serialize_account_data(self, account_data: Any) -> Union[Dict[str, Any], List[Any], Any]:
         if hasattr(account_data, 'to_dict'):
@@ -379,19 +386,20 @@ class LighterClient:
             return None
     
     async def fetch_all_accounts(self) -> Dict[str, Any]:
-        """Fetch all accounts in parallel using asyncio.gather"""
-        async def fetch_single(account):
-            return await self.fetch_account_data(account.name, account.account_index)
-        
-        tasks = [fetch_single(account) for account in settings.accounts]
-        results_list = await asyncio.gather(*tasks, return_exceptions=True)
-        
+        """Fetch all accounts sequentially with delay to avoid rate limiting"""
         results = {}
-        for account, data in zip(settings.accounts, results_list):
-            if isinstance(data, Exception):
-                logger.error(f"Error fetching account {account.account_index}: {data}")
-            elif data:
-                results[str(account.account_index)] = data
+        delay_between_accounts = 2.0
+        
+        for account in settings.accounts:
+            try:
+                data = await self.fetch_account_data(account.name, account.account_index)
+                if data:
+                    results[str(account.account_index)] = data
+            except Exception as e:
+                logger.error(f"Error fetching account {account.account_index}: {e}")
+            
+            await asyncio.sleep(delay_between_accounts)
+        
         return results
     
     def _get_position_markets(self, account_index: int) -> List[int]:
