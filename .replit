@@ -28,7 +28,7 @@ outputType = "webview"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "cd mFrontend && npm run preview -- --host 0.0.0.0 --port 5000"
+args = "cd mFrontend && npm run build && cd .. && python -m uvicorn Backend.api:app --host 0.0.0.0 --port 5000"
 waitForPort = 5000
 
 [[ports]]

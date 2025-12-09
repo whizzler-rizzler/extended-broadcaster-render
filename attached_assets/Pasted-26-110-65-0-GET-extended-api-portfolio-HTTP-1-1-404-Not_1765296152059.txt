@@ -1,0 +1,117 @@
+26.110.65:0 - "GET /extended/api/portfolio HTTP/1.1" 404 Not Found
+INFO:     159.26.110.65:0 - "GET /extended/api/ws/health HTTP/1.1" 404 Not Found
+INFO:     159.26.110.65:0 - "GET /extended/api/latency HTTP/1.1" 404 Not Found
+INFO:     159.26.110.65:0 - "GET /extended/api/ws/raw-messages?limit=20 HTTP/1.1" 404 Not Found
+INFO:     159.26.110.65:0 - "GET /extended/api/rest/health HTTP/1.1" 404 Not Found
+INFO:     159.26.110.65:0 - "GET /extended/api/errors?limit=30 HTTP/1.1" 404 Not Found
+INFO:     159.26.110.65:0 - "GET /extended/api/control/status HTTP/1.1" 404 Not Found
+INFO:     159.26.110.65:0 - "GET /extended/api/latency HTTP/1.1" 404 Not Found
+INFO:     159.26.110.65:0 - "GET /extended/api/rest/health HTTP/1.1" 404 Not Found
+INFO:     159.26.110.65:0 - "GET /extended/api/errors?limit=30 HTTP/1.1" 404 Not Found
+INFO:     159.26.110.65:0 - "GET /extended/api/control/status HTTP/1.1" 404 Not Found
+INFO:     159.26.110.65:0 - "GET /extended/api/portfolio HTTP/1.1" 404 Not Found
+INFO:     159.26.110.65:0 - "GET /extended/api/ws/raw-messages?limit=20 HTTP/1.1" 404 Not Found
+INFO:     159.26.110.65:0 - "GET /extended/api/ws/health HTTP/1.1" 404 Not Found
+INFO:     159.26.110.65:0 - "GET /extended/api/latency HTTP/1.1" 404 Not Found
+INFO:     159.26.110.65:0 - "GET /extended/api/errors?limit=30 HTTP/1.1" 404 Not Found
+     [GET]extended-account-stream.onrender.com/extended/api/rest/healthclientIP="159.26.110.65" requestID="bda5a917-0df5-4739" responseTimeMS=1 responseBytes=291 userAgent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36"
+     [GET]extended-account-stream.onrender.com/extended/api/latencyclientIP="159.26.110.65" requestID="acd0117c-f6e1-4af2" responseTimeMS=1 responseBytes=291 userAgent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36"
+     [GET]extended-account-stream.onrender.com/extended/api/rest/healthclientIP="159.26.110.65" requestID="02335e35-97d7-400a" responseTimeMS=1 responseBytes=291 userAgent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36"
+     [GET]extended-account-stream.onrender.com/extended/api/portfolioclientIP="159.26.110.65" requestID="85c80559-5c55-4be6" responseTimeMS=1 responseBytes=291 userAgent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36"
+     [GET]extended-account-stream.onrender.com/extended/api/portfolioclientIP="159.26.110.65" requestID="67f8aef6-d5d3-4bc0" responseTimeMS=1 responseBytes=291 userAgent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36"
+     [GET]extended-account-stream.onrender.com/extended/api/latencyclientIP="159.26.110.65" requestID="a7253349-bcc2-4d16" responseTimeMS=2 responseBytes=291 userAgent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36"
+     [GET]extended-account-stream.onrender.com/extended/api/ws/healthclientIP="159.26.110.65" requestID="4b489a8d-8649-459e" responseTimeMS=1 responseBytes=291 userAgent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36"
+     [GET]extended-account-stream.onrender.com/extended/api/rest/healthclientIP="159.26.110.65" requestID="0979e624-c3d1-41b0" responseTimeMS=1 responseBytes=291 userAgent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36"
+     [GET]extended-account-stream.onrender.com/extended/api/control/statusclientIP="159.26.110.65" requestID="88841eba-3032-4c60" responseTimeMS=2 responseBytes=291 userAgent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36"
+     [GET]extended-account-stream.onrender.com/extended/api/control/statusclientIP="159.26.110.65" requestID="8cdaddee-585b-414f" responseTimeMS=1 responseBytes=291 userAgent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36"
+     [GET]extended-account-stream.onrender.com/extended/api/errors?limit=30clientIP="159.26.110.65" requestID="34588f39-f130-4329" responseTimeMS=1 responseBytes=291 userAgent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36"
+     [GET]extended-account-stream.onrender.com/extended/api/ws/raw-messages?limit=20clientIP="159.26.110.65" requestID="843b65cf-30e8-4772" responseTimeMS=2 responseBytes=291 userAgent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36"
+     [GET]extended-account-stream.onrender.com/extended/api/ws/raw-messages?limit=20clientIP="159.26.110.65" requestID="c929ec66-58e2-45ed" responseTimeMS=1 responseBytes=291 userAgent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36"
+     [GET]extended-account-stream.onrender.com/extended/api/portfolioclientIP="159.26.110.65" requestID="488d6b48-6adc-4742" responseTimeMS=1 responseBytes=291 userAgent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36"
+     [GET]extended-account-stream.onrender.com/extended/api/rest/healthclientIP="159.26.110.65" requestID="25fa5505-e3d5-4834" responseTimeMS=1 responseBytes=291 userAgent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36"
+     [GET]extended-account-stream.onrender.com/extended/api/errors?limit=30clientIP="159.26.110.65" requestID="5594e01b-8ae9-4a9e" responseTimeMS=2 responseBytes=291 userAgent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36"
+     [GET]extended-account-stream.onrender.com/extended/api/latencyclientIP="159.26.110.65" requestID="42214f85-afca-42b2" responseTimeMS=1 responseBytes=291 userAgent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36"
+INFO:     159.26.110.65:0 - "GET /extended/api/ws/health HTTP/1.1" 404 Not Found
+INFO:     159.26.110.65:0 - "GET /extended/api/ws/raw-messages?limit=20 HTTP/1.1" 404 Not Found
+INFO:     159.26.110.65:0 - "GET /extended/api/portfolio HTTP/1.1" 404 Not Found
+INFO:     159.26.110.65:0 - "GET /extended/api/rest/health HTTP/1.1" 404 Not Found
+INFO:     159.26.110.65:0 - "GET /extended/api/control/status HTTP/1.1" 404 Not Found
+INFO:     159.26.110.65:0 - "GET /extended/api/portfolio HTTP/1.1" 404 Not Found
+INFO:     159.26.110.65:0 - "GET /extended/api/ws/raw-messages?limit=20 HTTP/1.1" 404 Not Found
+INFO:     159.26.110.65:0 - "GET /extended/api/control/status HTTP/1.1" 404 Not Found
+INFO:     159.26.110.65:0 - "GET /extended/api/rest/health HTTP/1.1" 404 Not Found
+INFO:     159.26.110.65:0 - "GET /extended/api/latency HTTP/1.1" 404 Not Found
+INFO:     159.26.110.65:0 - "GET /extended/api/ws/health HTTP/1.1" 404 Not Found
+INFO:     159.26.110.65:0 - "GET /extended/api/errors?limit=30 HTTP/1.1" 404 Not Found
+     [GET]extended-account-stream.onrender.com/extended/api/latencyclientIP="159.26.110.65" requestID="70812a0c-cce1-4ab9" responseTimeMS=1 responseBytes=291 userAgent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36"
+     [GET]extended-account-stream.onrender.com/extended/api/errors?limit=30clientIP="159.26.110.65" requestID="945a2cd7-dc8c-4014" responseTimeMS=1 responseBytes=291 userAgent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36"
+     [GET]extended-account-stream.onrender.com/extended/api/control/statusclientIP="159.26.110.65" requestID="2f528428-cf42-4cf1" responseTimeMS=1 responseBytes=291 userAgent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36"
+     [GET]extended-account-stream.onrender.com/extended/api/errors?limit=30clientIP="159.26.110.65" requestID="4292b614-c479-48a0" responseTimeMS=1 responseBytes=291 userAgent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36"
+     [GET]extended-account-stream.onrender.com/extended/api/rest/healthclientIP="159.26.110.65" requestID="96fdc219-5686-41db" responseTimeMS=1 responseBytes=291 userAgent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36"
+     [GET]extended-account-stream.onrender.com/extended/api/portfolioclientIP="159.26.110.65" requestID="cab2bab4-a1f8-4b40" responseTimeMS=2 responseBytes=291 userAgent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36"
+     [GET]extended-account-stream.onrender.com/extended/api/portfolioclientIP="159.26.110.65" requestID="18eb244e-f9f1-4834" responseTimeMS=1 responseBytes=291 userAgent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36"
+INFO:     159.26.110.65:0 - "GET /extended/api/portfolio HTTP/1.1" 404 Not Found
+INFO:     159.26.110.65:0 - "GET /extended/api/rest/health HTTP/1.1" 404 Not Found
+INFO:     159.26.110.65:0 - "GET /extended/api/control/status HTTP/1.1" 404 Not Found
+INFO:     159.26.110.65:0 - "GET /extended/api/errors?limit=30 HTTP/1.1" 404 Not Found
+INFO:     159.26.110.65:0 - "GET /extended/api/ws/raw-messages?limit=20 HTTP/1.1" 404 Not Found
+INFO:     159.26.110.65:0 - "GET /extended/api/ws/health HTTP/1.1" 404 Not Found
+INFO:     159.26.110.65:0 - "GET /extended/api/latency HTTP/1.1" 404 Not Found
+INFO:     159.26.110.65:0 - "GET /extended/api/rest/health HTTP/1.1" 404 Not Found
+INFO:     159.26.110.65:0 - "GET /extended/api/ws/health HTTP/1.1" 404 Not Found
+INFO:     159.26.110.65:0 - "GET /extended/api/portfolio HTTP/1.1" 404 Not Found
+INFO:     159.26.110.65:0 - "GET /extended/api/latency HTTP/1.1" 404 Not Found
+INFO:     159.26.110.65:0 - "GET /extended/api/errors?limit=30 HTTP/1.1" 404 Not Found
+INFO:     159.26.110.65:0 - "GET /extended/api/ws/raw-messages?limit=20 HTTP/1.1" 404 Not Found
+INFO:     159.26.110.65:0 - "GET /extended/api/control/status HTTP/1.1" 404 Not Found
+     [GET]extended-account-stream.onrender.com/extended/api/ws/healthclientIP="159.26.110.65" requestID="07d6edee-2540-4903" responseTimeMS=2 responseBytes=291 userAgent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36"
+     [GET]extended-account-stream.onrender.com/extended/api/ws/raw-messages?limit=20clientIP="159.26.110.65" requestID="b64ceb1d-a25c-4d47" responseTimeMS=1 responseBytes=291 userAgent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36"
+     [GET]extended-account-stream.onrender.com/extended/api/ws/healthclientIP="159.26.110.65" requestID="27fb09d1-66d6-4bcf" responseTimeMS=3 responseBytes=291 userAgent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36"
+     [GET]extended-account-stream.onrender.com/extended/api/ws/raw-messages?limit=20clientIP="159.26.110.65" requestID="a9c84bbe-d028-471d" responseTimeMS=1 responseBytes=291 userAgent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36"
+     [GET]extended-account-stream.onrender.com/extended/api/latencyclientIP="159.26.110.65" requestID="688d5a10-5294-44bd" responseTimeMS=0 responseBytes=291 userAgent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36"
+     [GET]extended-account-stream.onrender.com/extended/api/rest/healthclientIP="159.26.110.65" requestID="1877382d-a639-430f" responseTimeMS=1 responseBytes=291 userAgent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36"
+     [GET]extended-account-stream.onrender.com/extended/api/ws/healthclientIP="159.26.110.65" requestID="c8117aa7-de76-4324" responseTimeMS=1 responseBytes=291 userAgent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36"
+     [GET]extended-account-stream.onrender.com/extended/api/control/statusclientIP="159.26.110.65" requestID="7c0c0661-4bd8-40e9" responseTimeMS=1 responseBytes=291 userAgent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36"
+     [GET]extended-account-stream.onrender.com/extended/api/ws/healthclientIP="159.26.110.65" requestID="f5b78450-df3a-4d19" responseTimeMS=1 responseBytes=291 userAgent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36"
+     [GET]extended-account-stream.onrender.com/extended/api/ws/raw-messages?limit=20clientIP="159.26.110.65" requestID="25992d2e-8124-487e" responseTimeMS=3 responseBytes=291 userAgent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36"
+     [GET]extended-account-stream.onrender.com/extended/api/errors?limit=30clientIP="159.26.110.65" requestID="39b118c1-ff17-4b64" responseTimeMS=2 responseBytes=291 userAgent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36"
+     [GET]extended-account-stream.onrender.com/extended/api/rest/healthclientIP="159.26.110.65" requestID="51fe1c17-08d2-4b76" responseTimeMS=2 responseBytes=291 userAgent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36"
+     [GET]extended-account-stream.onrender.com/extended/api/latencyclientIP="159.26.110.65" requestID="077d0bfd-bb44-4ac9" responseTimeMS=1 responseBytes=291 userAgent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36"
+     [GET]extended-account-stream.onrender.com/extended/api/portfolioclientIP="159.26.110.65" requestID="a45cb001-fb0b-4ca6" responseTimeMS=2 responseBytes=291 userAgent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36"
+     [GET]extended-account-stream.onrender.com/extended/api/control/statusclientIP="159.26.110.65" requestID="ab2a3a37-31a2-4182" responseTimeMS=1 responseBytes=291 userAgent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36"
+INFO:     159.26.110.65:0 - "GET /extended/api/portfolio HTTP/1.1" 404 Not Found
+INFO:     159.26.110.65:0 - "GET /extended/api/latency HTTP/1.1" 404 Not Found
+INFO:     159.26.110.65:0 - "GET /extended/api/control/status HTTP/1.1" 404 Not Found
+INFO:     159.26.110.65:0 - "GET /extended/api/errors?limit=30 HTTP/1.1" 404 Not Found
+INFO:     159.26.110.65:0 - "GET /extended/api/rest/health HTTP/1.1" 404 Not Found
+INFO:     159.26.110.65:0 - "GET /extended/api/ws/raw-messages?limit=20 HTTP/1.1" 404 Not Found
+INFO:     159.26.110.65:0 - "GET /extended/api/ws/health HTTP/1.1" 404 Not Found
+     [GET]extended-account-stream.onrender.com/extended/api/latencyclientIP="159.26.110.65" requestID="3e4ba874-f35d-4f12" responseTimeMS=1 responseBytes=291 userAgent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36"
+     [GET]extended-account-stream.onrender.com/extended/api/ws/raw-messages?limit=20clientIP="159.26.110.65" requestID="93a924f5-db1b-48fb" responseTimeMS=1 responseBytes=291 userAgent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36"
+     [GET]extended-account-stream.onrender.com/extended/api/rest/healthclientIP="159.26.110.65" requestID="36e3688b-bdfc-453a" responseTimeMS=1 responseBytes=291 userAgent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36"
+     [GET]extended-account-stream.onrender.com/extended/api/errors?limit=30clientIP="159.26.110.65" requestID="4d53c23d-227f-44be" responseTimeMS=1 responseBytes=291 userAgent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36"
+     [GET]extended-account-stream.onrender.com/extended/api/ws/healthclientIP="159.26.110.65" requestID="76e1a3a5-3ba0-49f9" responseTimeMS=2 responseBytes=291 userAgent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36"
+     [GET]extended-account-stream.onrender.com/extended/api/control/statusclientIP="159.26.110.65" requestID="d8680cef-4095-41cf" responseTimeMS=1 responseBytes=291 userAgent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36"
+     [GET]extended-account-stream.onrender.com/extended/api/portfolioclientIP="159.26.110.65" requestID="6c57429c-e0c7-4087" responseTimeMS=3 responseBytes=291 userAgent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36"
+INFO:     159.26.110.65:0 - "GET /extended/api/portfolio HTTP/1.1" 404 Not Found
+INFO:     159.26.110.65:0 - "GET /extended/api/latency HTTP/1.1" 404 Not Found
+INFO:     159.26.110.65:0 - "GET /extended/api/ws/raw-messages?limit=20 HTTP/1.1" 404 Not Found
+INFO:     159.26.110.65:0 - "GET /extended/api/ws/health HTTP/1.1" 404 Not Found
+INFO:     159.26.110.65:0 - "GET /extended/api/errors?limit=30 HTTP/1.1" 404 Not Found
+INFO:     159.26.110.65:0 - "GET /extended/api/control/status HTTP/1.1" 404 Not Found
+INFO:     159.26.110.65:0 - "GET /extended/api/rest/health HTTP/1.1" 404 Not Found
+     [GET]extended-account-stream.onrender.com/extended/api/errors?limit=30clientIP="159.26.110.65" requestID="141b7245-f4ae-4864" responseTimeMS=1 responseBytes=291 userAgent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36"
+     [GET]extended-account-stream.onrender.com/extended/api/control/statusclientIP="159.26.110.65" requestID="04ac15d6-0cbb-45d5" responseTimeMS=2 responseBytes=291 userAgent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36"
+     [GET]extended-account-stream.onrender.com/extended/api/ws/raw-messages?limit=20clientIP="159.26.110.65" requestID="88e0c541-ae33-4bbd" responseTimeMS=1 responseBytes=291 userAgent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36"
+     [GET]extended-account-stream.onrender.com/extended/api/ws/healthclientIP="159.26.110.65" requestID="e8e329ee-7857-4477" responseTimeMS=2 responseBytes=291 userAgent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36"
+     [GET]extended-account-stream.onrender.com/extended/api/portfolioclientIP="159.26.110.65" requestID="cd74f497-4a26-4ea6" responseTimeMS=3 responseBytes=291 userAgent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36"
+     [GET]extended-account-stream.onrender.com/extended/api/latencyclientIP="159.26.110.65" requestID="d221791e-efca-4add" responseTimeMS=1 responseBytes=291 userAgent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36"
+     [GET]extended-account-stream.onrender.com/extended/api/rest/healthclientIP="159.26.110.65" requestID="9907943e-49fb-457c" responseTimeMS=2 responseBytes=291 userAgent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36"
+INFO:     159.26.110.65:0 - "GET /extended/api/ws/health HTTP/1.1" 404 Not Found
+INFO:     159.26.110.65:0 - "GET /extended/api/ws/raw-messages?limit=20 HTTP/1.1" 404 Not Found
+INFO:     159.26.110.65:0 - "GET /extended/api/portfolio HTTP/1.1" 404 Not Found
+INFO:     159.26.110.65:0 - "GET /extended/api/latency HTTP/1.1" 404 Not Found
+INFO:     159.26.110.65:0 - "GET /extended/api/errors?limit=30 HTTP/1.1" 404 Not Found
+INFO:     159.26.110.65:0 - "GET /extended/api/control/status HTTP/1.1" 404 Not Found
+INFO:     159.26.110.65:0 - "GET /extended/api/rest/health HTTP/1.1" 404 Not Found
+Need better ways to work with logs? Try theRender CLI, Render MCP Server, or s
