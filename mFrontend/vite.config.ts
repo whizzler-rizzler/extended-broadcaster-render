@@ -5,16 +5,18 @@ export default defineConfig({
   plugins: [react()],
   server: {
     host: '0.0.0.0',
-    port: 5173,
+    port: 5000,
     allowedHosts: true,
     proxy: {
       '/api': {
-        target: 'http://localhost:5000',
+        target: 'https://extended-account-stream.onrender.com',
         changeOrigin: true,
+        secure: true,
       },
       '/ws': {
-        target: 'ws://localhost:5000',
+        target: 'wss://extended-account-stream.onrender.com',
         ws: true,
+        secure: true,
       },
     },
   },

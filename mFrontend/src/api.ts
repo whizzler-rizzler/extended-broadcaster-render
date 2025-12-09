@@ -1,6 +1,6 @@
 import type { PortfolioData, WsHealthData } from './types';
 
-const API_BASE = import.meta.env.VITE_API_BASE || '';
+const API_BASE = import.meta.env.VITE_API_BASE || 'https://extended-account-stream.onrender.com/extended';
 
 export async function fetchPortfolio(): Promise<PortfolioData> {
   const res = await fetch(`${API_BASE}/api/portfolio`);

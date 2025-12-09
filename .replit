@@ -17,19 +17,19 @@ author = "agent"
 
 [[workflows.workflow.tasks]]
 task = "workflow.run"
-args = "Lighter Broadcaster"
+args = "Extended Frontend"
 
 [[workflows.workflow]]
-name = "Lighter Broadcaster"
+name = "Extended Frontend"
 author = "agent"
-
-[[workflows.workflow.tasks]]
-task = "shell.exec"
-args = "python main.py"
-waitForPort = 5000
 
 [workflows.workflow.metadata]
 outputType = "webview"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "cd mFrontend && npm run preview -- --host 0.0.0.0 --port 5000"
+waitForPort = 5000
 
 [[ports]]
 localPort = 5000
