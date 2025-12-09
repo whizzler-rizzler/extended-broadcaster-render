@@ -609,6 +609,92 @@ async def get_recent_trades(account_id: Optional[int] = None, limit: int = 100):
 # Legacy endpoints removed - use /api/cached-accounts instead
 
 
+# ============= STATISTICS ENDPOINTS =============
+@app.get("/api/stats/periods")
+async def get_stats_periods(account_id: Optional[int] = None):
+    """
+    Get trading statistics for 24h, 7d, and 30d periods.
+    Each period includes: total_pnl, total_volume, trades_count, wins, losses, win_rate
+    """
+    if not supabase_client.is_initialized:
+        raise HTTPException(status_code=503, detail="Supabase persistence not enabled")
+    
+    stats = await supabase_client.get_period_stats(account_index=account_id)
+    return {
+        "account_id": account_id,
+        "stats": stats,
+        "timestamp": time.time()
+    }
+
+
+@app.get("/api/stats/summary")
+async def get_stats_summary():
+    """
+    Get summary statistics for all accounts.
+    Includes: current equity (from cache), PnL for 24h/7d/30d, total volume.
+    """
+    if not supabase_client.is_initialized:
+        raise HTTPException(status_code=503, detail="Supabase persistence not enabled")
+    
+    total_equity = 0.0
+    accounts_equity = {}
+    
+    for account in ACCOUNTS:
+        cache = BROADCASTER_CACHES[account.id]
+        if cache.balance:
+            balance_data = cache.balance.get('data', cache.balance) if isinstance(cache.balance, dict) else cache.balance
+            if isinstance(balance_data, dict):
+                equity = balance_data.get('equity') or balance_data.get('totalEquity') or 0
+            elif isinstance(balance_data, list) and len(balance_data) > 0:
+                equity = balance_data[0].get('equity') or balance_data[0].get('totalEquity') or 0
+            else:
+                equity = 0
+            try:
+                equity_val = float(equity)
+                total_equity += equity_val
+                accounts_equity[account.id] = equity_val
+            except (ValueError, TypeError):
+                accounts_equity[account.id] = 0
+    
+    stats = await supabase_client.get_period_stats()
+    
+    return {
+        "total_equity": round(total_equity, 2),
+        "accounts_equity": accounts_equity,
+        "pnl_24h": stats.get("24h", {}).get("total_pnl", 0),
+        "pnl_7d": stats.get("7d", {}).get("total_pnl", 0),
+        "pnl_30d": stats.get("30d", {}).get("total_pnl", 0),
+        "volume_24h": stats.get("24h", {}).get("total_volume", 0),
+        "volume_7d": stats.get("7d", {}).get("total_volume", 0),
+        "volume_30d": stats.get("30d", {}).get("total_volume", 0),
+        "trades_24h": stats.get("24h", {}).get("trades_count", 0),
+        "trades_7d": stats.get("7d", {}).get("trades_count", 0),
+        "trades_30d": stats.get("30d", {}).get("trades_count", 0),
+        "win_rate_24h": stats.get("24h", {}).get("win_rate", 0),
+        "win_rate_7d": stats.get("7d", {}).get("win_rate", 0),
+        "win_rate_30d": stats.get("30d", {}).get("win_rate", 0),
+        "timestamp": time.time()
+    }
+
+
+@app.get("/api/trades")
+async def get_trades_list(account_id: Optional[int] = None, limit: int = 100):
+    """
+    Get list of trades with PnL and volume.
+    Returns: market, side, position_size, entry_price, exit_price, realized_pnl, volume, timestamp
+    """
+    if not supabase_client.is_initialized:
+        raise HTTPException(status_code=503, detail="Supabase persistence not enabled")
+    
+    trades = await supabase_client.get_trades_list(limit=limit, account_index=account_id)
+    return {
+        "account_id": account_id,
+        "trades": trades,
+        "count": len(trades),
+        "timestamp": time.time()
+    }
+
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)
