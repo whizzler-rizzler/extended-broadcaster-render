@@ -105,6 +105,9 @@ def load_accounts() -> List[AccountConfig]:
                     parts = raw_proxy.split(':')
                     if len(parts) == 4:
                         ip, port, username, password = parts
+                        # Add -staticresidential suffix if not present
+                        if not username.endswith('-staticresidential'):
+                            username = f"{username}-staticresidential"
                         proxy_url = f"http://{username}:{password}@{ip}:{port}"
                         print(f"✅ Account {i} proxy: {ip}:{port} (user: {username})")
                     else:
