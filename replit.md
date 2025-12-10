@@ -1,10 +1,10 @@
-# Lighter Broadcaster Service
+# Extended Exchange Broadcaster Service
 
-A Python-based broadcaster service that acts as a data intermediary for Lighter.xyz trading platform.
+A Python-based broadcaster service that acts as a data intermediary for Extended Exchange (Starknet) trading platform.
 
 ## Overview
 
-This service monitors Lighter.xyz accounts using REST API polling (2x per second) and WebSocket connections, then redistributes the data through its own REST API and WebSocket endpoints with rate limiting and caching.
+This service monitors Extended Exchange accounts using REST API polling (2x per second), then redistributes the data through its own REST API and WebSocket endpoints with rate limiting and caching.
 
 ## Architecture
 
@@ -98,15 +98,30 @@ Health status includes:
 ## Configuration
 
 Environment variables for account configuration follow this pattern:
-- `Lighter_{N}_{ID}_Account_Index` - Account index
-- `Lighter_{N}_{ID}_API_KEY_Index` - API key index
-- `Lighter_{N}_{ID}_PRIVATE` - Private key
-- `Lighter_{N}_{ID}_PUBLIC` - Public key
-- `Lighter_{N}_PROXY_{M}_URL` - Optional proxy URL
+- `Extended_{N}_{CODE}_API_KEY` - API key for account N
+- `Extended_{N}_{CODE}_CLIENT_ID` - Client ID
+- `Extended_{N}_{CODE}_STARKNET_PRIVATE` - Starknet private key
+- `Extended_{N}_{CODE}_STARKNET_PUBLIC` - Starknet public key
+- `Extended_{N}_{CODE}_VAULT_NUMBER` - Vault number
+- `Extended_{N}_PROXY_{N}_URL` - Proxy URL (see Proxy Configuration below)
+
+### Proxy Configuration
+
+Proxy URLs support two formats:
+
+1. **Full URL format (recommended)**:
+   ```
+   http://username:password@ip:port/
+   ```
+   Example: `http://ilbefxoi-staticresidential:mhaamz128dg0@82.27.111.128:5335/`
+
+2. **Legacy format**:
+   ```
+   IP:PORT:Username:Password
+   ```
+   Example: `82.27.111.128:5335:ilbefxoi-staticresidential:mhaamz128dg0`
 
 Other settings:
-- `LIGHTER_BASE_URL` - Lighter API URL (default: mainnet)
-- `LIGHTER_WS_URL` - Lighter WebSocket URL
 - `POLL_INTERVAL` - Polling interval in seconds (default: 0.5)
 - `CACHE_TTL` - Cache TTL in seconds (default: 5)
 - `RATE_LIMIT` - API rate limit (default: 100/minute)

@@ -39,7 +39,7 @@ class AccountConfig:
     name: str
     api_key: str
     base_url: str = "https://api.starknet.extended.exchange/api/v1"
-    proxy_url: str = None  # Optional proxy URL per account
+    proxy_url: Optional[str] = None  # Optional proxy URL per account
 
 @dataclass 
 class AccountCache:
@@ -77,20 +77,38 @@ def load_accounts() -> List[AccountConfig]:
         code = ACCOUNT_CODES.get(i, "")
         api_key = os.getenv(f"Extended_{i}_{code}_API_KEY")
         if api_key:
-            # Get raw proxy value - format is IP:PORT:Username:Password
+            # Get proxy URL - supports two formats:
+            # 1. Full URL: http://username:password@ip:port/
+            # 2. Legacy format: IP:PORT:Username:Password
             proxy_var = f"Extended_{i}_PROXY_{i}_URL"
             raw_proxy = os.getenv(proxy_var)
             
             proxy_url = None
             if raw_proxy:
-                # Convert from IP:PORT:Username:Password to http://username:password@ip:port
-                parts = raw_proxy.strip().split(':')
-                if len(parts) == 4:
-                    ip, port, username, password = parts
-                    proxy_url = f"http://{username}:{password}@{ip}:{port}"
-                    print(f"✅ Account {i} proxy: {ip}:{port} (user: {username})")
+                raw_proxy = raw_proxy.strip()
+                if raw_proxy.startswith("http://") or raw_proxy.startswith("https://"):
+                    # New format: full URL (http://username:password@ip:port/)
+                    proxy_url = raw_proxy
+                    # Extract IP for logging (safely)
+                    try:
+                        # Parse: http://user:pass@ip:port/
+                        at_idx = raw_proxy.find('@')
+                        if at_idx > 0:
+                            host_part = raw_proxy[at_idx+1:].rstrip('/')
+                            print(f"✅ Account {i} proxy: {host_part}")
+                        else:
+                            print(f"✅ Account {i} proxy: configured (full URL)")
+                    except:
+                        print(f"✅ Account {i} proxy: configured (full URL)")
                 else:
-                    print(f"⚠️ Account {i} proxy invalid: expected IP:PORT:User:Pass, got {len(parts)} parts")
+                    # Legacy format: IP:PORT:Username:Password
+                    parts = raw_proxy.split(':')
+                    if len(parts) == 4:
+                        ip, port, username, password = parts
+                        proxy_url = f"http://{username}:{password}@{ip}:{port}"
+                        print(f"✅ Account {i} proxy: {ip}:{port} (user: {username})")
+                    else:
+                        print(f"⚠️ Account {i} proxy invalid: expected IP:PORT:User:Pass or full URL, got: {raw_proxy[:30]}...")
             else:
                 print(f"⚠️ Account {i}: no proxy ({proxy_var} not set)")
             
