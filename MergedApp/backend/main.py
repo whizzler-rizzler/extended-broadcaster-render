@@ -176,6 +176,15 @@ BROADCAST_CLIENTS: Set[WebSocket] = set()
 # Poller state tracking
 TRADES_POLL_COUNTER = 0
 
+# ============= ORDER BOOK STREAM STATE =============
+ORDERBOOK_CACHE: Dict[str, Any] = {}
+ORDERBOOK_LAST_UPDATE: float = 0
+ORDERBOOK_WS_CONNECTED: bool = False
+ORDERBOOK_MARKETS = ["ETH-PERP", "BTC-PERP", "SOL-PERP", "DOGE-PERP", "XRP-PERP", "ADA-PERP", "AVAX-PERP", "LINK-PERP", "DOT-PERP", "MATIC-PERP"]
+EXTENDED_STREAM_URL = "wss://api.starknet.extended.exchange/stream.extended.exchange/v1"
+ORDERBOOK_PROXY_URL = os.getenv("ORDERBOOK_PROXY_URL")
+ORDERBOOK_DEPTH = 20
+
 
 # ============= PROXY FUNCTION FOR FRONTEND_ONLY MODE =============
 async def proxy_to_remote(endpoint: str) -> Dict[str, Any]:
@@ -371,6 +380,116 @@ async def poll_all_accounts_fast():
     ], return_exceptions=True)
 
 
+# ============= ORDER BOOK WEBSOCKET CLIENT =============
+async def orderbook_websocket_client():
+    """
+    Connect to Extended Exchange Order Book stream via WebSocket.
+    Subscribes to orderbook channel for all configured markets.
+    
+    Supports optional proxy via ORDERBOOK_PROXY_URL environment variable.
+    If proxy is configured, uses aiohttp with SOCKS/HTTP proxy support.
+    """
+    global ORDERBOOK_CACHE, ORDERBOOK_LAST_UPDATE, ORDERBOOK_WS_CONNECTED
+    
+    import random
+    
+    retry_count = 0
+    base_delay = 5
+    max_delay = 300
+    
+    proxy_info = f" via proxy" if ORDERBOOK_PROXY_URL else ""
+    print(f"📖 [OrderBook] Will connect to {EXTENDED_STREAM_URL}{proxy_info}")
+    
+    while True:
+        connection_was_successful = False
+        
+        try:
+            print(f"📖 [OrderBook] Connecting (attempt {retry_count + 1})...")
+            
+            if ORDERBOOK_PROXY_URL:
+                from aiohttp_socks import ProxyConnector
+                connector = ProxyConnector.from_url(ORDERBOOK_PROXY_URL)
+                session = aiohttp.ClientSession(connector=connector)
+            else:
+                session = aiohttp.ClientSession()
+            
+            try:
+                async with session.ws_connect(
+                    EXTENDED_STREAM_URL,
+                    heartbeat=30,
+                    receive_timeout=60
+                ) as ws:
+                    ORDERBOOK_WS_CONNECTED = True
+                    connection_was_successful = True
+                    retry_count = 0
+                    print(f"✅ [OrderBook] Connected! Subscribing to {len(ORDERBOOK_MARKETS)} markets...")
+                    
+                    subscribe_msg = {
+                        "type": "subscribe",
+                        "channel": "orderbook",
+                        "markets": ORDERBOOK_MARKETS
+                    }
+                    await ws.send_str(json.dumps(subscribe_msg))
+                    print(f"📨 [OrderBook] Subscribed to: {', '.join(ORDERBOOK_MARKETS)}")
+                    
+                    async for msg in ws:
+                        if msg.type == aiohttp.WSMsgType.TEXT:
+                            try:
+                                data = json.loads(msg.data)
+                                
+                                if data.get("type") == "orderbook" or data.get("channel") == "orderbook":
+                                    market = data.get("market") or data.get("symbol")
+                                    if market:
+                                        bids = data.get("bids", [])[:ORDERBOOK_DEPTH]
+                                        asks = data.get("asks", [])[:ORDERBOOK_DEPTH]
+                                        
+                                        ORDERBOOK_CACHE[market] = {
+                                            "bids": bids,
+                                            "asks": asks,
+                                            "timestamp": data.get("timestamp") or time.time(),
+                                            "sequence": data.get("sequence")
+                                        }
+                                        ORDERBOOK_LAST_UPDATE = time.time()
+                                        
+                                        await broadcast_to_clients({
+                                            "type": "orderbook_update",
+                                            "market": market,
+                                            "bids": bids,
+                                            "asks": asks,
+                                            "timestamp": time.time()
+                                        })
+                                
+                                elif data.get("type") == "subscribed":
+                                    print(f"✅ [OrderBook] Subscription confirmed: {data.get('channel')}")
+                                
+                                elif data.get("type") == "error":
+                                    print(f"⚠️ [OrderBook] Stream error: {data.get('message')}")
+                                    
+                            except json.JSONDecodeError as e:
+                                print(f"⚠️ [OrderBook] Invalid JSON: {e}")
+                        
+                        elif msg.type == aiohttp.WSMsgType.ERROR:
+                            print(f"⚠️ [OrderBook] WebSocket error: {ws.exception()}")
+                            break
+                        elif msg.type == aiohttp.WSMsgType.CLOSED:
+                            print(f"⚠️ [OrderBook] WebSocket closed by server")
+                            break
+            finally:
+                ORDERBOOK_WS_CONNECTED = False
+                await session.close()
+                        
+        except Exception as e:
+            print(f"❌ [OrderBook] WebSocket error: {e}")
+        
+        ORDERBOOK_WS_CONNECTED = False
+        retry_count += 1
+        delay = min(base_delay * (2 ** min(retry_count - 1, 6)), max_delay)
+        jitter = random.uniform(0.5, 1.5)
+        sleep_time = delay * jitter
+        print(f"🔄 [OrderBook] Reconnecting in {sleep_time:.1f}s (attempt {retry_count})...")
+        await asyncio.sleep(sleep_time)
+
+
 async def poll_all_accounts_trades():
     """Poll trades for all accounts in parallel."""
     await asyncio.gather(*[
@@ -437,7 +556,8 @@ async def startup_broadcaster():
         print("⚠️ [Startup] Supabase persistence disabled (no credentials)")
     
     asyncio.create_task(background_poller())
-    print("✅ [Startup] Broadcaster initialized")
+    asyncio.create_task(orderbook_websocket_client())
+    print("✅ [Startup] Broadcaster initialized with Order Book stream")
 
 
 # ============= REST API ENDPOINTS =============
@@ -794,6 +914,73 @@ async def get_trades_list(account_id: Optional[int] = None, limit: int = 100):
         "account_id": account_id,
         "trades": trades,
         "count": len(trades),
+        "timestamp": time.time()
+    }
+
+
+# ============= ORDER BOOK ENDPOINTS =============
+@app.get("/api/orderbook")
+async def get_orderbook():
+    """
+    Get cached order book data for all markets.
+    Real-time data from Extended Exchange WebSocket stream.
+    """
+    if IS_FRONTEND_ONLY:
+        return await proxy_to_remote("/api/orderbook")
+    
+    return {
+        "markets": ORDERBOOK_CACHE,
+        "connected": ORDERBOOK_WS_CONNECTED,
+        "last_update": ORDERBOOK_LAST_UPDATE,
+        "cache_age_ms": int((time.time() - ORDERBOOK_LAST_UPDATE) * 1000) if ORDERBOOK_LAST_UPDATE > 0 else None,
+        "subscribed_markets": ORDERBOOK_MARKETS,
+        "timestamp": time.time()
+    }
+
+
+@app.get("/api/orderbook/{market}")
+async def get_orderbook_market(market: str):
+    """
+    Get cached order book data for a specific market.
+    Example: /api/orderbook/ETH-PERP
+    """
+    if IS_FRONTEND_ONLY:
+        return await proxy_to_remote(f"/api/orderbook/{market}")
+    
+    market_upper = market.upper()
+    
+    if market_upper not in ORDERBOOK_CACHE:
+        available = list(ORDERBOOK_CACHE.keys()) if ORDERBOOK_CACHE else ORDERBOOK_MARKETS
+        raise HTTPException(
+            status_code=404, 
+            detail=f"Market {market_upper} not found. Available: {', '.join(available)}"
+        )
+    
+    book = ORDERBOOK_CACHE[market_upper]
+    return {
+        "market": market_upper,
+        "bids": book.get("bids", []),
+        "asks": book.get("asks", []),
+        "sequence": book.get("sequence"),
+        "last_update": book.get("timestamp"),
+        "connected": ORDERBOOK_WS_CONNECTED,
+        "timestamp": time.time()
+    }
+
+
+@app.get("/api/orderbook-status")
+async def get_orderbook_status():
+    """Get order book WebSocket connection status."""
+    if IS_FRONTEND_ONLY:
+        return await proxy_to_remote("/api/orderbook-status")
+    
+    return {
+        "connected": ORDERBOOK_WS_CONNECTED,
+        "stream_url": EXTENDED_STREAM_URL,
+        "subscribed_markets": ORDERBOOK_MARKETS,
+        "cached_markets": list(ORDERBOOK_CACHE.keys()),
+        "last_update": ORDERBOOK_LAST_UPDATE,
+        "cache_age_ms": int((time.time() - ORDERBOOK_LAST_UPDATE) * 1000) if ORDERBOOK_LAST_UPDATE > 0 else None,
         "timestamp": time.time()
     }
 

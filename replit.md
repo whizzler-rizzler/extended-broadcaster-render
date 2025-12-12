@@ -95,6 +95,11 @@ Health status includes:
 ### WebSocket
 - `WS /ws` - WebSocket for real-time updates
 
+### Order Book (Real-time via Extended Stream)
+- `GET /api/orderbook` - All cached order books for all markets
+- `GET /api/orderbook/{market}` - Order book for specific market (e.g., ETH-PERP)
+- `GET /api/orderbook-status` - Order book WebSocket connection status
+
 ## Configuration
 
 Environment variables for account configuration follow this pattern:
