@@ -84,11 +84,15 @@ def load_accounts() -> List[AccountConfig]:
         code = detected_accounts[i]['code']
         api_key = detected_accounts[i]['api_key']
         
-        # Get proxy URL - supports two formats:
-        # 1. Full URL: http://username:password@ip:port/
-        # 2. Legacy format: IP:PORT:Username:Password
-        proxy_var = f"Extended_{i}_PROXY_{i}_URL"
-        raw_proxy = os.getenv(proxy_var)
+        # Get proxy URL - supports multiple variable name formats:
+        # 1. Extended_N_CODE_Proxy (new format from screenshot)
+        # 2. Extended_N_PROXY_N_URL (old format)
+        # Value formats supported:
+        # - Full URL: http://username:password@ip:port/
+        # - Legacy: IP:PORT:Username:Password
+        proxy_var_new = f"Extended_{i}_{code}_Proxy"
+        proxy_var_old = f"Extended_{i}_PROXY_{i}_URL"
+        raw_proxy = os.getenv(proxy_var_new) or os.getenv(proxy_var_old)
         
         proxy_url = None
         if raw_proxy:
@@ -116,7 +120,7 @@ def load_accounts() -> List[AccountConfig]:
                 else:
                     print(f"⚠️ Account {i} proxy invalid: expected IP:PORT:User:Pass or full URL, got: {raw_proxy[:30]}...")
         else:
-            print(f"⚠️ Account {i}: no proxy ({proxy_var} not set)")
+            print(f"⚠️ Account {i}: no proxy ({proxy_var_new} or {proxy_var_old} not set)")
         
         accounts.append(AccountConfig(
             id=f"account_{i}",

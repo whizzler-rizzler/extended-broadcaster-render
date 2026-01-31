@@ -53,47 +53,42 @@ services:
         sync: false
       - key: Extended_10_PROXY_10_URL
         sync: false
-      # Add more accounts below (11-20+)
-      # Pattern: Extended_N_XXXXXX_API_KEY and Extended_N_PROXY_N_URL
-      - key: Extended_11_XXXXXX_API_KEY
+      # Accounts 12-14 (new format with Extended_N_CODE_Proxy)
+      - key: Extended_12_2c4079_API_KEY
         sync: false
-      - key: Extended_11_PROXY_11_URL
+      - key: Extended_12_2c4079_CLIENT_ID
         sync: false
-      - key: Extended_12_XXXXXX_API_KEY
+      - key: Extended_12_2c4079_STARKNET_PUBLIC
         sync: false
-      - key: Extended_12_PROXY_12_URL
+      - key: Extended_12_2c4079_STARKNET_PRIVATE
         sync: false
-      - key: Extended_13_XXXXXX_API_KEY
+      - key: Extended_12_2c4079_VAULT_NUMBER
         sync: false
-      - key: Extended_13_PROXY_13_URL
+      - key: Extended_12_2c4079_Proxy
         sync: false
-      - key: Extended_14_XXXXXX_API_KEY
+      - key: Extended_13_a8687D_API_KEY
         sync: false
-      - key: Extended_14_PROXY_14_URL
+      - key: Extended_13_a8687D_CLIENT_ID
         sync: false
-      - key: Extended_15_XXXXXX_API_KEY
+      - key: Extended_13_a8687D_STARKNET_PUBLIC
         sync: false
-      - key: Extended_15_PROXY_15_URL
+      - key: Extended_13_a8687D_STARKNET_PRIVATE
         sync: false
-      - key: Extended_16_XXXXXX_API_KEY
+      - key: Extended_13_a8687D_VAULT_NUMBER
         sync: false
-      - key: Extended_16_PROXY_16_URL
+      - key: Extended_13_a8687D_Proxy
         sync: false
-      - key: Extended_17_XXXXXX_API_KEY
+      - key: Extended_14_12d8C5_API_KEY
         sync: false
-      - key: Extended_17_PROXY_17_URL
+      - key: Extended_14_12d8C5_CLIENT_ID
         sync: false
-      - key: Extended_18_XXXXXX_API_KEY
+      - key: Extended_14_12d8C5_STARKNET_PUBLIC
         sync: false
-      - key: Extended_18_PROXY_18_URL
+      - key: Extended_14_12d8C5_STARKNET_PRIVATE
         sync: false
-      - key: Extended_19_XXXXXX_API_KEY
+      - key: Extended_14_12d8C5_VAULT_NUMBER
         sync: false
-      - key: Extended_19_PROXY_19_URL
-        sync: false
-      - key: Extended_20_XXXXXX_API_KEY
-        sync: false
-      - key: Extended_20_PROXY_20_URL
+      - key: Extended_14_12d8C5_Proxy
         sync: false
       # Optional: Order book stream proxy
       - key: ORDERBOOK_PROXY_URL
