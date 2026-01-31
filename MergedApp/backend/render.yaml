@@ -13,82 +13,125 @@ services:
         sync: false
       - key: Supabase_service_role
         sync: false
+      # Account 1
       - key: Extended_1_aE42d3_API_KEY
         sync: false
       - key: Extended_1_PROXY_1_URL
         sync: false
+      # Account 2
       - key: Extended_2_61658C_API_KEY
         sync: false
       - key: Extended_2_PROXY_2_URL
         sync: false
+      # Account 3
       - key: Extended_3_74eF87_API_KEY
         sync: false
       - key: Extended_3_PROXY_3_URL
         sync: false
+      # Account 4
       - key: Extended_4_1112E1_API_KEY
         sync: false
       - key: Extended_4_PROXY_4_URL
         sync: false
+      # Account 5
       - key: Extended_5_fe69Ac_API_KEY
         sync: false
       - key: Extended_5_PROXY_5_URL
         sync: false
+      # Account 6
       - key: Extended_6_05A739_API_KEY
         sync: false
       - key: Extended_6_PROXY_6_URL
         sync: false
+      # Account 7
       - key: Extended_7_1eE2a4_API_KEY
         sync: false
       - key: Extended_7_PROXY_7_URL
         sync: false
+      # Account 8
       - key: Extended_8_7B8f14_API_KEY
         sync: false
       - key: Extended_8_PROXY_8_URL
         sync: false
+      # Account 9
       - key: Extended_9_1A04d3_API_KEY
         sync: false
       - key: Extended_9_PROXY_9_URL
         sync: false
+      # Account 10
       - key: Extended_10_0f08fC_API_KEY
         sync: false
       - key: Extended_10_PROXY_10_URL
         sync: false
-      # Accounts 12-14 (new format with Extended_N_CODE_Proxy)
+      # Account 12
       - key: Extended_12_2c4079_API_KEY
-        sync: false
-      - key: Extended_12_2c4079_CLIENT_ID
-        sync: false
-      - key: Extended_12_2c4079_STARKNET_PUBLIC
-        sync: false
-      - key: Extended_12_2c4079_STARKNET_PRIVATE
-        sync: false
-      - key: Extended_12_2c4079_VAULT_NUMBER
         sync: false
       - key: Extended_12_2c4079_Proxy
         sync: false
+      # Account 13
       - key: Extended_13_a8687D_API_KEY
-        sync: false
-      - key: Extended_13_a8687D_CLIENT_ID
-        sync: false
-      - key: Extended_13_a8687D_STARKNET_PUBLIC
-        sync: false
-      - key: Extended_13_a8687D_STARKNET_PRIVATE
-        sync: false
-      - key: Extended_13_a8687D_VAULT_NUMBER
         sync: false
       - key: Extended_13_a8687D_Proxy
         sync: false
+      # Account 14
       - key: Extended_14_12d8C5_API_KEY
         sync: false
-      - key: Extended_14_12d8C5_CLIENT_ID
-        sync: false
-      - key: Extended_14_12d8C5_STARKNET_PUBLIC
-        sync: false
-      - key: Extended_14_12d8C5_STARKNET_PRIVATE
-        sync: false
-      - key: Extended_14_12d8C5_VAULT_NUMBER
-        sync: false
       - key: Extended_14_12d8C5_Proxy
+        sync: false
+      # Account 15
+      - key: Extended_15_55aeC6_API_KEY
+        sync: false
+      - key: Extended_15_55aeC6_Proxy
+        sync: false
+      # Account 16
+      - key: Extended_16_756C39_API_KEY
+        sync: false
+      - key: Extended_16_756C39_Proxy
+        sync: false
+      # Account 17
+      - key: Extended_17_fAd8A4_API_KEY
+        sync: false
+      - key: Extended_17_fAd8A4_Proxy
+        sync: false
+      # Account 18
+      - key: Extended_18_C38018_API_KEY
+        sync: false
+      - key: Extended_18_C38018_Proxy
+        sync: false
+      # Account 19
+      - key: Extended_19_84eD44_API_KEY
+        sync: false
+      - key: Extended_19_84eD44_Proxy
+        sync: false
+      # Account 20
+      - key: Extended_20_901F9c_API_KEY
+        sync: false
+      - key: Extended_20_901F9c_Proxy
+        sync: false
+      # Account 21
+      - key: Extended_21_22fD71_API_KEY
+        sync: false
+      - key: Extended_21_22fD71_Proxy
+        sync: false
+      # Account 22
+      - key: Extended_22_35d97a_API_KEY
+        sync: false
+      - key: Extended_22_35d97a_Proxy
+        sync: false
+      # Account 23
+      - key: Extended_23_76683d_API_KEY
+        sync: false
+      - key: Extended_23_76683d_Proxy
+        sync: false
+      # Account 24
+      - key: Extended_24_62EE48_API_KEY
+        sync: false
+      - key: Extended_24_62EE48_Proxy
+        sync: false
+      # Account 25
+      - key: Extended_25_c7477A_API_KEY
+        sync: false
+      - key: Extended_25_c7477A_Proxy
         sync: false
       # Optional: Order book stream proxy
       - key: ORDERBOOK_PROXY_URL
