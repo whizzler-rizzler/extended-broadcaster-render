@@ -1,0 +1,127 @@
+[GET]
+ws-trader-pulse.onrender.com/api/cached-accounts clientIP="34.148.198.193" requestID="4a821f73-ec95-48d4" responseTimeMS=10 responseBytes=1498 userAgent="Python/3.11 aiohttp/3.13.2"
+❌ [Extended 20 (901F9c)][/user/balance] via proxy Error: 
+❌ [Extended 21 (22fD71)][/user/positions] via proxy Error: 
+❌ [Extended 21 (22fD71)][/user/balance] via proxy Error: 
+❌ [Extended 22 (35d97a)][/user/positions] via proxy Error: 
+❌ [Extended 22 (35d97a)][/user/balance] via proxy Error: 
+📋 [Extended 9 (1A04d3)] Orders changed - broadcasting
+📋 [Extended 2 (61658C)] Orders changed - broadcasting
+📋 [Extended 10 (0f08fC)] Orders changed - broadcasting
+📋 [Extended 4 (1112E1)] Orders changed - broadcasting
+📋 [Extended 6 (05A739)] Orders changed - broadcasting
+📋 [Extended 7 (1eE2a4)] Orders changed - broadcasting
+📋 [Extended 5 (fe69Ac)] Orders changed - broadcasting
+📋 [Extended 25 (c7477A)] Orders changed - broadcasting
+📋 [Extended 18 (C38018)] Orders changed - broadcasting
+📋 [Extended 1 (aE42d3)] Orders changed - broadcasting
+📋 [Extended 3 (74eF87)] Orders changed - broadcasting
+📋 [Extended 8 (7B8f14)] Orders changed - broadcasting
+📋 [Extended 14 (12d8C5)] Orders changed - broadcasting
+📋 [Extended 24 (62EE48)] Orders changed - broadcasting
+📋 [Extended 15 (55aeC6)] Orders changed - broadcasting
+📋 [Extended 23 (76683d)] Orders changed - broadcasting
+📋 [Extended 19 (84eD44)] Orders changed - broadcasting
+📖 [OrderBook] Connecting (attempt 3)...
+❌ [OrderBook] WebSocket error: 404, message='Invalid response status', url='wss://api.starknet.extended.exchange/stream.extended.exchange/v1'
+🔄 [OrderBook] Reconnecting in 18.1s (attempt 3)...
+INFO:     10.20.122.131:36696 - "GET /api/cached-accounts HTTP/1.1" 200 OK
+INFO:     10.17.223.68:45920 - "GET /api/broadcaster/stats HTTP/1.1" 200 OK
+[GET]
+ws-trader-pulse.onrender.com/api/cached-accounts clientIP="34.148.198.193" requestID="fb33148e-e5bd-4705" responseTimeMS=5 responseBytes=1494 userAgent="Python/3.11 aiohttp/3.13.2"
+[GET]
+ws-trader-pulse.onrender.com/api/cached-accounts clientIP="34.148.198.193" requestID="c4f59f4d-4d63-45ef" responseTimeMS=6 responseBytes=1494 userAgent="Python/3.11 aiohttp/3.13.2"
+[GET]
+ws-trader-pulse.onrender.com/api/broadcaster/stats clientIP="34.148.198.193" requestID="43a27bce-339c-4f38" responseTimeMS=4 responseBytes=692 userAgent="Python/3.11 aiohttp/3.13.2"
+INFO:     10.23.182.2:39810 - "GET /api/cached-accounts HTTP/1.1" 200 OK
+INFO:     10.22.9.65:37378 - "GET /api/broadcaster/stats HTTP/1.1" 200 OK
+INFO:     10.22.95.68:51418 - "GET /api/cached-accounts HTTP/1.1" 200 OK
+[GET]
+ws-trader-pulse.onrender.com/api/cached-accounts clientIP="34.148.198.193" requestID="10865b6e-91af-4143" responseTimeMS=4 responseBytes=1494 userAgent="Python/3.11 aiohttp/3.13.2"
+[GET]
+ws-trader-pulse.onrender.com/api/cached-accounts clientIP="34.148.198.193" requestID="f01aa654-0feb-4a4e" responseTimeMS=6 responseBytes=1503 userAgent="Python/3.11 aiohttp/3.13.2"
+[GET]
+ws-trader-pulse.onrender.com/api/cached-accounts clientIP="34.148.198.193" requestID="90d9cf07-f9c1-45aa" responseTimeMS=6 responseBytes=1504 userAgent="Python/3.11 aiohttp/3.13.2"
+[GET]
+ws-trader-pulse.onrender.com/api/cached-accounts clientIP="34.148.198.193" requestID="be94dc03-ccc8-4a02" responseTimeMS=4 responseBytes=1492 userAgent="Python/3.11 aiohttp/3.13.2"
+[GET]
+ws-trader-pulse.onrender.com/api/cached-accounts clientIP="34.148.198.193" requestID="6f161e3a-93c7-4520" responseTimeMS=6 responseBytes=1484 userAgent="Python/3.11 aiohttp/3.13.2"
+[GET]
+ws-trader-pulse.onrender.com/api/cached-accounts clientIP="34.148.198.193" requestID="a50b0d22-bcbd-4477" responseTimeMS=6 responseBytes=1493 userAgent="Python/3.11 aiohttp/3.13.2"
+INFO:     10.19.52.69:33158 - "GET /api/cached-accounts HTTP/1.1" 200 OK
+INFO:     10.23.182.2:39810 - "GET /api/cached-accounts HTTP/1.1" 200 OK
+INFO:     10.19.52.69:33158 - "GET /api/cached-accounts HTTP/1.1" 200 OK
+INFO:     10.20.122.131:36696 - "GET /api/cached-accounts HTTP/1.1" 200 OK
+INFO:     10.22.95.68:51418 - "GET /api/cached-accounts HTTP/1.1" 200 OK
+INFO:     10.20.122.131:36696 - "GET /api/cached-accounts HTTP/1.1" 200 OK
+INFO:     10.23.182.2:39810 - "GET /api/cached-accounts HTTP/1.1" 200 OK
+INFO:     10.17.223.68:45924 - "GET /api/broadcaster/stats HTTP/1.1" 200 OK
+INFO:     10.23.182.2:39810 - "GET /api/cached-accounts HTTP/1.1" 200 OK
+[GET]
+ws-trader-pulse.onrender.com/api/broadcaster/stats clientIP="34.148.198.193" requestID="7486ea48-7a1e-4fa0" responseTimeMS=4 responseBytes=690 userAgent="Python/3.11 aiohttp/3.13.2"
+[GET]
+ws-trader-pulse.onrender.com/api/cached-accounts clientIP="34.148.198.193" requestID="b99e15de-1245-479e" responseTimeMS=4 responseBytes=1495 userAgent="Python/3.11 aiohttp/3.13.2"
+[GET]
+ws-trader-pulse.onrender.com/api/cached-accounts clientIP="34.148.198.193" requestID="30f3a3d5-3691-4603" responseTimeMS=4 responseBytes=1492 userAgent="Python/3.11 aiohttp/3.13.2"
+[GET]
+ws-trader-pulse.onrender.com/api/cached-accounts clientIP="34.148.198.193" requestID="a9ed8429-db44-4c5a" responseTimeMS=4 responseBytes=1502 userAgent="Python/3.11 aiohttp/3.13.2"
+INFO:     10.22.9.65:37378 - "GET /api/cached-accounts HTTP/1.1" 200 OK
+[GET]
+ws-trader-pulse.onrender.com/api/cached-accounts clientIP="34.148.198.193" requestID="b80076e5-846d-4409" responseTimeMS=4 responseBytes=1498 userAgent="Python/3.11 aiohttp/3.13.2"
+[GET]
+ws-trader-pulse.onrender.com/api/cached-accounts clientIP="34.148.198.193" requestID="cb0a5b9c-ae9a-44f5" responseTimeMS=4 responseBytes=1501 userAgent="Python/3.11 aiohttp/3.13.2"
+[GET]
+ws-trader-pulse.onrender.com/api/cached-accounts clientIP="34.148.198.193" requestID="7effe747-e068-4294" responseTimeMS=4 responseBytes=1490 userAgent="Python/3.11 aiohttp/3.13.2"
+INFO:     10.19.52.69:33158 - "GET /api/cached-accounts HTTP/1.1" 200 OK
+❌ [Extended 12 (2c4079)][/user/orders?status=ACTIVE] via proxy Error: 
+❌ [Extended 13 (a8687D)][/user/orders?status=ACTIVE] via proxy Error: 
+❌ [Extended 16 (756C39)][/user/orders?status=ACTIVE] via proxy Error: 
+❌ [Extended 17 (fAd8A4)][/user/orders?status=ACTIVE] via proxy Error: 
+❌ [Extended 20 (901F9c)][/user/orders?status=ACTIVE] via proxy Error: 
+❌ [Extended 21 (22fD71)][/user/orders?status=ACTIVE] via proxy Error: 
+❌ [Extended 22 (35d97a)][/user/orders?status=ACTIVE] via proxy Error: 
+INFO:     10.23.182.2:39810 - "GET /api/cached-accounts HTTP/1.1" 200 OK
+INFO:     10.19.153.4:38044 - "GET /api/cached-accounts HTTP/1.1" 200 OK
+[GET]
+ws-trader-pulse.onrender.com/api/cached-accounts clientIP="34.148.198.193" requestID="db1d6d58-691d-402b" responseTimeMS=4 responseBytes=1495 userAgent="Python/3.11 aiohttp/3.13.2"
+[GET]
+ws-trader-pulse.onrender.com/api/cached-accounts clientIP="34.148.198.193" requestID="4c6a6bd4-86a2-4204" responseTimeMS=4 responseBytes=1491 userAgent="Python/3.11 aiohttp/3.13.2"
+⚠️ [Extended 25 (c7477A)][/user/balance] HTTP 404 (proxy: http://ilbefxoi:mhaamz128...)
+⚠️ [Extended 19 (84eD44)][/user/balance] HTTP 404 (proxy: http://ilbefxoi:mhaamz128...)
+⚠️ [Extended 23 (76683d)][/user/balance] HTTP 404 (proxy: http://ilbefxoi:mhaamz128...)
+⚠️ [Extended 24 (62EE48)][/user/balance] HTTP 404 (proxy: http://ilbefxoi:mhaamz128...)
+⚠️ [Extended 18 (C38018)][/user/balance] HTTP 404 (proxy: http://ilbefxoi:mhaamz128...)
+⚠️ [Extended 15 (55aeC6)][/user/balance] HTTP 404 (proxy: http://ilbefxoi:mhaamz128...)
+⚠️ [Extended 14 (12d8C5)][/user/balance] HTTP 404 (proxy: http://ilbefxoi:mhaamz128...)
+INFO:     10.19.153.4:38044 - "GET /api/cached-accounts HTTP/1.1" 200 OK
+INFO:     10.18.211.133:52694 - "GET /api/cached-accounts HTTP/1.1" 200 OK
+[GET]
+ws-trader-pulse.onrender.com/api/cached-accounts clientIP="34.148.198.193" requestID="132431ad-1df4-4419" responseTimeMS=5 responseBytes=1493 userAgent="Python/3.11 aiohttp/3.13.2"
+[GET]
+ws-trader-pulse.onrender.com/api/cached-accounts clientIP="34.148.198.193" requestID="bb812cab-afc2-4a3b" responseTimeMS=4 responseBytes=1496 userAgent="Python/3.11 aiohttp/3.13.2"
+[GET]
+ws-trader-pulse.onrender.com/api/cached-accounts clientIP="34.148.198.193" requestID="1658fb55-0e18-4b28" responseTimeMS=4 responseBytes=1498 userAgent="Python/3.11 aiohttp/3.13.2"
+[GET]
+ws-trader-pulse.onrender.com/api/cached-accounts clientIP="34.148.198.193" requestID="ad74ae71-f88b-416e" responseTimeMS=4 responseBytes=1486 userAgent="Python/3.11 aiohttp/3.13.2"
+INFO:     10.18.211.133:52694 - "GET /api/cached-accounts HTTP/1.1" 200 OK
+INFO:     10.22.9.65:37378 - "GET /api/cached-accounts HTTP/1.1" 200 OK
+INFO:     10.23.182.2:39810 - "GET /api/cached-accounts HTTP/1.1" 200 OK
+INFO:     10.20.122.131:36708 - "GET /api/cached-accounts HTTP/1.1" 200 OK
+[GET]
+ws-trader-pulse.onrender.com/api/broadcaster/stats clientIP="34.148.198.193" requestID="a94de1ae-732e-4447" responseTimeMS=3 responseBytes=691 userAgent="Python/3.11 aiohttp/3.13.2"
+[GET]
+ws-trader-pulse.onrender.com/api/broadcaster/stats clientIP="34.148.198.193" requestID="1c62e672-1aeb-4f4a" responseTimeMS=7 responseBytes=697 userAgent="Python/3.11 aiohttp/3.13.2"
+INFO:     10.22.9.65:37378 - "GET /api/broadcaster/stats HTTP/1.1" 200 OK
+INFO:     10.20.122.131:36708 - "GET /api/broadcaster/stats HTTP/1.1" 200 OK
+[GET]
+ws-trader-pulse.onrender.com/api/cached-accounts clientIP="34.148.198.193" requestID="c8359cdd-a2ab-4974" responseTimeMS=5 responseBytes=1503 userAgent="Python/3.11 aiohttp/3.13.2"
+📖 [OrderBook] Connecting (attempt 4)...
+❌ [OrderBook] WebSocket error: 404, message='Invalid response status', url='wss://api.starknet.extended.exchange/stream.extended.exchange/v1'
+🔄 [OrderBook] Reconnecting in 49.7s (attempt 4)...
+INFO:     10.17.223.68:43824 - "GET /api/cached-accounts HTTP/1.1" 200 OK
+[GET]
+ws-trader-pulse.onrender.com/api/cached-accounts clientIP="34.148.198.193" requestID="bd85b81c-481e-464b" responseTimeMS=5 responseBytes=1494 userAgent="Python/3.11 aiohttp/3.13.2"
+[GET]
+ws-trader-pulse.onrender.com/api/broadcaster/stats clientIP="34.148.198.193" requestID="2b692c31-d5d0-4055" responseTimeMS=3 responseBytes=692 userAgent="Python/3.11 aiohttp/3.13.2"
+INFO:     10.22.95.68:38670 - "GET /api/cached-accounts HTTP/1.1" 200 OK
+INFO:     10.20.122.131:36708 - "GET /api/broadcaster/stats HTTP/1.1" 200 OK

@@ -266,7 +266,9 @@ async def fetch_account_api(account: AccountConfig, endpoint: str) -> Dict[str, 
                     return None
     except Exception as e:
         proxy_info = f" via proxy" if account.proxy_url else ""
-        print(f"❌ [{account.name}][{endpoint}]{proxy_info} Error: {e}")
+        error_type = type(e).__name__
+        error_msg = str(e) if str(e) else "No error message"
+        print(f"❌ [{account.name}][{endpoint}]{proxy_info} {error_type}: {error_msg}")
         return None
 
 
