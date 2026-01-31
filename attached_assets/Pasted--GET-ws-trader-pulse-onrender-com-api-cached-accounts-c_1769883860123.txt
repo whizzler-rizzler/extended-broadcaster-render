@@ -1,0 +1,132 @@
+[GET]
+ws-trader-pulse.onrender.com/api/cached-accounts clientIP="34.148.198.193" requestID="60d3f94a-520d-4bdb" responseTimeMS=3 responseBytes=1184 userAgent="Python/3.11 aiohttp/3.13.2"
+[GET]
+ws-trader-pulse.onrender.com/api/broadcaster/stats clientIP="34.148.198.193" requestID="ad056098-2ab5-4e58" responseTimeMS=2 responseBytes=509 userAgent="Python/3.11 aiohttp/3.13.2"
+⚠️ [Extended 4 (1112E1)][/user/positions-history] HTTP 404 (proxy: http://ilbefxoi-staticres...)
+⚠️ [Extended 1 (aE42d3)][/user/positions-history] HTTP 404 (proxy: http://ilbefxoi-staticres...)
+⚠️ [Extended 5 (fe69Ac)][/user/positions-history] HTTP 404 (proxy: http://ilbefxoi-staticres...)
+⚠️ [Extended 8 (7B8f14)][/user/positions-history] HTTP 404 (proxy: http://ilbefxoi-staticres...)
+⚠️ [Extended 2 (61658C)][/user/positions-history] HTTP 404 (proxy: http://ilbefxoi-staticres...)
+⚠️ [Extended 10 (0f08fC)][/user/positions-history] HTTP 404 (proxy: http://ilbefxoi-staticres...)
+⚠️ [Extended 6 (05A739)][/user/positions-history] HTTP 404 (proxy: http://ilbefxoi-staticres...)
+⚠️ [Extended 9 (1A04d3)][/user/positions-history] HTTP 404 (proxy: http://ilbefxoi-staticres...)
+⚠️ [Extended 3 (74eF87)][/user/positions-history] HTTP 404 (proxy: http://ilbefxoi-staticres...)
+⚠️ [Extended 7 (1eE2a4)][/user/positions-history] HTTP 404 (proxy: http://ilbefxoi-staticres...)
+INFO:     10.22.9.65:58750 - "GET /api/broadcaster/stats HTTP/1.1" 200 OK
+INFO:     10.20.122.131:49354 - "GET /api/cached-accounts HTTP/1.1" 200 OK
+[GET]
+ws-trader-pulse.onrender.com/api/cached-accounts clientIP="34.148.198.193" requestID="545bade9-7dca-4226" responseTimeMS=4 responseBytes=1185 userAgent="Python/3.11 aiohttp/3.13.2"
+[GET]
+ws-trader-pulse.onrender.com/api/cached-accounts clientIP="34.148.198.193" requestID="2c80fd9f-cab7-4d93" responseTimeMS=4 responseBytes=1186 userAgent="Python/3.11 aiohttp/3.13.2"
+[GET]
+ws-trader-pulse.onrender.com/api/cached-accounts clientIP="34.148.198.193" requestID="753297a0-8c4c-4e3f" responseTimeMS=6 responseBytes=1176 userAgent="Python/3.11 aiohttp/3.13.2"
+[GET]
+ws-trader-pulse.onrender.com/api/cached-accounts clientIP="34.148.198.193" requestID="a64aa6cc-a310-4062" responseTimeMS=3 responseBytes=1181 userAgent="Python/3.11 aiohttp/3.13.2"
+INFO:     10.23.182.2:57222 - "GET /api/cached-accounts HTTP/1.1" 200 OK
+INFO:     10.20.122.131:49354 - "GET /api/cached-accounts HTTP/1.1" 200 OK
+INFO:     10.17.223.68:34450 - "GET /api/cached-accounts HTTP/1.1" 200 OK
+INFO:     10.22.95.68:60546 - "GET /api/cached-accounts HTTP/1.1" 200 OK
+[GET]
+ws-trader-pulse.onrender.com/api/cached-accounts clientIP="34.148.198.193" requestID="9e4d79a8-aefe-46b3" responseTimeMS=5 responseBytes=1181 userAgent="Python/3.11 aiohttp/3.13.2"
+[GET]
+ws-trader-pulse.onrender.com/api/cached-accounts clientIP="34.148.198.193" requestID="844c9509-fd7d-4b5b" responseTimeMS=9 responseBytes=1183 userAgent="Python/3.11 aiohttp/3.13.2"
+[GET]
+ws-trader-pulse.onrender.com/api/cached-accounts clientIP="34.148.198.193" requestID="ae801b91-107a-4799" responseTimeMS=3 responseBytes=1183 userAgent="Python/3.11 aiohttp/3.13.2"
+[GET]
+ws-trader-pulse.onrender.com/api/cached-accounts clientIP="34.148.198.193" requestID="896fcafd-0aad-44bf" responseTimeMS=4 responseBytes=1172 userAgent="Python/3.11 aiohttp/3.13.2"
+INFO:     10.19.153.4:53588 - "GET /api/cached-accounts HTTP/1.1" 200 OK
+INFO:     10.18.211.133:44810 - "GET /api/cached-accounts HTTP/1.1" 200 OK
+INFO:     10.23.182.2:57222 - "GET /api/cached-accounts HTTP/1.1" 200 OK
+[GET]
+ws-trader-pulse.onrender.com/api/cached-accounts clientIP="34.148.198.193" requestID="9bf9529d-3022-4ee3" responseTimeMS=3 responseBytes=1178 userAgent="Python/3.11 aiohttp/3.13.2"
+[GET]
+ws-trader-pulse.onrender.com/api/cached-accounts clientIP="34.148.198.193" requestID="0bb2e2bc-92a1-4565" responseTimeMS=5 responseBytes=1194 userAgent="Python/3.11 aiohttp/3.13.2"
+[GET]
+ws-trader-pulse.onrender.com/api/cached-accounts clientIP="34.148.198.193" requestID="e6b4418a-6634-4403" responseTimeMS=3 responseBytes=1176 userAgent="Python/3.11 aiohttp/3.13.2"
+[GET]
+ws-trader-pulse.onrender.com/api/cached-accounts clientIP="34.148.198.193" requestID="bccfc79a-a0f0-40a0" responseTimeMS=7 responseBytes=1188 userAgent="Python/3.11 aiohttp/3.13.2"
+[GET]
+ws-trader-pulse.onrender.com/api/cached-accounts clientIP="34.148.198.193" requestID="d67303a7-10a0-46f2" responseTimeMS=3 responseBytes=1186 userAgent="Python/3.11 aiohttp/3.13.2"
+INFO:     10.22.95.68:60546 - "GET /api/cached-accounts HTTP/1.1" 200 OK
+INFO:     10.19.153.4:53588 - "GET /api/cached-accounts HTTP/1.1" 200 OK
+INFO:     10.17.223.68:34450 - "GET /api/cached-accounts HTTP/1.1" 200 OK
+INFO:     10.22.9.65:45140 - "GET /api/cached-accounts HTTP/1.1" 200 OK
+INFO:     10.20.122.131:49354 - "GET /api/cached-accounts HTTP/1.1" 200 OK
+INFO:     10.17.223.68:34450 - "GET /api/cached-accounts HTTP/1.1" 200 OK
+INFO:     10.19.52.69:58392 - "GET /api/cached-accounts HTTP/1.1" 200 OK
+INFO:     10.22.9.65:45140 - "GET /api/cached-accounts HTTP/1.1" 200 OK
+INFO:     10.20.122.131:49354 - "GET /api/cached-accounts HTTP/1.1" 200 OK
+⚠️ [Extended 10 (0f08fC)][/user/positions-history] HTTP 404 (proxy: http://ilbefxoi-staticres...)
+⚠️ [Extended 5 (fe69Ac)][/user/positions-history] HTTP 404 (proxy: http://ilbefxoi-staticres...)
+⚠️ [Extended 4 (1112E1)][/user/positions-history] HTTP 404 (proxy: http://ilbefxoi-staticres...)
+⚠️ [Extended 2 (61658C)][/user/positions-history] HTTP 404 (proxy: http://ilbefxoi-staticres...)
+⚠️ [Extended 8 (7B8f14)][/user/positions-history] HTTP 404 (proxy: http://ilbefxoi-staticres...)
+⚠️ [Extended 9 (1A04d3)][/user/positions-history] HTTP 404 (proxy: http://ilbefxoi-staticres...)
+[GET]
+ws-trader-pulse.onrender.com/api/cached-accounts clientIP="34.148.198.193" requestID="e5da1e39-9443-4d02" responseTimeMS=5 responseBytes=1173 userAgent="Python/3.11 aiohttp/3.13.2"
+[GET]
+ws-trader-pulse.onrender.com/api/cached-accounts clientIP="34.148.198.193" requestID="30598864-ad28-4d2b" responseTimeMS=3 responseBytes=1176 userAgent="Python/3.11 aiohttp/3.13.2"
+[GET]
+ws-trader-pulse.onrender.com/api/cached-accounts clientIP="34.148.198.193" requestID="5778cdd5-677c-4a35" responseTimeMS=3 responseBytes=1180 userAgent="Python/3.11 aiohttp/3.13.2"
+[GET]
+ws-trader-pulse.onrender.com/api/cached-accounts clientIP="34.148.198.193" requestID="86e31d7c-e0e7-4e77" responseTimeMS=3 responseBytes=1178 userAgent="Python/3.11 aiohttp/3.13.2"
+⚠️ [Extended 1 (aE42d3)][/user/positions-history] HTTP 404 (proxy: http://ilbefxoi-staticres...)
+⚠️ [Extended 7 (1eE2a4)][/user/positions-history] HTTP 404 (proxy: http://ilbefxoi-staticres...)
+⚠️ [Extended 6 (05A739)][/user/positions-history] HTTP 404 (proxy: http://ilbefxoi-staticres...)
+⚠️ [Extended 3 (74eF87)][/user/positions-history] HTTP 404 (proxy: http://ilbefxoi-staticres...)
+INFO:     10.20.122.131:49354 - "GET /api/cached-accounts HTTP/1.1" 200 OK
+[GET]
+ws-trader-pulse.onrender.com/api/cached-accounts clientIP="34.148.198.193" requestID="2abc2eb1-79b9-48e0" responseTimeMS=4 responseBytes=1172 userAgent="Python/3.11 aiohttp/3.13.2"
+[GET]
+ws-trader-pulse.onrender.com/api/cached-accounts clientIP="34.148.198.193" requestID="562ed21a-76b0-454d" responseTimeMS=9 responseBytes=1177 userAgent="Python/3.11 aiohttp/3.13.2"
+[GET]
+ws-trader-pulse.onrender.com/api/cached-accounts clientIP="34.148.198.193" requestID="d6eb1d45-bb13-446c" responseTimeMS=4 responseBytes=1174 userAgent="Python/3.11 aiohttp/3.13.2"
+[GET]
+ws-trader-pulse.onrender.com/api/broadcaster/stats clientIP="34.148.198.193" requestID="3323b74f-aac1-49f2" responseTimeMS=2 responseBytes=509 userAgent="Python/3.11 aiohttp/3.13.2"
+INFO:     10.19.52.69:58392 - "GET /api/cached-accounts HTTP/1.1" 200 OK
+INFO:     10.19.52.69:58392 - "GET /api/cached-accounts HTTP/1.1" 200 OK
+INFO:     10.19.153.4:53588 - "GET /api/cached-accounts HTTP/1.1" 200 OK
+INFO:     10.23.182.2:57228 - "GET /api/broadcaster/stats HTTP/1.1" 200 OK
+[GET]
+ws-trader-pulse.onrender.com/api/cached-accounts clientIP="34.148.198.193" requestID="da8588c5-e9e5-49df" responseTimeMS=5 responseBytes=1173 userAgent="Python/3.11 aiohttp/3.13.2"
+[GET]
+ws-trader-pulse.onrender.com/api/cached-accounts clientIP="34.148.198.193" requestID="40360da7-24bb-4090" responseTimeMS=4 responseBytes=1173 userAgent="Python/3.11 aiohttp/3.13.2"
+[GET]
+ws-trader-pulse.onrender.com/api/broadcaster/stats clientIP="34.148.198.193" requestID="b342ff51-84db-49b7" responseTimeMS=2 responseBytes=508 userAgent="Python/3.11 aiohttp/3.13.2"
+INFO:     10.19.52.69:58392 - "GET /api/cached-accounts HTTP/1.1" 200 OK
+INFO:     10.19.52.69:58392 - "GET /api/broadcaster/stats HTTP/1.1" 200 OK
+INFO:     10.22.95.68:60550 - "GET /api/cached-accounts HTTP/1.1" 200 OK
+[GET]
+ws-trader-pulse.onrender.com/api/broadcaster/stats clientIP="34.148.198.193" requestID="00429a37-6958-4609" responseTimeMS=1 responseBytes=509 userAgent="Python/3.11 aiohttp/3.13.2"
+INFO:     10.20.122.131:44540 - "GET /api/broadcaster/stats HTTP/1.1" 200 OK
+[GET]
+ws-trader-pulse.onrender.com/api/broadcaster/stats clientIP="34.148.198.193" requestID="ea705000-c5e0-43ba" responseTimeMS=1 responseBytes=509 userAgent="Python/3.11 aiohttp/3.13.2"
+[GET]
+ws-trader-pulse.onrender.com/api/cached-accounts clientIP="34.148.198.193" requestID="97951380-e716-49f2" responseTimeMS=3 responseBytes=1174 userAgent="Python/3.11 aiohttp/3.13.2"
+INFO:     10.22.9.65:45142 - "GET /api/cached-accounts HTTP/1.1" 200 OK
+INFO:     10.23.182.2:34922 - "GET /api/broadcaster/stats HTTP/1.1" 200 OK
+[GET]
+ws-trader-pulse.onrender.com/api/cached-accounts clientIP="34.148.198.193" requestID="93d5f7dc-5091-4df3" responseTimeMS=4 responseBytes=1179 userAgent="Python/3.11 aiohttp/3.13.2"
+[GET]
+ws-trader-pulse.onrender.com/api/cached-accounts clientIP="34.148.198.193" requestID="5e1ad25b-9949-40ec" responseTimeMS=4 responseBytes=1174 userAgent="Python/3.11 aiohttp/3.13.2"
+[GET]
+ws-trader-pulse.onrender.com/api/cached-accounts clientIP="34.148.198.193" requestID="e8ab8fd9-79dd-4cc5" responseTimeMS=5 responseBytes=1182 userAgent="Python/3.11 aiohttp/3.13.2"
+[GET]
+ws-trader-pulse.onrender.com/api/cached-accounts clientIP="34.148.198.193" requestID="111bdadd-ca0c-41ce" responseTimeMS=2 responseBytes=1173 userAgent="Python/3.11 aiohttp/3.13.2"
+⚠️ [Extended 10 (0f08fC)][/user/positions-history] HTTP 404 (proxy: http://ilbefxoi-staticres...)
+⚠️ [Extended 5 (fe69Ac)][/user/positions-history] HTTP 404 (proxy: http://ilbefxoi-staticres...)
+⚠️ [Extended 8 (7B8f14)][/user/positions-history] HTTP 404 (proxy: http://ilbefxoi-staticres...)
+⚠️ [Extended 9 (1A04d3)][/user/positions-history] HTTP 404 (proxy: http://ilbefxoi-staticres...)
+⚠️ [Extended 4 (1112E1)][/user/positions-history] HTTP 404 (proxy: http://ilbefxoi-staticres...)
+⚠️ [Extended 6 (05A739)][/user/positions-history] HTTP 404 (proxy: http://ilbefxoi-staticres...)
+⚠️ [Extended 1 (aE42d3)][/user/positions-history] HTTP 404 (proxy: http://ilbefxoi-staticres...)
+⚠️ [Extended 3 (74eF87)][/user/positions-history] HTTP 404 (proxy: http://ilbefxoi-staticres...)
+⚠️ [Extended 7 (1eE2a4)][/user/positions-history] HTTP 404 (proxy: http://ilbefxoi-staticres...)
+⚠️ [Extended 2 (61658C)][/user/positions-history] HTTP 404 (proxy: http://ilbefxoi-staticres...)
+INFO:     10.19.52.69:58392 - "GET /api/cached-accounts HTTP/1.1" 200 OK
+INFO:     10.22.9.65:45142 - "GET /api/cached-accounts HTTP/1.1" 200 OK
+INFO:     10.18.211.133:33542 - "GET /api/cached-accounts HTTP/1.1" 200 OK
+INFO:     10.22.95.68:60552 - "GET /api/cached-accounts HTTP/1.1" 200 OK
+INFO:     10.19.52.69:58392 - "GET /api/cached-accounts HTTP/1.1" 200 OK
+INFO:     10.20.122.131:44540 - "GET /api/cached-accounts HTTP/1.1" 200 OK
+INFO:     10.19.52.69:58392 - "GET /api/cached-accounts HTTP/1.1" 200 OK

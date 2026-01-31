@@ -1,0 +1,152 @@
+❌ [Extended 14 (12d8C5)][/user/balance] via proxy Error: 407, message='Proxy Authentication Required', url='http://ilbefxoi-staticresidential:mhaamz128dg0@108.165.181.220:5683'
+❌ [Extended 14 (12d8C5)][/user/positions] via proxy Error: 407, message='Proxy Authentication Required', url='http://ilbefxoi-staticresidential:mhaamz128dg0@108.165.181.220:5683'
+❌ [Extended 16 (756C39)][/user/balance] via proxy Error: 407, message='Proxy Authentication Required', url='http://ilbefxoi-staticresidential:mhaamz128dg0@23.27.243.75:6540'
+Menu
+❌ [Extended 13 (a8687D)][/user/balance] via proxy Error: 407, message='Proxy Authentication Required', url='http://ilbefxoi-staticresidential:mhaamz128dg0@167.100.106.29:7098'
+❌ [Extended 12 (2c4079)][/user/balance] via proxy Error: 407, message='Proxy Authentication Required', url='http://ilbefxoi-staticresidential:mhaamz128dg0@167.100.106.100:7169'
+❌ [Extended 24 (62EE48)][/user/balance] via proxy Error: 407, message='Proxy Authentication Required', url='http://ilbefxoi-staticresidential:mhaamz128dg0@195.40.122.131:6815'
+❌ [Extended 18 (C38018)][/user/balance] via proxy Error: 407, message='Proxy Authentication Required', url='http://ilbefxoi-staticresidential:mhaamz128dg0@23.26.46.60:7026'
+❌ [Extended 23 (76683d)][/user/balance] via proxy Error: 407, message='Proxy Authentication Required', url='http://ilbefxoi-staticresidential:mhaamz128dg0@195.40.123.123:6307'
+❌ [Extended 21 (22fD71)][/user/balance] via proxy Error: 407, message='Proxy Authentication Required', url='http://ilbefxoi-staticresidential:mhaamz128dg0@23.27.127.234:7199'
+❌ [Extended 22 (35d97a)][/user/balance] via proxy Error: 407, message='Proxy Authentication Required', url='http://ilbefxoi-staticresidential:mhaamz128dg0@142.111.67.81:5546'
+❌ [Extended 19 (84eD44)][/user/balance] via proxy Error: 407, message='Proxy Authentication Required', url='http://ilbefxoi-staticresidential:mhaamz128dg0@142.111.208.149:7113'
+❌ [Extended 20 (901F9c)][/user/positions] via proxy Error: 407, message='Proxy Authentication Required', url='http://ilbefxoi-staticresidential:mhaamz128dg0@167.100.105.21:7590'
+❌ [Extended 23 (76683d)][/user/positions] via proxy Error: 407, message='Proxy Authentication Required', url='http://ilbefxoi-staticresidential:mhaamz128dg0@195.40.123.123:6307'
+❌ [Extended 22 (35d97a)][/user/positions] via proxy Error: 407, message='Proxy Authentication Required', url='http://ilbefxoi-staticresidential:mhaamz128dg0@142.111.67.81:5546'
+❌ [Extended 21 (22fD71)][/user/positions] via proxy Error: 407, message='Proxy Authentication Required', url='http://ilbefxoi-staticresidential:mhaamz128dg0@23.27.127.234:7199'
+❌ [Extended 15 (55aeC6)][/user/positions] via proxy Error: 407, message='Proxy Authentication Required', url='http://ilbefxoi-staticresidential:mhaamz128dg0@147.136.85.173:6089'
+❌ [Extended 15 (55aeC6)][/user/balance] via proxy Error: 407, message='Proxy Authentication Required', url='http://ilbefxoi-staticresidential:mhaamz128dg0@147.136.85.173:6089'
+❌ [Extended 13 (a8687D)][/user/positions] via proxy Error: 407, message='Proxy Authentication Required', url='http://ilbefxoi-staticresidential:mhaamz128dg0@167.100.106.29:7098'
+❌ [Extended 25 (c7477A)][/user/positions] via proxy Error: 407, message='Proxy Authentication Required', url='http://ilbefxoi-staticresidential:mhaamz128dg0@195.40.120.53:5736'
+❌ [Extended 24 (62EE48)][/user/positions] via proxy Error: 407, message='Proxy Authentication Required', url='http://ilbefxoi-staticresidential:mhaamz128dg0@195.40.122.131:6815'
+❌ [Extended 17 (fAd8A4)][/user/positions] via proxy Error: 407, message='Proxy Authentication Required', url='http://ilbefxoi-staticresidential:mhaamz128dg0@142.111.67.31:5496'
+==> ///////////////////////////////////////////////////////////
+==> 
+==> Available at your primary URL https://ws-trader-pulse.onrender.com
+==> 
+==> ///////////////////////////////////////////////////////////
+❌ [Extended 17 (fAd8A4)][/user/balance] via proxy Error: 407, message='Proxy Authentication Required', url='http://ilbefxoi-staticresidential:mhaamz128dg0@142.111.67.31:5496'
+❌ [Extended 16 (756C39)][/user/positions] via proxy Error: 407, message='Proxy Authentication Required', url='http://ilbefxoi-staticresidential:mhaamz128dg0@23.27.243.75:6540'
+❌ [Extended 25 (c7477A)][/user/balance] via proxy Error: 407, message='Proxy Authentication Required', url='http://ilbefxoi-staticresidential:mhaamz128dg0@195.40.120.53:5736'
+❌ [Extended 20 (901F9c)][/user/balance] via proxy Error: 407, message='Proxy Authentication Required', url='http://ilbefxoi-staticresidential:mhaamz128dg0@167.100.105.21:7590'
+❌ [Extended 18 (C38018)][/user/orders?status=ACTIVE] via proxy Error: 407, message='Proxy Authentication Required', url='http://ilbefxoi-staticresidential:mhaamz128dg0@23.26.46.60:7026'
+❌ [Extended 23 (76683d)][/user/orders?status=ACTIVE] via proxy Error: 407, message='Proxy Authentication Required', url='http://ilbefxoi-staticresidential:mhaamz128dg0@195.40.123.123:6307'
+❌ [Extended 15 (55aeC6)][/user/orders?status=ACTIVE] via proxy Error: 407, message='Proxy Authentication Required', url='http://ilbefxoi-staticresidential:mhaamz128dg0@147.136.85.173:6089'
+❌ [Extended 24 (62EE48)][/user/orders?status=ACTIVE] via proxy Error: 407, message='Proxy Authentication Required', url='http://ilbefxoi-staticresidential:mhaamz128dg0@195.40.122.131:6815'
+❌ [Extended 25 (c7477A)][/user/orders?status=ACTIVE] via proxy Error: 407, message='Proxy Authentication Required', url='http://ilbefxoi-staticresidential:mhaamz128dg0@195.40.120.53:5736'
+❌ [Extended 13 (a8687D)][/user/orders?status=ACTIVE] via proxy Error: 407, message='Proxy Authentication Required', url='http://ilbefxoi-staticresidential:mhaamz128dg0@167.100.106.29:7098'
+❌ [Extended 12 (2c4079)][/user/orders?status=ACTIVE] via proxy Error: 407, message='Proxy Authentication Required', url='http://ilbefxoi-staticresidential:mhaamz128dg0@167.100.106.100:7169'
+❌ [Extended 19 (84eD44)][/user/orders?status=ACTIVE] via proxy Error: 407, message='Proxy Authentication Required', url='http://ilbefxoi-staticresidential:mhaamz128dg0@142.111.208.149:7113'
+❌ [Extended 20 (901F9c)][/user/orders?status=ACTIVE] via proxy Error: 407, message='Proxy Authentication Required', url='http://ilbefxoi-staticresidential:mhaamz128dg0@167.100.105.21:7590'
+❌ [Extended 22 (35d97a)][/user/orders?status=ACTIVE] via proxy Error: 407, message='Proxy Authentication Required', url='http://ilbefxoi-staticresidential:mhaamz128dg0@142.111.67.81:5546'
+❌ [Extended 14 (12d8C5)][/user/orders?status=ACTIVE] via proxy Error: 407, message='Proxy Authentication Required', url='http://ilbefxoi-staticresidential:mhaamz128dg0@108.165.181.220:5683'
+❌ [Extended 17 (fAd8A4)][/user/orders?status=ACTIVE] via proxy Error: 407, message='Proxy Authentication Required', url='http://ilbefxoi-staticresidential:mhaamz128dg0@142.111.67.31:5496'
+❌ [Extended 21 (22fD71)][/user/orders?status=ACTIVE] via proxy Error: 407, message='Proxy Authentication Required', url='http://ilbefxoi-staticresidential:mhaamz128dg0@23.27.127.234:7199'
+❌ [Extended 16 (756C39)][/user/orders?status=ACTIVE] via proxy Error: 407, message='Proxy Authentication Required', url='http://ilbefxoi-staticresidential:mhaamz128dg0@23.27.243.75:6540'
+❌ [Extended 18 (C38018)][/user/positions-history] via proxy Error: 407, message='Proxy Authentication Required', url='http://ilbefxoi-staticresidential:mhaamz128dg0@23.26.46.60:7026'
+❌ [Extended 22 (35d97a)][/user/positions-history] via proxy Error: 407, message='Proxy Authentication Required', url='http://ilbefxoi-staticresidential:mhaamz128dg0@142.111.67.81:5546'
+❌ [Extended 15 (55aeC6)][/user/positions-history] via proxy Error: 407, message='Proxy Authentication Required', url='http://ilbefxoi-staticresidential:mhaamz128dg0@147.136.85.173:6089'
+❌ [Extended 19 (84eD44)][/user/positions-history] via proxy Error: 407, message='Proxy Authentication Required', url='http://ilbefxoi-staticresidential:mhaamz128dg0@142.111.208.149:7113'
+❌ [Extended 25 (c7477A)][/user/positions-history] via proxy Error: 407, message='Proxy Authentication Required', url='http://ilbefxoi-staticresidential:mhaamz128dg0@195.40.120.53:5736'
+❌ [Extended 24 (62EE48)][/user/positions-history] via proxy Error: 407, message='Proxy Authentication Required', url='http://ilbefxoi-staticresidential:mhaamz128dg0@195.40.122.131:6815'
+❌ [Extended 20 (901F9c)][/user/positions-history] via proxy Error: 407, message='Proxy Authentication Required', url='http://ilbefxoi-staticresidential:mhaamz128dg0@167.100.105.21:7590'
+❌ [Extended 23 (76683d)][/user/positions-history] via proxy Error: 407, message='Proxy Authentication Required', url='http://ilbefxoi-staticresidential:mhaamz128dg0@195.40.123.123:6307'
+❌ [Extended 21 (22fD71)][/user/positions-history] via proxy Error: 407, message='Proxy Authentication Required', url='http://ilbefxoi-staticresidential:mhaamz128dg0@23.27.127.234:7199'
+❌ [Extended 13 (a8687D)][/user/positions-history] via proxy Error: 407, message='Proxy Authentication Required', url='http://ilbefxoi-staticresidential:mhaamz128dg0@167.100.106.29:7098'
+❌ [Extended 12 (2c4079)][/user/positions-history] via proxy Error: 407, message='Proxy Authentication Required', url='http://ilbefxoi-staticresidential:mhaamz128dg0@167.100.106.100:7169'
+❌ [Extended 14 (12d8C5)][/user/positions-history] via proxy Error: 407, message='Proxy Authentication Required', url='http://ilbefxoi-staticresidential:mhaamz128dg0@108.165.181.220:5683'
+❌ [Extended 16 (756C39)][/user/positions-history] via proxy Error: 407, message='Proxy Authentication Required', url='http://ilbefxoi-staticresidential:mhaamz128dg0@23.27.243.75:6540'
+❌ [Extended 17 (fAd8A4)][/user/positions-history] via proxy Error: 407, message='Proxy Authentication Required', url='http://ilbefxoi-staticresidential:mhaamz128dg0@142.111.67.31:5496'
+⚠️ [Extended 1 (aE42d3)][/user/positions-history] HTTP 404 (proxy: http://ilbefxoi-staticres...)
+⚠️ [Extended 7 (1eE2a4)][/user/positions-history] HTTP 404 (proxy: http://ilbefxoi-staticres...)
+⚠️ [Extended 8 (7B8f14)][/user/positions-history] HTTP 404 (proxy: http://ilbefxoi-staticres...)
+⚠️ [Extended 10 (0f08fC)][/user/positions-history] HTTP 404 (proxy: http://ilbefxoi-staticres...)
+⚠️ [Extended 4 (1112E1)][/user/positions-history] HTTP 404 (proxy: http://ilbefxoi-staticres...)
+⚠️ [Extended 5 (fe69Ac)][/user/positions-history] HTTP 404 (proxy: http://ilbefxoi-staticres...)
+⚠️ [Extended 2 (61658C)][/user/positions-history] HTTP 404 (proxy: http://ilbefxoi-staticres...)
+⚠️ [Extended 9 (1A04d3)][/user/positions-history] HTTP 404 (proxy: http://ilbefxoi-staticres...)
+⚠️ [Extended 6 (05A739)][/user/positions-history] HTTP 404 (proxy: http://ilbefxoi-staticres...)
+INFO:     127.0.0.1:43132 - "HEAD / HTTP/1.1" 404 Not Found
+⚠️ [Extended 1 (aE42d3)][/user/positions-history] HTTP 404 (proxy: http://ilbefxoi-staticres...)
+⚠️ [Extended 10 (0f08fC)][/user/positions-history] HTTP 404 (proxy: http://ilbefxoi-staticres...)
+⚠️ [Extended 6 (05A739)][/user/positions-history] HTTP 404 (proxy: http://ilbefxoi-staticres...)
+⚠️ [Extended 9 (1A04d3)][/user/positions-history] HTTP 404 (proxy: http://ilbefxoi-staticres...)
+⚠️ [Extended 5 (fe69Ac)][/user/positions-history] HTTP 404 (proxy: http://ilbefxoi-staticres...)
+⚠️ [Extended 3 (74eF87)][/user/positions-history] HTTP 404 (proxy: http://ilbefxoi-staticres...)
+⚠️ [Extended 4 (1112E1)][/user/positions-history] HTTP 404 (proxy: http://ilbefxoi-staticres...)
+⚠️ [Extended 7 (1eE2a4)][/user/positions-history] HTTP 404 (proxy: http://ilbefxoi-staticres...)
+⚠️ [Extended 8 (7B8f14)][/user/positions-history] HTTP 404 (proxy: http://ilbefxoi-staticres...)
+⚠️ [Extended 2 (61658C)][/user/positions-history] HTTP 404 (proxy: http://ilbefxoi-staticres...)
+⚠️ [Extended 8 (7B8f14)][/user/positions-history] HTTP 404 (proxy: http://ilbefxoi-staticres...)
+⚠️ [Extended 5 (fe69Ac)][/user/positions-history] HTTP 404 (proxy: http://ilbefxoi-staticres...)
+⚠️ [Extended 6 (05A739)][/user/positions-history] HTTP 404 (proxy: http://ilbefxoi-staticres...)
+⚠️ [Extended 4 (1112E1)][/user/positions-history] HTTP 404 (proxy: http://ilbefxoi-staticres...)
+⚠️ [Extended 2 (61658C)][/user/positions-history] HTTP 404 (proxy: http://ilbefxoi-staticres...)
+⚠️ [Extended 7 (1eE2a4)][/user/positions-history] HTTP 404 (proxy: http://ilbefxoi-staticres...)
+⚠️ [Extended 3 (74eF87)][/user/positions-history] HTTP 404 (proxy: http://ilbefxoi-staticres...)
+⚠️ [Extended 10 (0f08fC)][/user/positions-history] HTTP 404 (proxy: http://ilbefxoi-staticres...)
+⚠️ [Extended 1 (aE42d3)][/user/positions-history] HTTP 404 (proxy: http://ilbefxoi-staticres...)
+⚠️ [Extended 9 (1A04d3)][/user/positions-history] HTTP 404 (proxy: http://ilbefxoi-staticres...)
+⚠️ [Extended 1 (aE42d3)][/user/positions-history] HTTP 404 (proxy: http://ilbefxoi-staticres...)
+⚠️ [Extended 5 (fe69Ac)][/user/positions-history] HTTP 404 (proxy: http://ilbefxoi-staticres...)
+⚠️ [Extended 6 (05A739)][/user/positions-history] HTTP 404 (proxy: http://ilbefxoi-staticres...)
+⚠️ [Extended 2 (61658C)][/user/positions-history] HTTP 404 (proxy: http://ilbefxoi-staticres...)
+⚠️ [Extended 9 (1A04d3)][/user/positions-history] HTTP 404 (proxy: http://ilbefxoi-staticres...)
+⚠️ [Extended 7 (1eE2a4)][/user/positions-history] HTTP 404 (proxy: http://ilbefxoi-staticres...)
+⚠️ [Extended 8 (7B8f14)][/user/positions-history] HTTP 404 (proxy: http://ilbefxoi-staticres...)
+⚠️ [Extended 3 (74eF87)][/user/positions-history] HTTP 404 (proxy: http://ilbefxoi-staticres...)
+⚠️ [Extended 4 (1112E1)][/user/positions-history] HTTP 404 (proxy: http://ilbefxoi-staticres...)
+⚠️ [Extended 10 (0f08fC)][/user/positions-history] HTTP 404 (proxy: http://ilbefxoi-staticres...)
+⚠️ [Extended 3 (74eF87)][/user/positions-history] HTTP 404 (proxy: http://ilbefxoi-staticres...)
+⚠️ [Extended 5 (fe69Ac)][/user/positions-history] HTTP 404 (proxy: http://ilbefxoi-staticres...)
+[GET]
+ws-trader-pulse.onrender.com/ clientIP="35.227.187.87" requestID="b7513007-a126-40f4" responseTimeMS=2 responseBytes=219 userAgent="Go-http-client/2.0"
+⚠️ [Extended 1 (aE42d3)][/user/positions-history] HTTP 404 (proxy: http://ilbefxoi-staticres...)
+⚠️ [Extended 10 (0f08fC)][/user/positions-history] HTTP 404 (proxy: http://ilbefxoi-staticres...)
+⚠️ [Extended 2 (61658C)][/user/positions-history] HTTP 404 (proxy: http://ilbefxoi-staticres...)
+⚠️ [Extended 9 (1A04d3)][/user/positions-history] HTTP 404 (proxy: http://ilbefxoi-staticres...)
+⚠️ [Extended 4 (1112E1)][/user/positions-history] HTTP 404 (proxy: http://ilbefxoi-staticres...)
+⚠️ [Extended 6 (05A739)][/user/positions-history] HTTP 404 (proxy: http://ilbefxoi-staticres...)
+⚠️ [Extended 7 (1eE2a4)][/user/positions-history] HTTP 404 (proxy: http://ilbefxoi-staticres...)
+⚠️ [Extended 8 (7B8f14)][/user/positions-history] HTTP 404 (proxy: http://ilbefxoi-staticres...)
+⚠️ [Extended 6 (05A739)][/user/positions-history] HTTP 404 (proxy: http://ilbefxoi-staticres...)
+⚠️ [Extended 7 (1eE2a4)][/user/positions-history] HTTP 404 (proxy: http://ilbefxoi-staticres...)
+⚠️ [Extended 2 (61658C)][/user/positions-history] HTTP 404 (proxy: http://ilbefxoi-staticres...)
+⚠️ [Extended 10 (0f08fC)][/user/positions-history] HTTP 404 (proxy: http://ilbefxoi-staticres...)
+⚠️ [Extended 3 (74eF87)][/user/positions-history] HTTP 404 (proxy: http://ilbefxoi-staticres...)
+⚠️ [Extended 1 (aE42d3)][/user/positions-history] HTTP 404 (proxy: http://ilbefxoi-staticres...)
+⚠️ [Extended 9 (1A04d3)][/user/positions-history] HTTP 404 (proxy: http://ilbefxoi-staticres...)
+⚠️ [Extended 8 (7B8f14)][/user/positions-history] HTTP 404 (proxy: http://ilbefxoi-staticres...)
+⚠️ [Extended 5 (fe69Ac)][/user/positions-history] HTTP 404 (proxy: http://ilbefxoi-staticres...)
+⚠️ [Extended 4 (1112E1)][/user/positions-history] HTTP 404 (proxy: http://ilbefxoi-staticres...)
+⚠️ [Extended 3 (74eF87)][/user/positions-history] HTTP 404 (proxy: http://ilbefxoi-staticres...)
+⚠️ [Extended 5 (fe69Ac)][/user/positions-history] HTTP 404 (proxy: http://ilbefxoi-staticres...)
+⚠️ [Extended 9 (1A04d3)][/user/positions-history] HTTP 404 (proxy: http://ilbefxoi-staticres...)
+⚠️ [Extended 8 (7B8f14)][/user/positions-history] HTTP 404 (proxy: http://ilbefxoi-staticres...)
+⚠️ [Extended 10 (0f08fC)][/user/positions-history] HTTP 404 (proxy: http://ilbefxoi-staticres...)
+⚠️ [Extended 6 (05A739)][/user/positions-history] HTTP 404 (proxy: http://ilbefxoi-staticres...)
+⚠️ [Extended 2 (61658C)][/user/positions-history] HTTP 404 (proxy: http://ilbefxoi-staticres...)
+⚠️ [Extended 1 (aE42d3)][/user/positions-history] HTTP 404 (proxy: http://ilbefxoi-staticres...)
+⚠️ [Extended 4 (1112E1)][/user/positions-history] HTTP 404 (proxy: http://ilbefxoi-staticres...)
+⚠️ [Extended 7 (1eE2a4)][/user/positions-history] HTTP 404 (proxy: http://ilbefxoi-staticres...)
+⚠️ [Extended 9 (1A04d3)][/user/positions-history] HTTP 404 (proxy: http://ilbefxoi-staticres...)
+⚠️ [Extended 5 (fe69Ac)][/user/positions-history] HTTP 404 (proxy: http://ilbefxoi-staticres...)
+⚠️ [Extended 10 (0f08fC)][/user/positions-history] HTTP 404 (proxy: http://ilbefxoi-staticres...)
+⚠️ [Extended 8 (7B8f14)][/user/positions-history] HTTP 404 (proxy: http://ilbefxoi-staticres...)
+⚠️ [Extended 2 (61658C)][/user/positions-history] HTTP 404 (proxy: http://ilbefxoi-staticres...)
+⚠️ [Extended 1 (aE42d3)][/user/positions-history] HTTP 404 (proxy: http://ilbefxoi-staticres...)
+⚠️ [Extended 7 (1eE2a4)][/user/positions-history] HTTP 404 (proxy: http://ilbefxoi-staticres...)
+⚠️ [Extended 4 (1112E1)][/user/positions-history] HTTP 404 (proxy: http://ilbefxoi-staticres...)
+⚠️ [Extended 6 (05A739)][/user/positions-history] HTTP 404 (proxy: http://ilbefxoi-staticres...)
+⚠️ [Extended 3 (74eF87)][/user/positions-history] HTTP 404 (proxy: http://ilbefxoi-staticres...)
+⚠️ [Extended 5 (fe69Ac)][/user/positions-history] HTTP 404 (proxy: http://ilbefxoi-staticres...)
+⚠️ [Extended 7 (1eE2a4)][/user/positions-history] HTTP 404 (proxy: http://ilbefxoi-staticres...)
+⚠️ [Extended 2 (61658C)][/user/positions-history] HTTP 404 (proxy: http://ilbefxoi-staticres...)
+⚠️ [Extended 9 (1A04d3)][/user/positions-history] HTTP 404 (proxy: http://ilbefxoi-staticres...)
+⚠️ [Extended 6 (05A739)][/user/positions-history] HTTP 404 (proxy: http://ilbefxoi-staticres...)
+⚠️ [Extended 10 (0f08fC)][/user/positions-history] HTTP 404 (proxy: http://ilbefxoi-staticres...)
+⚠️ [Extended 4 (1112E1)][/user/positions-history] HTTP 404 (proxy: http://ilbefxoi-staticres...)
+⚠️ [Extended 3 (74eF87)][/user/positions-history] HTTP 404 (proxy: http://ilbefxoi-staticres...)
+⚠️ [Extended 8 (7B8f14)][/user/positions-history] HTTP 404 (proxy: http://ilbefxoi-staticres...)
+⚠️ [Extended 1 (aE42d3)][/user/positions-history] HTTP 404 (proxy: http://ilbefxoi-staticres...)
+INFO:     10.22.95.68:56002 - "GET / HTTP/1.1" 404 Not Found
