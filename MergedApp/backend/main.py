@@ -85,19 +85,35 @@ def load_accounts() -> List[AccountConfig]:
         api_key = detected_accounts[i]['api_key']
         
         # Get proxy URL - supports multiple variable name formats:
-        # 1. Extended_N_CODE_Proxy (new format from screenshot)
-        # 2. Extended_N_PROXY_N_URL (old format)
+        # 1. Extended_N_CODE_Proxy (new format) - regular proxy, NO -staticresidential suffix
+        # 2. Extended_N_PROXY_N_URL (old format) - staticresidential proxy, ADD suffix
         # Value formats supported:
         # - Full URL: http://username:password@ip:port/
         # - Legacy: IP:PORT:Username:Password
         proxy_var_new = f"Extended_{i}_{code}_Proxy"
         proxy_var_old = f"Extended_{i}_PROXY_{i}_URL"
-        raw_proxy = os.getenv(proxy_var_new) or os.getenv(proxy_var_old)
+        
+        # Check which format is used to determine if we need staticresidential suffix
+        raw_proxy_new = os.getenv(proxy_var_new)
+        raw_proxy_old = os.getenv(proxy_var_old)
+        
+        # New format (12-25): regular proxy, no suffix needed
+        # Old format (1-10): staticresidential proxy, add suffix for legacy format
+        use_staticresidential = False
+        if raw_proxy_new:
+            raw_proxy = raw_proxy_new
+            use_staticresidential = False  # New accounts don't need suffix
+        elif raw_proxy_old:
+            raw_proxy = raw_proxy_old
+            use_staticresidential = True   # Old accounts need suffix for legacy format
+        else:
+            raw_proxy = None
         
         proxy_url = None
         if raw_proxy:
             raw_proxy = raw_proxy.strip()
             if raw_proxy.startswith("http://") or raw_proxy.startswith("https://"):
+                # Full URL format - use as-is (user controls the username)
                 proxy_url = raw_proxy
                 try:
                     at_idx = raw_proxy.find('@')
@@ -113,7 +129,8 @@ def load_accounts() -> List[AccountConfig]:
                 parts = raw_proxy.split(':')
                 if len(parts) == 4:
                     ip, port, username, password = parts
-                    if not username.endswith('-staticresidential'):
+                    # Only add -staticresidential for old format accounts (1-10)
+                    if use_staticresidential and not username.endswith('-staticresidential'):
                         username = f"{username}-staticresidential"
                     proxy_url = f"http://{username}:{password}@{ip}:{port}"
                     print(f"✅ Account {i} proxy: {ip}:{port} (user: {username})")
