@@ -1,0 +1,120 @@
+
+c658a099
+System
+forwarding local port 5000 to external port 80 (mapped as 1104)
+2026-02-01 23:46:38.18
+c658a099
+User
+INFO: Started server process [20]
+2026-02-01 23:46:38.18
+c658a099
+User
+INFO: Waiting for application startup.
+2026-02-01 23:46:38.19
+c658a099
+User
+INFO: Application startup complete.
+2026-02-01 23:46:38.20
+c658a099
+User
+INFO: Uvicorn running on http://0.0.0.0:80 (Press CTRL+C to quit)
+2026-02-01 23:47:23.83
+c658a099
+System
+a port configuration was specified but the required port was never opened
+2026-02-01 23:47:30.04
+c658a099
+System
+starting up user application
+2026-02-01 23:47:30.04
+c658a099
+System
+metasidecar: loaded enterprise status from environment is_enterprise=false
+2026-02-01 23:47:30.04
+c658a099
+System
+forwarding local port 5000 to external port 80 (mapped as 1104)
+2026-02-01 23:47:34.52
+c658a099
+User
+INFO: Started server process [19]
+2026-02-01 23:47:34.52
+c658a099
+User
+INFO: Application startup complete.
+2026-02-01 23:47:34.52
+c658a099
+User
+INFO: Waiting for application startup.
+2026-02-01 23:47:34.54
+c658a099
+User
+INFO: Uvicorn running on http://0.0.0.0:80 (Press CTRL+C to quit)
+2026-02-01 23:48:30.04
+c658a099
+System
+a port configuration was specified but the required port was never opened
+2026-02-01 23:48:36.86
+c658a099
+System
+starting up user application
+2026-02-01 23:48:36.86
+c658a099
+System
+forwarding local port 5000 to external port 80 (mapped as 1104)
+2026-02-01 23:48:36.87
+c658a099
+System
+metasidecar: loaded enterprise status from environment is_enterprise=false
+2026-02-01 23:48:40.80
+c658a099
+User
+INFO: Application startup complete.
+2026-02-01 23:48:40.80
+c658a099
+User
+INFO: Started server process [18]
+2026-02-01 23:48:40.80
+c658a099
+User
+INFO: Waiting for application startup.
+2026-02-01 23:48:40.81
+c658a099
+User
+INFO: Uvicorn running on http://0.0.0.0:80 (Press CTRL+C to quit)
+2026-02-01 23:49:36.88
+c658a099
+System
+a port configuration was specified but the required port was never opened
+2026-02-01 23:49:46.69
+c658a099
+System
+starting up user application
+2026-02-01 23:49:46.69
+c658a099
+System
+metasidecar: loaded enterprise status from environment is_enterprise=false
+2026-02-01 23:49:46.70
+c658a099
+System
+forwarding local port 5000 to external port 80 (mapped as 1104)
+2026-02-01 23:49:51.56
+c658a099
+User
+INFO: Started server process [21]
+2026-02-01 23:49:51.56
+c658a099
+User
+INFO: Application startup complete.
+2026-02-01 23:49:51.56
+c658a099
+User
+INFO: Waiting for application startup.
+2026-02-01 23:49:51.57
+c658a099
+User
+INFO: Uvicorn running on http://0.0.0.0:80 (Press CTRL+C to quit)
+2026-02-01 23:49:51.57
+c658a099
+User
+INFO: Uvicorn running on http://0.0.0.0:80 (Press CTRL+C to quit)
