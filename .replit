@@ -67,6 +67,7 @@ BROADCASTER_MODE = "FRONTEND_ONLY"
 REMOTE_API_BASE = "https://ws-trader-pulse.onrender.com"
 
 [deployment]
-build = ["sh", "-c", "pip install -r MergedApp/backend/requirements.txt"]
+build = ["cd", "MergedApp", "&&", "npm", "install", "&&", "npm", "run", "build"]
 run = ["sh", "-c", "cd MergedApp/backend && uvicorn main:app --host 0.0.0.0 --port 80"]
-deploymentTarget = "gce"
+deploymentTarget = "static"
+publicDir = "MergedApp/dist"
