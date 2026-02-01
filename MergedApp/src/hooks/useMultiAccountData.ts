@@ -7,9 +7,8 @@ import {
   computeAccountStats,
   aggregatePortfolio,
 } from '@/types/multiAccount';
+import { getApiUrl, getWsUrl } from '@/config/api';
 
-// Use local backend through Vite proxy (same-origin)
-const PYTHON_PROXY_URL = '';
 const REST_POLL_INTERVAL = 250; // 4x per second
 const WS_RECONNECT_DELAY = 3000;
 
@@ -132,7 +131,7 @@ export const useMultiAccountData = (): UseMultiAccountDataReturn => {
   const connectWebSocket = useCallback(() => {
     if (wsRef.current?.readyState === WebSocket.OPEN) return;
 
-    const wsUrl = PYTHON_PROXY_URL.replace('https://', 'wss://').replace('http://', 'ws://') + '/ws/broadcast';
+    const wsUrl = getWsUrl('/ws/broadcast');
     console.log('🔌 [MultiAccount] Connecting WebSocket:', wsUrl);
 
     try {
@@ -220,7 +219,7 @@ export const useMultiAccountData = (): UseMultiAccountDataReturn => {
     
     try {
       // Try multi-account endpoint first
-      const multiResponse = await fetch(`${PYTHON_PROXY_URL}/api/cached-accounts`);
+      const multiResponse = await fetch(getApiUrl('/api/cached-accounts'));
       
       if (multiResponse.ok) {
         const data = await multiResponse.json();
@@ -239,7 +238,7 @@ export const useMultiAccountData = (): UseMultiAccountDataReturn => {
       }
 
       // Fallback to single account endpoint
-      const singleResponse = await fetch(`${PYTHON_PROXY_URL}/api/cached-account`);
+      const singleResponse = await fetch(getApiUrl('/api/cached-account'));
       if (singleResponse.ok) {
         const data = await singleResponse.json();
         const fetchDuration = Date.now() - fetchStartTime;

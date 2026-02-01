@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { getApiUrl } from '@/config/api';
 
 export interface Trade {
   id: string;
@@ -21,7 +22,6 @@ interface TradeHistoryData {
   lastUpdate: Date;
 }
 
-const API_URL = '/api/cached-accounts';
 const POLL_INTERVAL = 5000; // 5 seconds
 
 export const useTradeHistory = () => {
@@ -33,7 +33,7 @@ export const useTradeHistory = () => {
 
   const fetchTradeHistory = async () => {
     try {
-      const response = await fetch(API_URL);
+      const response = await fetch(getApiUrl('/api/cached-accounts'));
       const result = await response.json();
       
       console.log('📜 [useTradeHistory] Fetched all accounts:', result);

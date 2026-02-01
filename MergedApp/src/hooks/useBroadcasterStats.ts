@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { getApiUrl } from '@/config/api';
 
 interface AccountStats {
   id: string;
@@ -36,7 +37,6 @@ interface BroadcasterStatsData {
   lastPollDuration: number;
 }
 
-const API_URL = '/api/broadcaster/stats';
 const POLL_INTERVAL = 2000;
 
 export const useBroadcasterStats = () => {
@@ -55,7 +55,7 @@ export const useBroadcasterStats = () => {
     const timeSinceLastFetch = fetchStart - lastFetchTimeRef.current;
     
     try {
-      const response = await fetch(API_URL);
+      const response = await fetch(getApiUrl('/api/broadcaster/stats'));
       const result = await response.json();
       const fetchDuration = Date.now() - fetchStart;
       

@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { getApiUrl } from '@/config/api';
 
 interface Position {
   market: string;
@@ -51,7 +52,7 @@ export const useAccountRestAPI = () => {
 
   const fetchAccountData = async () => {
     try {
-      const response = await fetch('/api/cached-account');
+      const response = await fetch(getApiUrl('/api/cached-account'));
       
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
