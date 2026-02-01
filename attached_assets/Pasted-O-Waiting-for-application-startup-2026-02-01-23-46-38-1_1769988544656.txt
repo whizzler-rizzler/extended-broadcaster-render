@@ -1,0 +1,143 @@
+O: Waiting for application startup.
+2026-02-01 23:46:38.19
+c658a099
+User
+INFO: Application startup complete.
+2026-02-01 23:46:38.20
+c658a099
+User
+INFO: Uvicorn running on http://0.0.0.0:80 (Press CTRL+C to quit)
+2026-02-01 23:47:23.83
+c658a099
+System
+a port configuration was specified but the required port was never opened
+2026-02-01 23:47:34.52
+c658a099
+User
+INFO: Started server process [19]
+2026-02-01 23:47:34.52
+c658a099
+User
+INFO: Application startup complete.
+2026-02-01 23:47:34.52
+c658a099
+User
+INFO: Waiting for application startup.
+2026-02-01 23:47:34.54
+c658a099
+User
+INFO: Uvicorn running on http://0.0.0.0:80 (Press CTRL+C to quit)
+2026-02-01 23:48:30.04
+c658a099
+System
+a port configuration was specified but the required port was never opened
+2026-02-01 23:48:40.80
+c658a099
+User
+INFO: Application startup complete.
+2026-02-01 23:48:40.80
+c658a099
+User
+INFO: Started server process [18]
+2026-02-01 23:48:40.80
+c658a099
+User
+INFO: Waiting for application startup.
+2026-02-01 23:48:40.81
+c658a099
+User
+INFO: Uvicorn running on http://0.0.0.0:80 (Press CTRL+C to quit)
+2026-02-01 23:49:36.88
+c658a099
+System
+a port configuration was specified but the required port was never opened
+2026-02-01 23:49:51.56
+c658a099
+User
+INFO: Started server process [21]
+2026-02-01 23:49:51.56
+c658a099
+User
+INFO: Application startup complete.
+2026-02-01 23:49:51.56
+c658a099
+User
+INFO: Waiting for application startup.
+2026-02-01 23:49:51.57
+c658a099
+User
+INFO: Uvicorn running on http://0.0.0.0:80 (Press CTRL+C to quit)
+2026-02-01 23:50:46.70
+c658a099
+System
+a port configuration was specified but the required port was never opened
+2026-02-01 23:51:04.00
+c658a099
+User
+INFO: Started server process [19]
+2026-02-01 23:51:04.00
+c658a099
+User
+INFO: Waiting for application startup.
+2026-02-01 23:51:04.00
+c658a099
+User
+INFO: Application startup complete.
+2026-02-01 23:51:04.03
+c658a099
+User
+INFO: Uvicorn running on http://0.0.0.0:80 (Press CTRL+C to quit)
+2026-02-01 23:51:56.02
+c658a099
+System
+a port configuration was specified but the required port was never opened
+2026-02-01 23:52:11.59
+c658a099
+User
+INFO: Started server process [20]
+2026-02-01 23:52:11.59
+c658a099
+User
+INFO: Waiting for application startup.
+2026-02-01 23:52:11.59
+c658a099
+User
+INFO: Application startup complete.
+2026-02-01 23:52:11.60
+c658a099
+User
+INFO: Uvicorn running on http://0.0.0.0:80 (Press CTRL+C to quit)
+2026-02-01 23:53:06.72
+c658a099
+System
+a port configuration was specified but the required port was never opened
+2026-02-01 23:53:26.51
+c658a099
+User
+INFO: Waiting for application startup.
+2026-02-01 23:53:26.51
+c658a099
+User
+INFO: Started server process [18]
+2026-02-01 23:53:26.51
+c658a099
+User
+INFO: Application startup complete.
+2026-02-01 23:53:26.51
+c658a099
+User
+INFO: Uvicorn running on http://0.0.0.0:80 (Press CTRL+C to quit)
+2026-02-01 23:54:21.74
+c658a099
+System
+a port configuration was specified but the required port was never opened
+2026-02-02 00:05:08.10
+084e5ec9
+User
+npm warn exec The following package was not found and will be installed: serve@14.2.5
+2026-02-02 00:28:06.33
+4b750a6f
+User
+npm warn exec The following package was not found and will be installed: serve@14.2.5
+Wrap
+Colors
