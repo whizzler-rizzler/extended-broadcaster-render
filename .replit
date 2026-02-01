@@ -67,7 +67,7 @@ BROADCASTER_MODE = "FRONTEND_ONLY"
 REMOTE_API_BASE = "https://ws-trader-pulse.onrender.com"
 
 [deployment]
-build = ["bash", "-c", "(cd MergedApp && npm install && VITE_API_BASE=https://ws-trader-pulse.onrender.com npm run build)"]
+build = ["bash", "build.sh"]
 run = ["npx", "serve", "-s", "MergedApp/dist", "-l", "5000"]
 deploymentTarget = "autoscale"
 publicDir = "MergedApp/dist"
