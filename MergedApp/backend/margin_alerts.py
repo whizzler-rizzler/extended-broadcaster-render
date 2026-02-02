@@ -43,8 +43,8 @@ class AlertConfig:
     def __post_init__(self):
         self.telegram_bot_token = os.environ.get("Telegram_bot_token", "")
         self.telegram_chat_id = os.environ.get("Telegram_id", "")
-        self.pushover_app_token = os.environ.get("Pushover_app_token", "")
-        self.pushover_user_key = os.environ.get("Pushover_user_key", "") or os.environ.get("Pushover_app_token", "")
+        self.pushover_app_token = os.environ.get("Pushover_API_token", "") or os.environ.get("Pushover_app_token", "")
+        self.pushover_user_key = os.environ.get("Pushover_user_key", "")
         # Twilio: Account SID for API URL, API Key SID + Secret for auth
         self.twilio_account_sid = os.environ.get("Twilio_account_sid", "")
         self.twilio_api_key_sid = os.environ.get("Twilio_sid", "")  # API Key SID (SK...)
