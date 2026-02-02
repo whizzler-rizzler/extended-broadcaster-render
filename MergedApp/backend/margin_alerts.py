@@ -103,11 +103,9 @@ class MarginAlertManager:
             session = await self.get_session()
             url = f"https://api.telegram.org/bot{self.config.telegram_bot_token}/sendMessage"
             
-            # Add warning emoji for critical alerts
+            # Add critical prefix for critical alerts
             if is_critical:
-                message = f"🚨🚨🚨 CRITICAL ALERT 🚨🚨🚨\n\n{message}"
-            else:
-                message = f"⚠️ MARGIN ALERT ⚠️\n\n{message}"
+                message = f"🚨🚨🚨 CRITICAL 🚨🚨🚨\n\n{message}"
             
             payload = {
                 "chat_id": self.config.telegram_chat_id,
@@ -283,16 +281,20 @@ class MarginAlertManager:
         
         # Build message
         margin_pct = margin_ratio * 100
+        timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        
         message = (
-            f"<b>Account:</b> {account_name}\n"
-            f"<b>Margin Ratio:</b> {margin_pct:.1f}%\n"
-            f"<b>Equity:</b> ${equity:.2f}\n"
-            f"<b>Threshold:</b> {threshold*100:.0f}%"
+            f"⚠️ MARGIN ALERT ⚠️\n\n"
+            f"{account_name}\n"
+            f"Margin: {margin_pct:.1f}%\n"
+            f"{timestamp}"
         )
         
         plain_message = (
-            f"MARGIN ALERT - {account_name}: "
-            f"Margin {margin_pct:.1f}%, Equity ${equity:.2f}"
+            f"MARGIN ALERT\n"
+            f"{account_name}\n"
+            f"Margin: {margin_pct:.1f}%\n"
+            f"{timestamp}"
         )
         
         call_message = (
@@ -350,13 +352,21 @@ class MarginAlertManager:
             }
         }
         
+        timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        
         test_message = (
-            "🧪 TEST ALERT\n\n"
-            "This is a test message from Extended Broadcaster.\n"
-            f"Timestamp: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
+            "⚠️ MARGIN ALERT ⚠️\n\n"
+            "TEST ACCOUNT\n"
+            "Margin: 85.0%\n"
+            f"{timestamp}"
         )
         
-        plain_message = f"TEST: Extended Broadcaster alert test at {datetime.now().strftime('%H:%M:%S')}"
+        plain_message = (
+            "MARGIN ALERT\n"
+            "TEST ACCOUNT\n"
+            "Margin: 85.0%\n"
+            f"{timestamp}"
+        )
         call_message = "To jest test systemu alertów Extended Broadcaster. Jeśli słyszysz tę wiadomość, system działa poprawnie."
         
         # Test all channels in parallel
