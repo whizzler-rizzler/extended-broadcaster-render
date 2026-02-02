@@ -175,7 +175,11 @@ class MarginAlertManager:
         
         try:
             session = await self.get_session()
-            url = f"https://api.twilio.com/2010-04-01/Accounts/{self.config.twilio_sid}/Messages.json"
+            # Get Account SID - try dedicated var first, then fall back to Twilio_sid
+            account_sid = os.environ.get("Twilio_account_sid", "") or self.config.twilio_sid
+            api_secret = os.environ.get("Twillio_secret_api", "") or self.config.twilio_auth_token
+            
+            url = f"https://api.twilio.com/2010-04-01/Accounts/{account_sid}/Messages.json"
             
             payload = {
                 "To": self.config.phone_number,
@@ -183,7 +187,8 @@ class MarginAlertManager:
                 "Body": message[:1600]  # SMS limit
             }
             
-            auth = aiohttp.BasicAuth(self.config.twilio_sid, self.config.twilio_auth_token)
+            # Use API Key SID + Secret for auth
+            auth = aiohttp.BasicAuth(self.config.twilio_sid, api_secret)
             
             async with session.post(url, data=payload, auth=auth) as resp:
                 result = await resp.json()
@@ -207,7 +212,11 @@ class MarginAlertManager:
         
         try:
             session = await self.get_session()
-            url = f"https://api.twilio.com/2010-04-01/Accounts/{self.config.twilio_sid}/Calls.json"
+            # Get Account SID - try dedicated var first, then fall back to Twilio_sid
+            account_sid = os.environ.get("Twilio_account_sid", "") or self.config.twilio_sid
+            api_secret = os.environ.get("Twillio_secret_api", "") or self.config.twilio_auth_token
+            
+            url = f"https://api.twilio.com/2010-04-01/Accounts/{account_sid}/Calls.json"
             
             # TwiML for text-to-speech
             twiml = f"""<?xml version="1.0" encoding="UTF-8"?>
@@ -223,7 +232,8 @@ class MarginAlertManager:
                 "Twiml": twiml
             }
             
-            auth = aiohttp.BasicAuth(self.config.twilio_sid, self.config.twilio_auth_token)
+            # Use API Key SID + Secret for auth
+            auth = aiohttp.BasicAuth(self.config.twilio_sid, api_secret)
             
             async with session.post(url, data=payload, auth=auth) as resp:
                 result = await resp.json()
