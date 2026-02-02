@@ -9,6 +9,7 @@ import time
 from datetime import datetime
 from dataclasses import dataclass, field
 from supabase_client import supabase_client
+from margin_alerts import alert_manager, MARGIN_THRESHOLDS
 
 app = FastAPI(title="Extended API Multi-Account Broadcaster")
 
@@ -211,7 +212,7 @@ ORDERBOOK_DEPTH = 20
 
 
 # ============= PROXY FUNCTION FOR FRONTEND_ONLY MODE =============
-async def proxy_to_remote(endpoint: str) -> Dict[str, Any]:
+async def proxy_to_remote(endpoint: str, method: str = "GET") -> Dict[str, Any]:
     """Proxy request to remote backend in FRONTEND_ONLY mode."""
     if not REMOTE_API_BASE:
         raise HTTPException(status_code=503, detail="REMOTE_API_BASE not configured")
@@ -219,11 +220,18 @@ async def proxy_to_remote(endpoint: str) -> Dict[str, Any]:
     try:
         async with aiohttp.ClientSession() as session:
             url = f"{REMOTE_API_BASE}{endpoint}"
-            async with session.get(url, timeout=aiohttp.ClientTimeout(total=30.0)) as resp:
-                if resp.status == 200:
-                    return await resp.json()
-                else:
-                    raise HTTPException(status_code=resp.status, detail=f"Remote API error: {resp.status}")
+            if method == "POST":
+                async with session.post(url, timeout=aiohttp.ClientTimeout(total=30.0)) as resp:
+                    if resp.status in [200, 201]:
+                        return await resp.json()
+                    else:
+                        raise HTTPException(status_code=resp.status, detail=f"Remote API error: {resp.status}")
+            else:
+                async with session.get(url, timeout=aiohttp.ClientTimeout(total=30.0)) as resp:
+                    if resp.status == 200:
+                        return await resp.json()
+                    else:
+                        raise HTTPException(status_code=resp.status, detail=f"Remote API error: {resp.status}")
     except aiohttp.ClientError as e:
         raise HTTPException(status_code=503, detail=f"Remote API connection error: {str(e)}")
 
@@ -530,6 +538,8 @@ async def poll_all_accounts_orders():
     ], return_exceptions=True)
 
 
+MARGIN_CHECK_COUNTER = 0  # Check margins every 20 cycles (5 seconds)
+
 async def background_poller():
     """
     Main background task that continuously polls Extended API for all accounts.
@@ -537,14 +547,15 @@ async def background_poller():
     With proxies per account, rate limiting is avoided.
     - Fast loop (250ms): positions + balance + orders (4x/sec per account)
     - Trades loop (1000ms): trades (1x/sec per account)
+    - Margin check (5s): check margins and send alerts
     """
-    global TRADES_POLL_COUNTER
+    global TRADES_POLL_COUNTER, MARGIN_CHECK_COUNTER
     
     # Count accounts with proxies
     proxied_accounts = sum(1 for a in ACCOUNTS if a.proxy_url)
     print(f"🚀 [Broadcaster] Background poller started for {len(ACCOUNTS)} accounts")
     print(f"🔒 Accounts with proxy: {proxied_accounts}/{len(ACCOUNTS)}")
-    print(f"⚡ Polling rates: positions/balance/orders 4x/s, trades 1x/s")
+    print(f"⚡ Polling rates: positions/balance/orders 4x/s, trades 1x/s, margin check 1x/5s")
     
     while True:
         try:
@@ -557,6 +568,12 @@ async def background_poller():
             if TRADES_POLL_COUNTER >= 4:
                 await poll_all_accounts_trades()
                 TRADES_POLL_COUNTER = 0
+            
+            # Margin check: every 20 cycles (5 seconds)
+            MARGIN_CHECK_COUNTER += 1
+            if MARGIN_CHECK_COUNTER >= 20:
+                await check_margins_and_alert()
+                MARGIN_CHECK_COUNTER = 0
             
             await asyncio.sleep(0.25)
             
@@ -1009,6 +1026,94 @@ async def get_orderbook_status():
         "cache_age_ms": int((time.time() - ORDERBOOK_LAST_UPDATE) * 1000) if ORDERBOOK_LAST_UPDATE > 0 else None,
         "timestamp": time.time()
     }
+
+
+# ============= MARGIN ALERTS ENDPOINTS =============
+@app.get("/api/alerts/status")
+async def get_alerts_status():
+    """Get margin alert system status and configuration."""
+    if IS_FRONTEND_ONLY:
+        return await proxy_to_remote("/api/alerts/status")
+    
+    return {
+        "enabled": True,
+        "thresholds": MARGIN_THRESHOLDS,
+        "channels": {
+            "telegram": bool(alert_manager.config.telegram_bot_token and alert_manager.config.telegram_chat_id),
+            "pushover": bool(alert_manager.config.pushover_app_token and alert_manager.config.pushover_user_key),
+            "sms": bool(alert_manager.config.twilio_sid and alert_manager.config.twilio_auth_token),
+            "phone": bool(alert_manager.config.phone_number)
+        },
+        "cooldown_minutes": alert_manager.state.cooldown_minutes,
+        "active_alerts": len(alert_manager.state.sent_alerts),
+        "timestamp": time.time()
+    }
+
+
+@app.post("/api/alerts/test")
+async def test_alerts():
+    """Test all notification channels."""
+    if IS_FRONTEND_ONLY:
+        return await proxy_to_remote("/api/alerts/test", method="POST")
+    
+    results = await alert_manager.test_all_channels()
+    return {
+        "success": any([results["telegram"], results["pushover"], results["sms"], results["phone_call"]]),
+        "results": results,
+        "timestamp": time.time()
+    }
+
+
+@app.get("/api/alerts/margins")
+async def get_current_margins():
+    """Get current margin ratios for all accounts."""
+    if IS_FRONTEND_ONLY:
+        return await proxy_to_remote("/api/alerts/margins")
+    
+    margins = []
+    for account in ACCOUNTS:
+        cache = BROADCASTER_CACHES.get(account.id)
+        if cache and cache.balance:
+            balance_data = cache.balance.get("data", {}) if isinstance(cache.balance, dict) else {}
+            margin_ratio = float(balance_data.get("marginRatio", 0))
+            equity = float(balance_data.get("equity", 0))
+            margins.append({
+                "account_id": account.id,
+                "account_name": account.name,
+                "margin_ratio": margin_ratio,
+                "margin_percent": round(margin_ratio * 100, 2),
+                "equity": round(equity, 2),
+                "threshold_triggered": alert_manager.get_threshold_level(margin_ratio)
+            })
+    
+    return {
+        "accounts": margins,
+        "thresholds": MARGIN_THRESHOLDS,
+        "timestamp": time.time()
+    }
+
+
+async def check_margins_and_alert():
+    """Check all account margins and send alerts if needed."""
+    for account in ACCOUNTS:
+        cache = BROADCASTER_CACHES.get(account.id)
+        if cache and cache.balance:
+            balance_data = cache.balance.get("data", {}) if isinstance(cache.balance, dict) else {}
+            margin_ratio = float(balance_data.get("marginRatio", 0))
+            equity = float(balance_data.get("equity", 0))
+            
+            if margin_ratio > 0:
+                try:
+                    result = await alert_manager.check_and_alert(
+                        account.id, 
+                        account.name, 
+                        margin_ratio, 
+                        equity
+                    )
+                    if result.get("alerts_sent"):
+                        print(f"🚨 Alert sent for {account.name}: {result['alerts_sent']}")
+                except Exception as e:
+                    print(f"❌ Error checking margin for {account.name}: {e}")
 
 
 if __name__ == "__main__":
