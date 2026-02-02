@@ -45,8 +45,10 @@ class AlertConfig:
         self.telegram_chat_id = os.environ.get("Telegram_id", "")
         self.pushover_app_token = os.environ.get("Pushover_app_token", "")
         self.pushover_user_key = os.environ.get("Pushover_user_key", "") or os.environ.get("Pushover_app_token", "")
-        self.twilio_sid = os.environ.get("Twilio_account_sid", "") or os.environ.get("Twilio_sid", "")
-        self.twilio_auth_token = os.environ.get("Twillio_account_token", "") or os.environ.get("Twilio_auth_token", "")
+        # Twilio: Account SID for API URL, API Key SID + Secret for auth
+        self.twilio_account_sid = os.environ.get("Twilio_account_sid", "")
+        self.twilio_api_key_sid = os.environ.get("Twilio_sid", "")  # API Key SID (SK...)
+        self.twilio_api_key_secret = os.environ.get("Twillio_secret_api", "")  # API Key Secret
         self.phone_number = os.environ.get("Alert_phone_number", "")
         self.twilio_from_number = os.environ.get("Twilio_from_number", "+12184232606")
 
@@ -167,19 +169,16 @@ class MarginAlertManager:
     
     # ==================== TWILIO SMS ====================
     async def send_sms(self, message: str) -> bool:
-        """Send SMS via Twilio"""
-        if not all([self.config.twilio_sid, self.config.twilio_auth_token, 
-                    self.config.phone_number, self.config.twilio_from_number]):
-            logger.warning("Twilio SMS not configured")
+        """Send SMS via Twilio using API Key authentication"""
+        if not all([self.config.twilio_account_sid, self.config.twilio_api_key_sid,
+                    self.config.twilio_api_key_secret, self.config.phone_number, 
+                    self.config.twilio_from_number]):
+            logger.warning("Twilio SMS not configured (missing account_sid, api_key, secret, or phone)")
             return False
         
         try:
             session = await self.get_session()
-            # Get Account SID - try dedicated var first, then fall back to Twilio_sid
-            account_sid = os.environ.get("Twilio_account_sid", "") or self.config.twilio_sid
-            api_secret = os.environ.get("Twillio_secret_api", "") or self.config.twilio_auth_token
-            
-            url = f"https://api.twilio.com/2010-04-01/Accounts/{account_sid}/Messages.json"
+            url = f"https://api.twilio.com/2010-04-01/Accounts/{self.config.twilio_account_sid}/Messages.json"
             
             payload = {
                 "To": self.config.phone_number,
@@ -187,8 +186,8 @@ class MarginAlertManager:
                 "Body": message[:1600]  # SMS limit
             }
             
-            # Use API Key SID + Secret for auth
-            auth = aiohttp.BasicAuth(self.config.twilio_sid, api_secret)
+            # Use API Key SID + Secret for Basic Auth
+            auth = aiohttp.BasicAuth(self.config.twilio_api_key_sid, self.config.twilio_api_key_secret)
             
             async with session.post(url, data=payload, auth=auth) as resp:
                 result = await resp.json()
@@ -204,21 +203,18 @@ class MarginAlertManager:
     
     # ==================== TWILIO PHONE CALL ====================
     async def make_phone_call(self, message: str) -> bool:
-        """Make phone call via Twilio with TTS message"""
-        if not all([self.config.twilio_sid, self.config.twilio_auth_token,
-                    self.config.phone_number, self.config.twilio_from_number]):
-            logger.warning("Twilio Phone not configured")
+        """Make phone call via Twilio with TTS message in Polish"""
+        if not all([self.config.twilio_account_sid, self.config.twilio_api_key_sid,
+                    self.config.twilio_api_key_secret, self.config.phone_number,
+                    self.config.twilio_from_number]):
+            logger.warning("Twilio Phone not configured (missing account_sid, api_key, secret, or phone)")
             return False
         
         try:
             session = await self.get_session()
-            # Get Account SID - try dedicated var first, then fall back to Twilio_sid
-            account_sid = os.environ.get("Twilio_account_sid", "") or self.config.twilio_sid
-            api_secret = os.environ.get("Twillio_secret_api", "") or self.config.twilio_auth_token
+            url = f"https://api.twilio.com/2010-04-01/Accounts/{self.config.twilio_account_sid}/Calls.json"
             
-            url = f"https://api.twilio.com/2010-04-01/Accounts/{account_sid}/Calls.json"
-            
-            # TwiML for text-to-speech
+            # TwiML for text-to-speech in Polish
             twiml = f"""<?xml version="1.0" encoding="UTF-8"?>
 <Response>
     <Say voice="alice" language="pl-PL">{message}</Say>
@@ -232,8 +228,8 @@ class MarginAlertManager:
                 "Twiml": twiml
             }
             
-            # Use API Key SID + Secret for auth
-            auth = aiohttp.BasicAuth(self.config.twilio_sid, api_secret)
+            # Use API Key SID + Secret for Basic Auth
+            auth = aiohttp.BasicAuth(self.config.twilio_api_key_sid, self.config.twilio_api_key_secret)
             
             async with session.post(url, data=payload, auth=auth) as resp:
                 result = await resp.json()
@@ -349,7 +345,7 @@ class MarginAlertManager:
             "config": {
                 "telegram_configured": bool(self.config.telegram_bot_token and self.config.telegram_chat_id),
                 "pushover_configured": bool(self.config.pushover_app_token and self.config.pushover_user_key),
-                "twilio_configured": bool(self.config.twilio_sid and self.config.twilio_auth_token),
+                "twilio_configured": bool(self.config.twilio_account_sid and self.config.twilio_api_key_sid and self.config.twilio_api_key_secret),
                 "phone_configured": bool(self.config.phone_number)
             }
         }
