@@ -63,8 +63,10 @@ externalPort = 8000
 
 [userenv.shared]
 POLL_INTERVAL = "0.25"
-BROADCASTER_MODE = "FRONTEND_ONLY"
 REMOTE_API_BASE = "https://ws-trader-pulse.onrender.com"
+
+[userenv.development]
+BROADCASTER_MODE = "COLLECTOR"
 
 [deployment]
 build = ["bash", "build.sh"]

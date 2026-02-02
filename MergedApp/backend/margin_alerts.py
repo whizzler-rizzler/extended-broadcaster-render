@@ -44,11 +44,11 @@ class AlertConfig:
         self.telegram_bot_token = os.environ.get("Telegram_bot_token", "")
         self.telegram_chat_id = os.environ.get("Telegram_id", "")
         self.pushover_app_token = os.environ.get("Pushover_app_token", "")
-        self.pushover_user_key = os.environ.get("Pushover_user_key", "")
-        self.twilio_sid = os.environ.get("Twilio_sid", "")
-        self.twilio_auth_token = os.environ.get("Twillio_account_token", "")
+        self.pushover_user_key = os.environ.get("Pushover_user_key", "") or os.environ.get("Pushover_app_token", "")
+        self.twilio_sid = os.environ.get("Twilio_account_sid", "") or os.environ.get("Twilio_sid", "")
+        self.twilio_auth_token = os.environ.get("Twillio_account_token", "") or os.environ.get("Twilio_auth_token", "")
         self.phone_number = os.environ.get("Alert_phone_number", "")
-        self.twilio_from_number = os.environ.get("Twilio_from_number", "+12184254583")
+        self.twilio_from_number = os.environ.get("Twilio_from_number", "+12184232606")
 
 @dataclass
 class AlertState:
