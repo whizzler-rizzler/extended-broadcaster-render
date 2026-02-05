@@ -1062,11 +1062,25 @@ async def get_alerts_status():
         "channels": {
             "telegram": bool(alert_manager.config.telegram_bot_token and alert_manager.config.telegram_chat_id),
             "pushover": bool(alert_manager.config.pushover_app_token and alert_manager.config.pushover_user_key),
-            "sms": bool(alert_manager.config.twilio_sid and alert_manager.config.twilio_auth_token),
+            "sms": bool(alert_manager.config.twilio_account_sid and alert_manager.config.twilio_api_key_sid),
             "phone": bool(alert_manager.config.phone_number)
         },
         "cooldown_minutes": alert_manager.state.cooldown_minutes,
         "active_alerts": len(alert_manager.state.sent_alerts),
+        "timestamp": time.time()
+    }
+
+
+@app.get("/api/alerts/config")
+async def get_alerts_config():
+    """Get detailed configuration status for all alert channels."""
+    if IS_FRONTEND_ONLY:
+        return await proxy_to_remote("/api/alerts/config")
+    
+    config_status = alert_manager.get_config_status()
+    print(f"📋 [Alerts] Config status requested: {config_status}")
+    return {
+        "config": config_status,
         "timestamp": time.time()
     }
 
@@ -1077,10 +1091,33 @@ async def test_alerts():
     if IS_FRONTEND_ONLY:
         return await proxy_to_remote("/api/alerts/test", method="POST")
     
+    print("🧪 [Alerts] Starting test of all channels...")
+    print(f"📋 [Alerts] Config: {alert_manager.get_config_status()}")
+    
     results = await alert_manager.test_all_channels()
+    
+    print(f"📊 [Alerts] Test results: telegram={results['telegram']}, pushover={results['pushover']}, sms={results['sms']}, phone={results['phone_call']}")
+    
     return {
         "success": any([results["telegram"], results["pushover"], results["sms"], results["phone_call"]]),
         "results": results,
+        "config": alert_manager.get_config_status(),
+        "timestamp": time.time()
+    }
+
+
+@app.post("/api/alerts/test-telegram")
+async def test_telegram_only():
+    """Test only Telegram channel with detailed logs."""
+    if IS_FRONTEND_ONLY:
+        return await proxy_to_remote("/api/alerts/test-telegram", method="POST")
+    
+    print("🧪 [Alerts] Testing Telegram only...")
+    result = await alert_manager.test_telegram_only()
+    print(f"📊 [Alerts] Telegram test result: {result}")
+    
+    return {
+        **result,
         "timestamp": time.time()
     }
 

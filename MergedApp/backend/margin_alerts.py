@@ -386,6 +386,76 @@ class MarginAlertManager:
         results["phone_call"] = call if isinstance(call, bool) else False
         
         return results
+    
+    def get_config_status(self) -> dict:
+        """Zwraca szczegółowy status konfiguracji wszystkich kanałów"""
+        return {
+            "telegram": {
+                "configured": bool(self.config.telegram_bot_token and self.config.telegram_chat_id),
+                "bot_token_set": bool(self.config.telegram_bot_token),
+                "bot_token_preview": self.config.telegram_bot_token[:10] + "..." if self.config.telegram_bot_token else "BRAK",
+                "chat_id_set": bool(self.config.telegram_chat_id),
+                "chat_id": self.config.telegram_chat_id if self.config.telegram_chat_id else "BRAK"
+            },
+            "pushover": {
+                "configured": bool(self.config.pushover_app_token and self.config.pushover_user_key),
+                "app_token_set": bool(self.config.pushover_app_token),
+                "app_token_preview": self.config.pushover_app_token[:10] + "..." if self.config.pushover_app_token else "BRAK",
+                "user_key_set": bool(self.config.pushover_user_key),
+                "user_key_preview": self.config.pushover_user_key[:10] + "..." if self.config.pushover_user_key else "BRAK"
+            },
+            "twilio_sms": {
+                "configured": bool(self.config.twilio_account_sid and self.config.twilio_api_key_sid and 
+                                   self.config.twilio_api_key_secret and self.config.phone_number),
+                "account_sid_set": bool(self.config.twilio_account_sid),
+                "account_sid_preview": self.config.twilio_account_sid[:10] + "..." if self.config.twilio_account_sid else "BRAK",
+                "api_key_sid_set": bool(self.config.twilio_api_key_sid),
+                "api_key_sid_preview": self.config.twilio_api_key_sid[:10] + "..." if self.config.twilio_api_key_sid else "BRAK",
+                "api_secret_set": bool(self.config.twilio_api_key_secret),
+                "phone_number": self.config.phone_number if self.config.phone_number else "BRAK",
+                "from_number": self.config.twilio_from_number if self.config.twilio_from_number else "BRAK"
+            },
+            "twilio_call": {
+                "configured": bool(self.config.twilio_account_sid and self.config.twilio_api_key_sid and 
+                                   self.config.twilio_api_key_secret and self.config.phone_number),
+            },
+            "env_vars_expected": {
+                "Telegram_bot_token": "Telegram_bot_token",
+                "Telegram_id": "Telegram_id",
+                "Pushover_app_token": "Pushover_app_token lub Pushover_API_token",
+                "Pushover_user_key": "Pushover_user_key",
+                "Twilio_account_sid": "Twilio_account_sid",
+                "Twilio_sid": "Twilio_sid (API Key SID - SK...)",
+                "Twillio_secret_api": "Twillio_secret_api (API Key Secret)",
+                "Alert_phone_number": "Alert_phone_number",
+                "Twilio_from_number": "Twilio_from_number (opcjonalnie)"
+            }
+        }
+    
+    async def test_telegram_only(self) -> dict:
+        """Test tylko Telegram z logami"""
+        result = {
+            "channel": "telegram",
+            "config": self.get_config_status()["telegram"],
+            "success": False,
+            "error": None
+        }
+        
+        if not self.config.telegram_bot_token or not self.config.telegram_chat_id:
+            result["error"] = "Brak konfiguracji: Telegram_bot_token lub Telegram_id"
+            return result
+        
+        timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        test_message = f"🧪 TEST ALERTU 🧪\nExtended Broadcaster\nCzas: {timestamp}\n\nJeśli widzisz tę wiadomość, alerty działają poprawnie!"
+        
+        try:
+            result["success"] = await self.send_telegram(test_message)
+            if not result["success"]:
+                result["error"] = "Wysłanie nie powiodło się - sprawdź logi serwera"
+        except Exception as e:
+            result["error"] = str(e)
+        
+        return result
 
 
 # Global instance
