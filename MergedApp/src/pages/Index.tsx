@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { Bot, Activity } from "lucide-react";
+import { Bot, Activity, Bell, CheckCircle, XCircle, Loader2 } from "lucide-react";
+import { getApiUrl } from "@/config/api";
 import { MultiAccountDashboard } from "@/components/MultiAccountDashboard";
 import { AccountDetailPanel } from "@/components/AccountDetailPanel";
 import { RestAPIDebugPanel } from "@/components/RestAPIDebugPanel";
@@ -41,6 +42,37 @@ const Index = () => {
   // Selected account for detail view
   const [selectedAccountId, setSelectedAccountId] = useState<string | null>(null);
   const selectedAccount = selectedAccountId ? accounts.get(selectedAccountId) : null;
+  
+  // Alert test state
+  const [alertTestState, setAlertTestState] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
+  const [alertTestResult, setAlertTestResult] = useState<any>(null);
+  
+  const handleTestAlert = async () => {
+    setAlertTestState('loading');
+    try {
+      const response = await fetch(getApiUrl('/api/alerts/test-telegram'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' }
+      });
+      const data = await response.json();
+      setAlertTestResult(data);
+      setAlertTestState(data.success ? 'success' : 'error');
+      
+      // Reset after 5 seconds
+      setTimeout(() => {
+        setAlertTestState('idle');
+        setAlertTestResult(null);
+      }, 5000);
+    } catch (err) {
+      console.error('Alert test error:', err);
+      setAlertTestState('error');
+      setAlertTestResult({ error: String(err) });
+      setTimeout(() => {
+        setAlertTestState('idle');
+        setAlertTestResult(null);
+      }, 5000);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-background">
@@ -60,21 +92,68 @@ const Index = () => {
               </p>
             </div>
           </div>
-          <div className="flex flex-col items-end gap-1">
-            <div className="flex items-center gap-2 text-sm">
-              <div className={`w-2 h-2 rounded-full ${isConnected ? 'bg-success animate-pulse' : 'bg-destructive'}`} />
-              <span className="text-muted-foreground">
-                {isConnected ? '✅ Connected' : '❌ Disconnected'}
-              </span>
+          <div className="flex items-center gap-4">
+            {/* Alert Test Button */}
+            <button
+              onClick={handleTestAlert}
+              disabled={alertTestState === 'loading'}
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                alertTestState === 'idle' 
+                  ? 'bg-orange-500/20 border border-orange-500/30 text-orange-400 hover:bg-orange-500/30'
+                  : alertTestState === 'loading'
+                  ? 'bg-blue-500/20 border border-blue-500/30 text-blue-400'
+                  : alertTestState === 'success'
+                  ? 'bg-green-500/20 border border-green-500/30 text-green-400'
+                  : 'bg-red-500/20 border border-red-500/30 text-red-400'
+              }`}
+            >
+              {alertTestState === 'loading' ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : alertTestState === 'success' ? (
+                <CheckCircle className="w-4 h-4" />
+              ) : alertTestState === 'error' ? (
+                <XCircle className="w-4 h-4" />
+              ) : (
+                <Bell className="w-4 h-4" />
+              )}
+              {alertTestState === 'idle' && 'Test Alert'}
+              {alertTestState === 'loading' && 'Wysyłam...'}
+              {alertTestState === 'success' && 'Wysłano!'}
+              {alertTestState === 'error' && 'Błąd'}
+            </button>
+            
+            <div className="flex flex-col items-end gap-1">
+              <div className="flex items-center gap-2 text-sm">
+                <div className={`w-2 h-2 rounded-full ${isConnected ? 'bg-success animate-pulse' : 'bg-destructive'}`} />
+                <span className="text-muted-foreground">
+                  {isConnected ? '✅ Connected' : '❌ Disconnected'}
+                </span>
+              </div>
+              <div className="text-xs text-muted-foreground">
+                {activeAccounts.length} accounts active • Last: {lastUpdate.toLocaleTimeString('pl-PL')}
+              </div>
+              {error && (
+                <div className="text-xs text-destructive font-mono">{error}</div>
+              )}
             </div>
-            <div className="text-xs text-muted-foreground">
-              {activeAccounts.length} accounts active • Last: {lastUpdate.toLocaleTimeString('pl-PL')}
-            </div>
-            {error && (
-              <div className="text-xs text-destructive font-mono">{error}</div>
-            )}
           </div>
         </div>
+        
+        {/* Alert Test Result Details */}
+        {alertTestResult && (
+          <div className={`p-4 rounded-lg border ${
+            alertTestState === 'success' 
+              ? 'bg-green-500/10 border-green-500/30' 
+              : 'bg-red-500/10 border-red-500/30'
+          }`}>
+            <h3 className="font-semibold mb-2">
+              {alertTestState === 'success' ? '✅ Alert wysłany pomyślnie' : '❌ Błąd wysyłania alertu'}
+            </h3>
+            <pre className="text-xs font-mono overflow-auto max-h-40 text-muted-foreground">
+              {JSON.stringify(alertTestResult, null, 2)}
+            </pre>
+          </div>
+        )}
 
         {/* Frequency Monitor */}
         <FrequencyMonitor 
