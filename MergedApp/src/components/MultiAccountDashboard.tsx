@@ -11,10 +11,13 @@ import {
   EyeOff,
   ChevronDown,
   ChevronUp,
-  Wallet
+  Wallet,
+  Star,
+  RefreshCw
 } from 'lucide-react';
 import { SingleAccountData, AggregatedPortfolio } from '@/types/multiAccount';
 import { AccountCardCompact } from './AccountCardCompact';
+import { useEarnedPoints } from '@/hooks/useEarnedPoints';
 
 interface MultiAccountDashboardProps {
   accounts: SingleAccountData[];
@@ -33,6 +36,8 @@ export const MultiAccountDashboard = ({
 }: MultiAccountDashboardProps) => {
   const [showInactive, setShowInactive] = useState(false);
   const [isExpanded, setIsExpanded] = useState(true);
+  
+  const { totalPoints, isLoading: pointsLoading, refresh: refreshPoints, lastUpdate: pointsLastUpdate, error: pointsError } = useEarnedPoints();
 
   const activeAccounts = accounts.filter(a => a.isActive);
   const inactiveAccounts = accounts.filter(a => !a.isActive);
@@ -105,8 +110,8 @@ export const MultiAccountDashboard = ({
             </div>
           </div>
 
-          {/* Row 2: Position & risk stats */}
-          <div className="grid grid-cols-4 gap-3">
+          {/* Row 2: Position & risk stats + Points */}
+          <div className="grid grid-cols-5 gap-3">
             {/* Positions */}
             <div className="bg-muted/40 rounded-lg p-4 border border-border/50">
               <div className="text-sm text-muted-foreground mb-2">Positions</div>
@@ -144,6 +149,43 @@ export const MultiAccountDashboard = ({
                   / ${(portfolio.totalEquity * 0.15).toLocaleString(undefined, { maximumFractionDigits: 0 })}
                 </span>
               </div>
+            </div>
+
+            {/* Earned Points */}
+            <div className={`rounded-lg p-4 border ${pointsError ? 'bg-muted/40 border-border/50' : 'bg-gradient-to-br from-yellow-500/10 to-orange-500/10 border-yellow-500/30'}`}>
+              <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <Star className={`w-4 h-4 ${pointsError ? 'text-muted-foreground' : 'text-yellow-500'}`} />
+                  Punkty
+                </div>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => refreshPoints()}
+                  disabled={pointsLoading}
+                  className="h-6 w-6 p-0"
+                  title="Odśwież punkty"
+                >
+                  <RefreshCw className={`w-3 h-3 ${pointsLoading ? 'animate-spin' : ''}`} />
+                </Button>
+              </div>
+              {pointsError || (totalPoints === 0 && !pointsLastUpdate) ? (
+                <div className="text-sm text-muted-foreground">
+                  Niedostępne
+                  <div className="text-xs mt-1">API Extended w budowie</div>
+                </div>
+              ) : (
+                <>
+                  <div className="text-2xl font-bold font-mono text-yellow-500">
+                    {totalPoints.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                  </div>
+                  {pointsLastUpdate && (
+                    <div className="text-xs text-muted-foreground mt-1">
+                      {pointsLastUpdate.toLocaleTimeString('pl-PL')}
+                    </div>
+                  )}
+                </>
+              )}
             </div>
           </div>
         </div>

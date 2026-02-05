@@ -213,6 +213,13 @@ EXTENDED_STREAM_URL = "wss://api.starknet.extended.exchange/stream.extended.exch
 ORDERBOOK_PROXY_URL = os.getenv("ORDERBOOK_PROXY_URL")
 ORDERBOOK_DEPTH = 20
 
+# ============= EARNED POINTS STATE =============
+# Cache for earned points per account - fetched every 10 minutes
+# Format: {account_id: {"points": float, "last_update": float, "raw_data": dict}}
+POINTS_CACHE: Dict[str, Dict[str, Any]] = {}
+POINTS_LAST_UPDATE: float = 0
+POINTS_POLL_INTERVAL = 600  # 10 minutes in seconds
+
 
 # ============= PROXY FUNCTION FOR FRONTEND_ONLY MODE =============
 async def proxy_to_remote(endpoint: str, method: str = "GET") -> Dict[str, Any]:
@@ -415,6 +422,87 @@ async def poll_all_accounts_fast():
     await asyncio.gather(*[
         poll_account_fast_data(account) for account in ACCOUNTS
     ], return_exceptions=True)
+
+
+# ============= EARNED POINTS POLLING =============
+async def fetch_account_points(account: AccountConfig) -> Dict[str, Any] | None:
+    """Fetch earned points from Extended Exchange API for a specific account."""
+    global POINTS_CACHE, POINTS_LAST_UPDATE
+    
+    try:
+        result = await fetch_account_api(account, "/points/earned")
+        
+        if result is not None:
+            # Extract points from response - API returns {"data": {"points": 123.45, ...}}
+            data = result.get('data', result) if isinstance(result, dict) else result
+            points_value = 0.0
+            
+            if isinstance(data, dict):
+                # Try different possible field names
+                points_value = float(data.get('points', data.get('earned_points', data.get('total', 0))))
+            elif isinstance(data, (int, float)):
+                points_value = float(data)
+            
+            POINTS_CACHE[account.id] = {
+                "points": points_value,
+                "last_update": time.time(),
+                "raw_data": result,
+                "account_name": account.name
+            }
+            POINTS_LAST_UPDATE = time.time()
+            
+            return POINTS_CACHE[account.id]
+    except Exception as e:
+        print(f"❌ [{account.name}] Points fetch error: {e}")
+    
+    return None
+
+
+async def poll_all_accounts_points():
+    """Fetch earned points for all accounts in parallel."""
+    results = await asyncio.gather(*[
+        fetch_account_points(account) for account in ACCOUNTS
+    ], return_exceptions=True)
+    
+    # Count successful fetches
+    success_count = sum(1 for r in results if r is not None and not isinstance(r, Exception))
+    total_points = sum(
+        POINTS_CACHE.get(acc.id, {}).get('points', 0) 
+        for acc in ACCOUNTS
+    )
+    
+    print(f"💎 [Points] Updated {success_count}/{len(ACCOUNTS)} accounts | Total: {total_points:,.2f} points")
+    
+    # Broadcast points update to clients
+    await broadcast_to_clients({
+        "type": "points_update",
+        "accounts": {
+            acc.id: POINTS_CACHE.get(acc.id, {"points": 0, "account_name": acc.name})
+            for acc in ACCOUNTS
+        },
+        "total_points": total_points,
+        "timestamp": time.time()
+    })
+
+
+async def points_background_poller():
+    """
+    Background task that polls earned points every 10 minutes.
+    Runs independently from the main fast poller.
+    """
+    print(f"💎 [Points] Background poller started (interval: {POINTS_POLL_INTERVAL}s = 10 min)")
+    
+    # Initial fetch after 5 seconds
+    await asyncio.sleep(5)
+    await poll_all_accounts_points()
+    
+    while True:
+        try:
+            await asyncio.sleep(POINTS_POLL_INTERVAL)
+            await poll_all_accounts_points()
+        except Exception as e:
+            print(f"❌ [Points] Poller error: {e}")
+            await asyncio.sleep(60)  # Wait 1 minute on error
 
 
 # ============= ORDER BOOK WEBSOCKET CLIENT =============
@@ -621,7 +709,8 @@ async def startup_broadcaster():
     
     asyncio.create_task(background_poller())
     asyncio.create_task(orderbook_websocket_client())
-    print("✅ [Startup] Broadcaster initialized with Order Book stream")
+    asyncio.create_task(points_background_poller())
+    print("✅ [Startup] Broadcaster initialized with Order Book stream + Points tracking")
     
     # Automatyczny test alertów przy starcie - wyśle testowy alert na Telegram
     asyncio.create_task(startup_alert_test())
@@ -1048,6 +1137,96 @@ async def get_orderbook_status():
         "cached_markets": list(ORDERBOOK_CACHE.keys()),
         "last_update": ORDERBOOK_LAST_UPDATE,
         "cache_age_ms": int((time.time() - ORDERBOOK_LAST_UPDATE) * 1000) if ORDERBOOK_LAST_UPDATE > 0 else None,
+        "timestamp": time.time()
+    }
+
+
+# ============= EARNED POINTS ENDPOINTS =============
+@app.get("/api/points")
+async def get_earned_points():
+    """
+    Get earned points for all accounts.
+    Points are fetched from Extended Exchange API every 10 minutes.
+    
+    Returns:
+        - accounts: Dict of account_id -> {points, account_name, last_update}
+        - total_points: Sum of all points across accounts
+        - last_update: Timestamp of last successful fetch
+    """
+    if IS_FRONTEND_ONLY:
+        return await proxy_to_remote("/api/points")
+    
+    total_points = sum(
+        data.get('points', 0) 
+        for data in POINTS_CACHE.values()
+    )
+    
+    return {
+        "accounts": {
+            acc.id: {
+                "account_name": acc.name,
+                "points": POINTS_CACHE.get(acc.id, {}).get('points', 0),
+                "last_update": POINTS_CACHE.get(acc.id, {}).get('last_update', 0)
+            }
+            for acc in ACCOUNTS
+        },
+        "total_points": total_points,
+        "last_update": POINTS_LAST_UPDATE,
+        "cache_age_seconds": int(time.time() - POINTS_LAST_UPDATE) if POINTS_LAST_UPDATE > 0 else None,
+        "poll_interval_seconds": POINTS_POLL_INTERVAL,
+        "timestamp": time.time()
+    }
+
+
+@app.get("/api/points/{account_index}")
+async def get_account_points(account_index: int):
+    """Get earned points for a specific account by index."""
+    if IS_FRONTEND_ONLY:
+        return await proxy_to_remote(f"/api/points/{account_index}")
+    
+    account_id = f"account_{account_index}"
+    
+    if account_id not in POINTS_CACHE:
+        # Try to find account and return 0 if exists but not yet fetched
+        account = next((a for a in ACCOUNTS if a.id == account_id), None)
+        if account:
+            return {
+                "account_id": account_id,
+                "account_name": account.name,
+                "points": 0,
+                "last_update": 0,
+                "message": "Points not yet fetched"
+            }
+        raise HTTPException(status_code=404, detail=f"Account {account_index} not found")
+    
+    data = POINTS_CACHE[account_id]
+    return {
+        "account_id": account_id,
+        "account_name": data.get('account_name', f'Account {account_index}'),
+        "points": data.get('points', 0),
+        "last_update": data.get('last_update', 0),
+        "raw_data": data.get('raw_data')
+    }
+
+
+@app.post("/api/points/refresh")
+async def refresh_points():
+    """Force refresh of earned points for all accounts."""
+    if IS_FRONTEND_ONLY:
+        return await proxy_to_remote("/api/points/refresh", method="POST")
+    
+    await poll_all_accounts_points()
+    
+    total_points = sum(
+        data.get('points', 0) 
+        for data in POINTS_CACHE.values()
+    )
+    
+    return {
+        "success": True,
+        "message": "Points refreshed for all accounts",
+        "total_points": total_points,
+        "accounts_updated": len(POINTS_CACHE),
         "timestamp": time.time()
     }
 

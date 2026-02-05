@@ -100,6 +100,13 @@ Health status includes:
 - `GET /api/orderbook/{market}` - Order book for specific market (e.g., ETH-PERP)
 - `GET /api/orderbook-status` - Order book WebSocket connection status
 
+### Earned Points (polling every 10 minutes)
+- `GET /api/points` - All accounts earned points with total sum
+- `GET /api/points/{index}` - Points for specific account
+- `POST /api/points/refresh` - Force refresh points from Extended API
+
+Note: Points API depends on Extended Exchange `/points/earned` endpoint which is documented but may not be active yet (returns 404). Code is ready to work when endpoint becomes available.
+
 ## Configuration
 
 Environment variables for account configuration follow this pattern:
