@@ -582,6 +582,24 @@ async def background_poller():
             await asyncio.sleep(0.5)
 
 
+async def startup_alert_test():
+    """Wysyła testowy alert przy starcie serwera"""
+    await asyncio.sleep(5)  # Poczekaj 5 sekund aż serwer się w pełni uruchomi
+    try:
+        from datetime import datetime
+        timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        test_message = f"🚀 SERWER URUCHOMIONY 🚀\nBackend Extended Broadcaster\nStart: {timestamp}\nAlertymarginowe: AKTYWNE"
+        
+        # Wyślij tylko na Telegram (wystarczy do potwierdzenia)
+        result = await alert_manager.send_telegram(test_message)
+        if result:
+            print("✅ [Startup] Testowy alert wysłany na Telegram")
+        else:
+            print("⚠️ [Startup] Nie udało się wysłać testowego alertu na Telegram")
+    except Exception as e:
+        print(f"❌ [Startup] Błąd testu alertów: {e}")
+
+
 # ============= STARTUP EVENT =============
 @app.on_event("startup")
 async def startup_broadcaster():
@@ -601,6 +619,9 @@ async def startup_broadcaster():
     asyncio.create_task(background_poller())
     asyncio.create_task(orderbook_websocket_client())
     print("✅ [Startup] Broadcaster initialized with Order Book stream")
+    
+    # Automatyczny test alertów przy starcie - wyśle testowy alert na Telegram
+    asyncio.create_task(startup_alert_test())
 
 
 # ============= REST API ENDPOINTS =============
