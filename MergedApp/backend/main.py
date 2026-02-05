@@ -1,5 +1,8 @@
-from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
+from pathlib import Path
 import aiohttp
 import asyncio
 import os
@@ -1174,6 +1177,31 @@ async def check_margins_and_alert():
                     print(f"❌ Error checking margin for {account.name}: {e}")
 
 
+# ============= STATIC FILES FOR PRODUCTION =============
+# Serve frontend static files in production
+DIST_DIR = Path(__file__).parent.parent / "dist"
+if DIST_DIR.exists():
+    print(f"📁 Serving static files from: {DIST_DIR}")
+    # Mount static assets (js, css, images)
+    app.mount("/assets", StaticFiles(directory=DIST_DIR / "assets"), name="assets")
+    
+    # Catch-all route for SPA - must be after all API routes
+    @app.get("/{full_path:path}")
+    async def serve_spa(request: Request, full_path: str):
+        """Serve the frontend SPA for non-API routes"""
+        # Don't intercept API, WebSocket, or asset routes
+        if full_path.startswith(("api/", "ws/", "assets/")):
+            raise HTTPException(status_code=404)
+        
+        index_file = DIST_DIR / "index.html"
+        if index_file.exists():
+            return FileResponse(index_file)
+        raise HTTPException(status_code=404, detail="Frontend not built")
+else:
+    print(f"⚠️ Static files directory not found: {DIST_DIR}")
+    print("   Frontend will not be served. Run 'npm run build' in MergedApp/")
+
+
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    uvicorn.run(app, host="0.0.0.0", port=5000)

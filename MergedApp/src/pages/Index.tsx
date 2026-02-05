@@ -50,13 +50,14 @@ const Index = () => {
   const handleTestAlert = async () => {
     setAlertTestState('loading');
     try {
-      const response = await fetch(getApiUrl('/api/alerts/test-telegram'), {
+      const response = await fetch(getApiUrl('/api/alerts/test'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' }
       });
       const data = await response.json();
       setAlertTestResult(data);
-      setAlertTestState(data.success ? 'success' : 'error');
+      const anySuccess = data.results && (data.results.telegram || data.results.pushover || data.results.sms || data.results.phone_call);
+      setAlertTestState(anySuccess ? 'success' : 'error');
       
       // Reset after 5 seconds
       setTimeout(() => {
@@ -141,17 +142,34 @@ const Index = () => {
         
         {/* Alert Test Result Details */}
         {alertTestResult && (
-          <div className={`p-4 rounded-lg border ${
-            alertTestState === 'success' 
-              ? 'bg-green-500/10 border-green-500/30' 
-              : 'bg-red-500/10 border-red-500/30'
-          }`}>
-            <h3 className="font-semibold mb-2">
-              {alertTestState === 'success' ? '✅ Alert wysłany pomyślnie' : '❌ Błąd wysyłania alertu'}
-            </h3>
-            <pre className="text-xs font-mono overflow-auto max-h-40 text-muted-foreground">
-              {JSON.stringify(alertTestResult, null, 2)}
-            </pre>
+          <div className="p-4 rounded-lg border bg-card/50 border-border">
+            <h3 className="font-semibold mb-3">Wyniki testu alertów:</h3>
+            {alertTestResult.results && (
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-3">
+                <div className={`p-3 rounded-lg ${alertTestResult.results.telegram ? 'bg-green-500/20 border-green-500/30' : 'bg-red-500/20 border-red-500/30'} border`}>
+                  <div className="text-sm font-medium">Telegram</div>
+                  <div className="text-lg">{alertTestResult.results.telegram ? '✅' : '❌'}</div>
+                </div>
+                <div className={`p-3 rounded-lg ${alertTestResult.results.pushover ? 'bg-green-500/20 border-green-500/30' : 'bg-red-500/20 border-red-500/30'} border`}>
+                  <div className="text-sm font-medium">Pushover</div>
+                  <div className="text-lg">{alertTestResult.results.pushover ? '✅' : '❌'}</div>
+                </div>
+                <div className={`p-3 rounded-lg ${alertTestResult.results.sms ? 'bg-green-500/20 border-green-500/30' : 'bg-red-500/20 border-red-500/30'} border`}>
+                  <div className="text-sm font-medium">SMS</div>
+                  <div className="text-lg">{alertTestResult.results.sms ? '✅' : '❌'}</div>
+                </div>
+                <div className={`p-3 rounded-lg ${alertTestResult.results.phone_call ? 'bg-green-500/20 border-green-500/30' : 'bg-red-500/20 border-red-500/30'} border`}>
+                  <div className="text-sm font-medium">Telefon</div>
+                  <div className="text-lg">{alertTestResult.results.phone_call ? '✅' : '❌'}</div>
+                </div>
+              </div>
+            )}
+            <details className="text-xs">
+              <summary className="cursor-pointer text-muted-foreground hover:text-foreground">Szczegóły konfiguracji</summary>
+              <pre className="mt-2 font-mono overflow-auto max-h-40 text-muted-foreground bg-background/50 p-2 rounded">
+                {JSON.stringify(alertTestResult.config, null, 2)}
+              </pre>
+            </details>
           </div>
         )}
 
