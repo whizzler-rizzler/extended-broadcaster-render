@@ -307,8 +307,14 @@ export const useMultiAccountData = (): UseMultiAccountDataReturn => {
     };
   }, [connectWebSocket, fetchRestData]);
 
-  // Derive active accounts list
-  const activeAccounts = Array.from(state.accounts.values()).filter(a => a.isActive);
+  // Derive active accounts list (sorted by account number)
+  const activeAccounts = Array.from(state.accounts.values())
+    .filter(a => a.isActive)
+    .sort((a, b) => {
+      const numA = parseInt(a.id.replace('account_', '')) || 0;
+      const numB = parseInt(b.id.replace('account_', '')) || 0;
+      return numA - numB;
+    });
   
   // Compute aggregated portfolio
   const portfolio = aggregatePortfolio(state.accounts);
