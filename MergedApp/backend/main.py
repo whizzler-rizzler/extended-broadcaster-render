@@ -59,88 +59,118 @@ class AccountCache:
     })
 
 # Load account configurations from environment variables
+def parse_proxy_url(raw_proxy: str, use_staticresidential: bool = False, account_num: int = 0) -> Optional[str]:
+    """Parse proxy URL from various formats into a standard http:// URL."""
+    if not raw_proxy:
+        return None
+    raw_proxy = raw_proxy.strip()
+    if raw_proxy.startswith("http://") or raw_proxy.startswith("https://"):
+        try:
+            at_idx = raw_proxy.find('@')
+            if at_idx > 0:
+                host_part = raw_proxy[at_idx+1:].rstrip('/')
+                print(f"✅ Account {account_num} proxy: {host_part}")
+            else:
+                print(f"✅ Account {account_num} proxy: configured (full URL)")
+        except:
+            print(f"✅ Account {account_num} proxy: configured (full URL)")
+        return raw_proxy
+    else:
+        parts = raw_proxy.split(':')
+        if len(parts) == 4:
+            ip, port, username, password = parts
+            if use_staticresidential and not username.endswith('-staticresidential'):
+                username = f"{username}-staticresidential"
+            proxy_url = f"http://{username}:{password}@{ip}:{port}"
+            print(f"✅ Account {account_num} proxy: {ip}:{port} (user: {username})")
+            return proxy_url
+        else:
+            print(f"⚠️ Account {account_num} proxy invalid: expected IP:PORT:User:Pass or full URL, got: {raw_proxy[:30]}...")
+            return None
+
 def load_accounts() -> List[AccountConfig]:
     import re
+    import json as json_lib
     accounts = []
+    json_accounts = {}
+    legacy_accounts = {}
     
-    # Auto-detect accounts from environment variables
-    # Pattern: Extended_N_XXXXXX_API_KEY where N is account number and XXXXXX is unique code
+    # === Phase 1: Detect JSON format accounts (Extended_N = {...}) ===
+    json_pattern = re.compile(r'^Extended_(\d+)$')
+    for env_var in os.environ:
+        match = json_pattern.match(env_var)
+        if match:
+            account_num = int(match.group(1))
+            raw_value = os.getenv(env_var, '').strip()
+            if raw_value.startswith('{'):
+                try:
+                    data = json_lib.loads(raw_value)
+                    if 'api_key' in data:
+                        json_accounts[account_num] = data
+                except json_lib.JSONDecodeError:
+                    print(f"⚠️ Extended_{account_num}: invalid JSON format")
+    
+    # === Phase 2: Detect legacy format accounts (Extended_N_CODE_API_KEY) ===
     api_key_pattern = re.compile(r'^Extended_(\d+)_([A-Za-z0-9]+)_API_KEY$')
-    
-    # Scan all environment variables to find account API keys
-    detected_accounts = {}
     for env_var in os.environ:
         match = api_key_pattern.match(env_var)
         if match:
             account_num = int(match.group(1))
-            account_code = match.group(2)
-            api_key = os.getenv(env_var)
-            if api_key:
-                detected_accounts[account_num] = {
-                    'code': account_code,
-                    'api_key': api_key
-                }
+            if account_num not in json_accounts:
+                account_code = match.group(2)
+                api_key = os.getenv(env_var)
+                if api_key:
+                    legacy_accounts[account_num] = {
+                        'code': account_code,
+                        'api_key': api_key
+                    }
     
-    print(f"🔍 Detected {len(detected_accounts)} accounts from environment variables")
+    print(f"🔍 Detected {len(json_accounts)} JSON accounts + {len(legacy_accounts)} legacy accounts = {len(json_accounts) + len(legacy_accounts)} total")
     
-    # Process detected accounts in order
-    for i in sorted(detected_accounts.keys()):
-        code = detected_accounts[i]['code']
-        api_key = detected_accounts[i]['api_key']
+    # === Process JSON accounts ===
+    for i in sorted(json_accounts.keys()):
+        data = json_accounts[i]
+        code = data.get('code', f'acc{i}')
+        api_key = data['api_key']
+        raw_proxy = data.get('proxy_url', '')
+        proxy_url = parse_proxy_url(raw_proxy, use_staticresidential=False, account_num=i) if raw_proxy else None
         
-        # Get proxy URL - supports multiple variable name formats:
-        # 1. Extended_N_CODE_Proxy (new format) - regular proxy, NO -staticresidential suffix
-        # 2. Extended_N_PROXY_N_URL (old format) - staticresidential proxy, ADD suffix
-        # Value formats supported:
-        # - Full URL: http://username:password@ip:port/
-        # - Legacy: IP:PORT:Username:Password
+        if not proxy_url:
+            print(f"⚠️ Account {i}: no proxy in JSON config")
+        
+        accounts.append(AccountConfig(
+            id=f"account_{i}",
+            name=f"Extended {i} ({code})",
+            api_key=api_key,
+            base_url="https://api.starknet.extended.exchange/api/v1",
+            proxy_url=proxy_url
+        ))
+        proxy_info = f" (via proxy)" if proxy_url else " (no proxy)"
+        print(f"✅ Loaded Account {i}: Extended_{i}_{code}{proxy_info} [JSON]")
+    
+    # === Process legacy accounts ===
+    for i in sorted(legacy_accounts.keys()):
+        code = legacy_accounts[i]['code']
+        api_key = legacy_accounts[i]['api_key']
+        
         proxy_var_new = f"Extended_{i}_{code}_Proxy"
         proxy_var_old = f"Extended_{i}_PROXY_{i}_URL"
         
-        # Check which format is used to determine if we need staticresidential suffix
         raw_proxy_new = os.getenv(proxy_var_new)
         raw_proxy_old = os.getenv(proxy_var_old)
         
-        # New format (12-25): regular proxy, no suffix needed
-        # Old format (1-10): staticresidential proxy, add suffix for legacy format
         use_staticresidential = False
         if raw_proxy_new:
             raw_proxy = raw_proxy_new
-            use_staticresidential = False  # New accounts don't need suffix
+            use_staticresidential = False
         elif raw_proxy_old:
             raw_proxy = raw_proxy_old
-            use_staticresidential = True   # Old accounts need suffix for legacy format
+            use_staticresidential = True
         else:
             raw_proxy = None
         
-        proxy_url = None
-        if raw_proxy:
-            raw_proxy = raw_proxy.strip()
-            if raw_proxy.startswith("http://") or raw_proxy.startswith("https://"):
-                # Full URL format - use as-is (user controls the username)
-                proxy_url = raw_proxy
-                try:
-                    at_idx = raw_proxy.find('@')
-                    if at_idx > 0:
-                        host_part = raw_proxy[at_idx+1:].rstrip('/')
-                        print(f"✅ Account {i} proxy: {host_part}")
-                    else:
-                        print(f"✅ Account {i} proxy: configured (full URL)")
-                except:
-                    print(f"✅ Account {i} proxy: configured (full URL)")
-            else:
-                # Legacy format: IP:PORT:Username:Password
-                parts = raw_proxy.split(':')
-                if len(parts) == 4:
-                    ip, port, username, password = parts
-                    # Only add -staticresidential for old format accounts (1-10)
-                    if use_staticresidential and not username.endswith('-staticresidential'):
-                        username = f"{username}-staticresidential"
-                    proxy_url = f"http://{username}:{password}@{ip}:{port}"
-                    print(f"✅ Account {i} proxy: {ip}:{port} (user: {username})")
-                else:
-                    print(f"⚠️ Account {i} proxy invalid: expected IP:PORT:User:Pass or full URL, got: {raw_proxy[:30]}...")
-        else:
+        proxy_url = parse_proxy_url(raw_proxy, use_staticresidential, i) if raw_proxy else None
+        if not proxy_url and not raw_proxy:
             print(f"⚠️ Account {i}: no proxy ({proxy_var_new} or {proxy_var_old} not set)")
         
         accounts.append(AccountConfig(
