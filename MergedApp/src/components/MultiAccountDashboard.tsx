@@ -37,7 +37,7 @@ export const MultiAccountDashboard = ({
   const [showInactive, setShowInactive] = useState(false);
   const [isExpanded, setIsExpanded] = useState(true);
   
-  const { totalPoints, isLoading: pointsLoading, refresh: refreshPoints, lastUpdate: pointsLastUpdate, error: pointsError } = useEarnedPoints();
+  const { points: pointsData, totalPoints, isLoading: pointsLoading, refresh: refreshPoints, lastUpdate: pointsLastUpdate, error: pointsError } = useEarnedPoints();
 
   const activeAccounts = accounts.filter(a => a.isActive);
   const inactiveAccounts = accounts.filter(a => !a.isActive);
@@ -240,6 +240,7 @@ export const MultiAccountDashboard = ({
                   account={account}
                   isSelected={selectedAccountId === account.id}
                   onClick={() => onAccountSelect?.(account.id)}
+                  accountPoints={pointsData?.accounts?.[account.id]?.points ?? null}
                 />
               ))
             )}

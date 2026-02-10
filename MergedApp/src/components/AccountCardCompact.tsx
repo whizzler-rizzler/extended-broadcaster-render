@@ -6,7 +6,8 @@ import {
   Activity,
   AlertTriangle,
   CheckCircle2,
-  XCircle
+  XCircle,
+  Star
 } from 'lucide-react';
 import { SingleAccountData } from '@/types/multiAccount';
 import { cn } from '@/lib/utils';
@@ -15,12 +16,14 @@ interface AccountCardCompactProps {
   account: SingleAccountData;
   isSelected?: boolean;
   onClick?: () => void;
+  accountPoints?: number | null;
 }
 
 export const AccountCardCompact = ({
   account,
   isSelected,
   onClick,
+  accountPoints,
 }: AccountCardCompactProps) => {
   const { computed, balance, isActive, name, id, positions, lastUpdate } = account;
   const pnl = Number(computed.totalPnl) || 0;
@@ -126,17 +129,27 @@ export const AccountCardCompact = ({
             </div>
           </div>
           
-          <div className="flex items-center gap-1">
-            <Activity className={cn(
-              'w-3 h-3',
-              isStale ? 'text-warning' : 'text-success'
-            )} />
-            <span className={cn(
-              'text-[10px]',
-              isStale ? 'text-warning' : 'text-muted-foreground'
-            )}>
-              {isStale ? `${timeSinceUpdate}s ago` : 'Live'}
-            </span>
+          <div className="flex items-center gap-2">
+            {accountPoints !== null && accountPoints !== undefined && (
+              <div className="flex items-center gap-1">
+                <Star className="w-3 h-3 text-yellow-500" />
+                <span className="font-mono text-yellow-500 text-[10px] font-semibold">
+                  {accountPoints.toLocaleString(undefined, { maximumFractionDigits: 1 })}
+                </span>
+              </div>
+            )}
+            <div className="flex items-center gap-1">
+              <Activity className={cn(
+                'w-3 h-3',
+                isStale ? 'text-warning' : 'text-success'
+              )} />
+              <span className={cn(
+                'text-[10px]',
+                isStale ? 'text-warning' : 'text-muted-foreground'
+              )}>
+                {isStale ? `${timeSinceUpdate}s ago` : 'Live'}
+              </span>
+            </div>
           </div>
         </div>
 

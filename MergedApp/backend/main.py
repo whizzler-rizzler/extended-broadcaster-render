@@ -460,21 +460,30 @@ async def fetch_account_points(account: AccountConfig) -> Dict[str, Any] | None:
     global POINTS_CACHE, POINTS_LAST_UPDATE
     
     try:
-        result = await fetch_account_api(account, "/points/earned")
+        result = await fetch_account_api(account, "/user/rewards/earned")
         
         if result is not None:
-            # Extract points from response - API returns {"data": {"points": 123.45, ...}}
-            data = result.get('data', result) if isinstance(result, dict) else result
-            points_value = 0.0
+            # API returns: {"status":"OK","data":[{"seasonId":1,"epochRewards":[{"epochId":N,"pointsReward":"123"},...]},...]}
+            data = result.get('data', []) if isinstance(result, dict) else []
+            total_points = 0.0
+            season_points = {}
             
-            if isinstance(data, dict):
-                # Try different possible field names
-                points_value = float(data.get('points', data.get('earned_points', data.get('total', 0))))
-            elif isinstance(data, (int, float)):
-                points_value = float(data)
+            if isinstance(data, list):
+                for season in data:
+                    if isinstance(season, dict):
+                        season_id = season.get('seasonId', 0)
+                        epoch_rewards = season.get('epochRewards', [])
+                        season_total = 0.0
+                        for epoch in epoch_rewards:
+                            if isinstance(epoch, dict):
+                                reward = float(epoch.get('pointsReward', 0))
+                                season_total += reward
+                        season_points[f"season_{season_id}"] = season_total
+                        total_points += season_total
             
             POINTS_CACHE[account.id] = {
-                "points": points_value,
+                "points": total_points,
+                "season_points": season_points,
                 "last_update": time.time(),
                 "raw_data": result,
                 "account_name": account.name
@@ -1196,6 +1205,7 @@ async def get_earned_points():
             acc.id: {
                 "account_name": acc.name,
                 "points": POINTS_CACHE.get(acc.id, {}).get('points', 0),
+                "season_points": POINTS_CACHE.get(acc.id, {}).get('season_points', {}),
                 "last_update": POINTS_CACHE.get(acc.id, {}).get('last_update', 0)
             }
             for acc in ACCOUNTS
