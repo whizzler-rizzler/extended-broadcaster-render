@@ -13,6 +13,7 @@ from datetime import datetime
 from dataclasses import dataclass, field
 from supabase_client import supabase_client
 from margin_alerts import alert_manager, MARGIN_THRESHOLDS
+import trade_history
 
 app = FastAPI(title="Extended API Multi-Account Broadcaster")
 
@@ -776,7 +777,8 @@ async def startup_broadcaster():
     asyncio.create_task(background_poller())
     asyncio.create_task(orderbook_websocket_client())
     asyncio.create_task(points_background_poller())
-    print("✅ [Startup] Broadcaster initialized with Order Book stream + Points tracking")
+    asyncio.create_task(trade_history_background_poller())
+    print("✅ [Startup] Broadcaster initialized with Order Book stream + Points tracking + Trade History")
     
     # Automatyczny test alertów przy starcie - wyśle testowy alert na Telegram
     asyncio.create_task(startup_alert_test())
@@ -1426,6 +1428,93 @@ async def check_margins_and_alert():
                         print(f"🚨 Alert sent for {account.name}: {result['alerts_sent']}")
                 except Exception as e:
                     print(f"❌ Error checking margin for {account.name}: {e}")
+
+
+# ============= TRADE HISTORY ENDPOINTS =============
+TRADE_HISTORY_POLL_INTERVAL = 600  # 10 minutes
+TRADE_HISTORY_LAST_UPDATE = 0
+
+async def trade_history_background_poller():
+    global TRADE_HISTORY_LAST_UPDATE
+    await asyncio.sleep(10)
+    print("📊 [TradeHistory] Background poller started (every 10 minutes)")
+    while True:
+        try:
+            saved = await trade_history.fetch_and_store_all_trades(ACCOUNTS, fetch_account_api)
+            TRADE_HISTORY_LAST_UPDATE = time.time()
+            print(f"📊 [TradeHistory] Cycle complete, {saved} new records saved")
+        except Exception as e:
+            print(f"❌ [TradeHistory] Error: {e}")
+        await asyncio.sleep(TRADE_HISTORY_POLL_INTERVAL)
+
+
+@app.get("/api/trade-history/epochs")
+async def get_trade_history_epochs():
+    if IS_FRONTEND_ONLY:
+        return await proxy_to_remote("/api/trade-history/epochs")
+    try:
+        epochs = await trade_history.get_available_epochs()
+        return {"epochs": epochs, "last_update": TRADE_HISTORY_LAST_UPDATE}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/trade-history/epoch/{epoch_number}")
+async def get_trade_history_epoch(epoch_number: int):
+    if IS_FRONTEND_ONLY:
+        return await proxy_to_remote(f"/api/trade-history/epoch/{epoch_number}")
+    try:
+        points_data = {
+            "accounts": {
+                acc.id: {
+                    "account_name": acc.name,
+                    "points": POINTS_CACHE.get(acc.id, {}).get('points', 0),
+                    "last_week_points": POINTS_CACHE.get(acc.id, {}).get('last_week_points', 0),
+                }
+                for acc in ACCOUNTS
+            },
+            "total_last_week_points": sum(d.get('last_week_points', 0) for d in POINTS_CACHE.values()),
+        }
+        stats = await trade_history.get_epoch_stats(epoch_number, points_data)
+        return stats
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/trade-history/account/{epoch_number}/{account_index}")
+async def get_trade_history_account(epoch_number: int, account_index: int):
+    if IS_FRONTEND_ONLY:
+        return await proxy_to_remote(f"/api/trade-history/account/{epoch_number}/{account_index}")
+    try:
+        trades = await trade_history.get_account_trades(epoch_number, account_index)
+        return {"trades": trades, "count": len(trades)}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/trade-history/stats")
+async def get_trade_history_db_stats():
+    if IS_FRONTEND_ONLY:
+        return await proxy_to_remote("/api/trade-history/stats")
+    try:
+        stats = await trade_history.get_db_stats()
+        stats["last_poll"] = TRADE_HISTORY_LAST_UPDATE
+        return stats
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/trade-history/refresh")
+async def refresh_trade_history():
+    if IS_FRONTEND_ONLY:
+        return await proxy_to_remote("/api/trade-history/refresh", method="POST")
+    try:
+        saved = await trade_history.fetch_and_store_all_trades(ACCOUNTS, fetch_account_api)
+        global TRADE_HISTORY_LAST_UPDATE
+        TRADE_HISTORY_LAST_UPDATE = time.time()
+        return {"success": True, "new_records": saved, "timestamp": time.time()}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 # ============= STATIC FILES FOR PRODUCTION =============
