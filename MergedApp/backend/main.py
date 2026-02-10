@@ -156,13 +156,18 @@ def load_accounts() -> List[AccountConfig]:
         
         proxy_var_new = f"Extended_{i}_{code}_Proxy"
         proxy_var_old = f"Extended_{i}_PROXY_{i}_URL"
+        proxy_var_simple = f"Extended_{i}_PROXY"
         
         raw_proxy_new = os.getenv(proxy_var_new)
         raw_proxy_old = os.getenv(proxy_var_old)
+        raw_proxy_simple = os.getenv(proxy_var_simple)
         
         use_staticresidential = False
         if raw_proxy_new:
             raw_proxy = raw_proxy_new
+            use_staticresidential = False
+        elif raw_proxy_simple:
+            raw_proxy = raw_proxy_simple
             use_staticresidential = False
         elif raw_proxy_old:
             raw_proxy = raw_proxy_old
