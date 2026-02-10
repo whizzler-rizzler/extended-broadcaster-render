@@ -5,16 +5,34 @@ import traceback
 from datetime import datetime, timedelta, timezone
 from typing import Dict, List, Optional, Any
 import asyncpg
+import numpy as np
 
 DATABASE_URL = os.getenv("DATABASE_URL")
 
 _db_pool = None
+_schema_ensured = False
 
 async def get_db_pool():
     global _db_pool
     if _db_pool is None:
         _db_pool = await asyncpg.create_pool(DATABASE_URL, min_size=2, max_size=10)
     return _db_pool
+
+
+async def ensure_schema():
+    global _schema_ensured
+    if _schema_ensured:
+        return
+    pool = await get_db_pool()
+    async with pool.acquire() as conn:
+        await conn.execute("""
+            ALTER TABLE trade_positions ADD COLUMN IF NOT EXISTS closed_time BIGINT;
+            ALTER TABLE trade_positions ADD COLUMN IF NOT EXISTS closed_at TIMESTAMP;
+            ALTER TABLE trade_positions ADD COLUMN IF NOT EXISTS exit_price NUMERIC;
+            ALTER TABLE trade_positions ADD COLUMN IF NOT EXISTS exit_type VARCHAR(50);
+        """)
+    _schema_ensured = True
+    print("✅ [TradeHistory] Schema migration complete (closed_time, closed_at, exit_price, exit_type)")
 
 
 def get_epoch_start(dt: datetime) -> datetime:
@@ -42,6 +60,8 @@ async def save_positions_history(account_id: str, account_index: int, account_na
     if not positions or not DATABASE_URL:
         return 0
 
+    await ensure_schema()
+
     pool = await get_db_pool()
     saved = 0
 
@@ -59,15 +79,26 @@ async def save_positions_history(account_id: str, account_index: int, account_na
 
                 breakdown = pos.get('realisedPnlBreakdown', {})
 
+                closed_time_ms = pos.get('closedTime')
+                closed_time_val = int(closed_time_ms) if closed_time_ms else None
+                closed_at_val = datetime.utcfromtimestamp(closed_time_val / 1000) if closed_time_val else None
+                exit_price_val = float(pos.get('exitPrice', 0)) if pos.get('exitPrice') else None
+                exit_type_val = pos.get('exitType') or None
+
                 await conn.execute("""
                     INSERT INTO trade_positions (
                         id, account_id, account_index, account_name,
                         market, side, size, max_position_size, leverage,
                         open_price, realised_pnl, trade_pnl, funding_fees,
                         open_fees, close_fees, created_time, created_at,
-                        epoch_start, epoch_number, fetched_at
-                    ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19, NOW())
-                    ON CONFLICT (id) DO NOTHING
+                        epoch_start, epoch_number, fetched_at,
+                        closed_time, closed_at, exit_price, exit_type
+                    ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19, NOW(), $20,$21,$22,$23)
+                    ON CONFLICT (id) DO UPDATE SET
+                        closed_time = COALESCE(EXCLUDED.closed_time, trade_positions.closed_time),
+                        closed_at = COALESCE(EXCLUDED.closed_at, trade_positions.closed_at),
+                        exit_price = COALESCE(EXCLUDED.exit_price, trade_positions.exit_price),
+                        exit_type = COALESCE(EXCLUDED.exit_type, trade_positions.exit_type)
                 """,
                     int(pos_id),
                     account_id,
@@ -88,6 +119,10 @@ async def save_positions_history(account_id: str, account_index: int, account_na
                     created_at,
                     epoch_start.date(),
                     epoch_num,
+                    closed_time_val,
+                    closed_at_val,
+                    exit_price_val,
+                    exit_type_val,
                 )
                 saved += 1
             except asyncpg.UniqueViolationError:
@@ -147,7 +182,21 @@ async def get_available_epochs() -> List[Dict]:
         return epochs
 
 
-async def get_epoch_stats(epoch_number: int, points_data: Optional[Dict] = None) -> Dict:
+def _format_duration(seconds: float) -> str:
+    if seconds < 3600:
+        return f"{seconds/60:.0f}m"
+    elif seconds < 86400:
+        return f"{seconds/3600:.1f}h"
+    else:
+        return f"{seconds/86400:.1f}d"
+
+
+async def get_epoch_stats(epoch_number: int, points_data: Optional[Dict] = None, current_epoch: Optional[int] = None) -> Dict:
+    is_current_epoch = (current_epoch is not None and epoch_number == current_epoch)
+    is_last_completed_epoch = (current_epoch is not None and epoch_number == current_epoch - 1)
+    points_pending = is_current_epoch
+    points_available = is_last_completed_epoch
+
     pool = await get_db_pool()
     async with pool.acquire() as conn:
         combined = await conn.fetchrow("""
@@ -159,7 +208,9 @@ async def get_epoch_stats(epoch_number: int, points_data: Optional[Dict] = None)
                 COALESCE(SUM(ABS(open_fees) + ABS(close_fees)), 0) as total_fees,
                 COALESCE(SUM(realised_pnl), 0) as total_pnl,
                 COALESCE(SUM(trade_pnl), 0) as total_trade_pnl,
-                COALESCE(SUM(funding_fees), 0) as total_funding_fees
+                COALESCE(SUM(funding_fees), 0) as total_funding_fees,
+                COALESCE(SUM(ABS(open_fees)), 0) as total_open_fees,
+                COALESCE(SUM(ABS(close_fees)), 0) as total_close_fees
             FROM trade_positions
             WHERE epoch_number = $1
         """, epoch_number)
@@ -176,8 +227,11 @@ async def get_epoch_stats(epoch_number: int, points_data: Optional[Dict] = None)
                 COALESCE(SUM(realised_pnl), 0) as pnl,
                 COALESCE(SUM(trade_pnl), 0) as trade_pnl,
                 COALESCE(SUM(funding_fees), 0) as funding_fees,
+                COALESCE(SUM(ABS(open_fees)), 0) as open_fees,
+                COALESCE(SUM(ABS(close_fees)), 0) as close_fees,
                 COALESCE(SUM(CASE WHEN open_fees = 0 THEN ABS(size * open_price) ELSE 0 END), 0) as maker_volume,
                 COALESCE(SUM(CASE WHEN open_fees != 0 THEN ABS(size * open_price) ELSE 0 END), 0) as taker_volume,
+                COALESCE(AVG(CASE WHEN closed_time IS NOT NULL AND created_time > 0 THEN (closed_time - created_time) / 1000.0 END), 0) as avg_duration_seconds,
                 MIN(created_at) as first_trade,
                 MAX(created_at) as last_trade
             FROM trade_positions
@@ -187,6 +241,7 @@ async def get_epoch_stats(epoch_number: int, points_data: Optional[Dict] = None)
         """, epoch_number)
 
         account_stats = []
+        cpp_values = []
         for acc in accounts:
             volume = float(acc['volume'])
             fees = float(acc['fees'])
@@ -195,10 +250,12 @@ async def get_epoch_stats(epoch_number: int, points_data: Optional[Dict] = None)
             total_vol = maker_vol + taker_vol if (maker_vol + taker_vol) > 0 else 1
 
             acc_points = 0
-            if points_data and 'accounts' in points_data:
+            if is_last_completed_epoch and points_data and 'accounts' in points_data:
                 acc_key = acc['account_id']
                 if acc_key in points_data['accounts']:
                     acc_points = points_data['accounts'][acc_key].get('last_week_points', 0)
+            elif is_current_epoch:
+                acc_points = 0
 
             pairs_data = await conn.fetch("""
                 SELECT market,
@@ -221,20 +278,24 @@ async def get_epoch_stats(epoch_number: int, points_data: Optional[Dict] = None)
 
             taker_fee_rate_bps = (fees / taker_vol * 10000) if taker_vol > 0 else 0
 
-            first_trade = acc['first_trade']
-            last_trade = acc['last_trade']
-            avg_position_time = None
-            if first_trade and last_trade and int(acc['positions']) > 1:
-                total_seconds = (last_trade - first_trade).total_seconds()
-                avg_seconds = total_seconds / (int(acc['positions']) - 1)
-                if avg_seconds < 3600:
-                    avg_position_time = f"{avg_seconds/60:.0f}m"
-                elif avg_seconds < 86400:
-                    avg_position_time = f"{avg_seconds/3600:.1f}h"
+            avg_dur_sec = float(acc['avg_duration_seconds'])
+            if avg_dur_sec > 0:
+                avg_position_time = _format_duration(avg_dur_sec)
+            else:
+                first_trade = acc['first_trade']
+                last_trade = acc['last_trade']
+                if first_trade and last_trade and int(acc['positions']) > 1:
+                    total_seconds = (last_trade - first_trade).total_seconds()
+                    avg_seconds = total_seconds / (int(acc['positions']) - 1)
+                    avg_position_time = _format_duration(avg_seconds)
                 else:
-                    avg_position_time = f"{avg_seconds/86400:.1f}d"
+                    avg_position_time = "N/A"
 
             points_per_1m = (acc_points / volume * 1_000_000) if volume > 0 and acc_points > 0 else 0
+
+            acc_cpp = (fees / acc_points) if acc_points > 0 else None
+            if acc_cpp is not None:
+                cpp_values.append(acc_cpp)
 
             account_stats.append({
                 "account_index": acc['account_index'],
@@ -246,6 +307,8 @@ async def get_epoch_stats(epoch_number: int, points_data: Optional[Dict] = None)
                 "realised_pnl": round(float(acc['pnl']), 6),
                 "trade_pnl": round(float(acc['trade_pnl']), 6),
                 "funding_fees": round(float(acc['funding_fees']), 6),
+                "open_fees": round(float(acc['open_fees']), 6),
+                "close_fees": round(float(acc['close_fees']), 6),
                 "points_earned": round(acc_points, 2),
                 "points_per_1m": round(points_per_1m, 2),
                 "avg_position_time": avg_position_time,
@@ -254,6 +317,7 @@ async def get_epoch_stats(epoch_number: int, points_data: Optional[Dict] = None)
                 "maker_pct": round(maker_vol / total_vol * 100, 1),
                 "taker_pct": round(taker_vol / total_vol * 100, 1),
                 "taker_fee_rate_bps": round(taker_fee_rate_bps, 2),
+                "cost_per_point": round(acc_cpp, 6) if acc_cpp else None,
                 "trading_pairs": trading_pairs,
             })
 
@@ -261,10 +325,11 @@ async def get_epoch_stats(epoch_number: int, points_data: Optional[Dict] = None)
         total_fees = float(combined['total_fees'])
 
         total_points = 0
-        if points_data:
+        if is_last_completed_epoch and points_data:
             total_points = points_data.get('total_last_week_points', 0)
 
         cpp = (total_fees / total_points) if total_points > 0 else 0
+        avg_cpp = (sum(cpp_values) / len(cpp_values)) if cpp_values else None
 
         start, end = epoch_number_to_dates(epoch_number)
 
@@ -273,17 +338,25 @@ async def get_epoch_stats(epoch_number: int, points_data: Optional[Dict] = None)
             "epoch_label": f"Epoch {epoch_number} ({start.strftime('%b %d, %Y')} - {end.strftime('%b %d, %Y')})",
             "start_date": start.strftime("%Y-%m-%d"),
             "end_date": end.strftime("%Y-%m-%d"),
+            "is_current_epoch": is_current_epoch,
+            "points_pending": points_pending,
+            "points_available": points_available,
             "combined_stats": {
                 "total_volume": round(total_volume, 2),
                 "total_fees": round(total_fees, 6),
                 "cost_per_point": round(cpp, 6),
+                "avg_cpp": round(avg_cpp, 6) if avg_cpp else None,
                 "total_positions": int(combined['total_positions']),
                 "total_accounts": int(combined['total_accounts']),
                 "total_markets": int(combined['total_markets']),
                 "total_pnl": round(float(combined['total_pnl']), 6),
                 "total_trade_pnl": round(float(combined['total_trade_pnl']), 6),
                 "total_funding_fees": round(float(combined['total_funding_fees']), 6),
+                "total_open_fees": round(float(combined['total_open_fees']), 6),
+                "total_close_fees": round(float(combined['total_close_fees']), 6),
                 "total_points": round(total_points, 2),
+                "points_pending": points_pending,
+                "points_available": points_available,
             },
             "accounts": account_stats,
         }
@@ -341,3 +414,139 @@ async def get_db_stats() -> Dict:
             "latest": row['latest'].isoformat() if row['latest'] else None,
             "last_fetch": row['last_fetch'].isoformat() if row['last_fetch'] else None,
         }
+
+
+async def get_regression_analysis(points_data: Dict, current_epoch: int) -> Dict:
+    last_completed_epoch = current_epoch - 1
+
+    pool = await get_db_pool()
+    async with pool.acquire() as conn:
+        accounts = await conn.fetch("""
+            SELECT
+                account_index,
+                account_id,
+                account_name,
+                COUNT(*) as positions,
+                COUNT(DISTINCT market) as markets_traded,
+                COALESCE(SUM(ABS(size * open_price)), 0) as volume,
+                COALESCE(SUM(ABS(open_fees) + ABS(close_fees)), 0) as fees,
+                COALESCE(SUM(CASE WHEN open_fees = 0 THEN ABS(size * open_price) ELSE 0 END), 0) as maker_volume,
+                COALESCE(SUM(CASE WHEN open_fees != 0 THEN ABS(size * open_price) ELSE 0 END), 0) as taker_volume,
+                COALESCE(AVG(CASE WHEN closed_time IS NOT NULL AND created_time > 0 THEN (closed_time - created_time) / 1000.0 END), 0) as avg_duration_seconds
+            FROM trade_positions
+            WHERE epoch_number = $1
+            GROUP BY account_index, account_id, account_name
+            ORDER BY account_index
+        """, last_completed_epoch)
+
+    if not accounts:
+        return {"error": "No data for the last completed epoch", "epoch": last_completed_epoch}
+
+    feature_names = ["avg_duration", "volume", "total_fees", "maker_ratio", "markets_traded", "positions"]
+    features = []
+    targets = []
+    account_labels = []
+
+    for acc in accounts:
+        acc_key = acc['account_id']
+        acc_points = 0.0
+        if points_data and 'accounts' in points_data:
+            if acc_key in points_data['accounts']:
+                acc_points = points_data['accounts'][acc_key].get('last_week_points', 0)
+
+        if acc_points <= 0:
+            continue
+
+        volume = float(acc['volume'])
+        maker_vol = float(acc['maker_volume'])
+        taker_vol = float(acc['taker_volume'])
+        total_vol = maker_vol + taker_vol if (maker_vol + taker_vol) > 0 else 1
+        maker_ratio = maker_vol / total_vol
+
+        row = [
+            float(acc['avg_duration_seconds']),
+            volume,
+            float(acc['fees']),
+            maker_ratio,
+            int(acc['markets_traded']),
+            int(acc['positions']),
+        ]
+        features.append(row)
+        targets.append(acc_points)
+        account_labels.append(acc['account_name'])
+
+    n = len(features)
+    if n < 3:
+        return {
+            "error": f"Not enough accounts with points data ({n} found, need at least 3)",
+            "epoch": last_completed_epoch,
+            "accounts_with_points": n,
+        }
+
+    X = np.array(features, dtype=np.float64)
+    y = np.array(targets, dtype=np.float64)
+
+    X_means = X.mean(axis=0)
+    X_stds = X.std(axis=0)
+    X_stds[X_stds == 0] = 1.0
+    X_norm = (X - X_means) / X_stds
+
+    y_mean = y.mean()
+    ss_tot = np.sum((y - y_mean) ** 2)
+
+    X_with_intercept = np.column_stack([np.ones(n), X_norm])
+
+    try:
+        coeffs, residuals, rank, sv = np.linalg.lstsq(X_with_intercept, y, rcond=None)
+    except np.linalg.LinAlgError:
+        return {"error": "Linear algebra error during regression", "epoch": last_completed_epoch}
+
+    y_pred = X_with_intercept @ coeffs
+    ss_res = np.sum((y - y_pred) ** 2)
+    r_squared = 1 - (ss_res / ss_tot) if ss_tot > 0 else 0
+
+    intercept = coeffs[0]
+    beta = coeffs[1:]
+    std_coeffs = beta.copy()
+
+    abs_importance = np.abs(std_coeffs)
+    total_importance = abs_importance.sum()
+    if total_importance > 0:
+        importance_pct = abs_importance / total_importance * 100
+    else:
+        importance_pct = np.zeros(len(feature_names))
+
+    p = len(feature_names)
+    dof = max(1, n - p - 1)
+    mse = ss_res / dof if dof > 0 else 0
+
+    try:
+        XtX_inv = np.linalg.inv(X_with_intercept.T @ X_with_intercept)
+        se = np.sqrt(np.diag(XtX_inv) * mse)
+        t_stats = coeffs / se
+        p_values_features = [None] * len(feature_names)
+    except Exception:
+        p_values_features = [None] * len(feature_names)
+
+    most_important_idx = int(np.argmax(abs_importance))
+
+    feature_results = []
+    for i, name in enumerate(feature_names):
+        feature_results.append({
+            "name": name,
+            "coefficient": round(float(std_coeffs[i]), 6),
+            "importance_pct": round(float(importance_pct[i]), 2),
+            "p_value": round(float(p_values_features[i]), 4) if p_values_features[i] is not None else None,
+        })
+
+    feature_results.sort(key=lambda x: x["importance_pct"], reverse=True)
+
+    return {
+        "epoch": last_completed_epoch,
+        "r_squared": round(float(r_squared), 4),
+        "intercept": round(float(intercept), 4),
+        "n_accounts": n,
+        "most_important_factor": feature_names[most_important_idx],
+        "features": feature_results,
+        "accounts_used": account_labels,
+    }

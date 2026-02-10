@@ -1464,6 +1464,7 @@ async def get_trade_history_epoch(epoch_number: int):
     if IS_FRONTEND_ONLY:
         return await proxy_to_remote(f"/api/trade-history/epoch/{epoch_number}")
     try:
+        current_epoch = trade_history.get_epoch_number(datetime.utcnow())
         points_data = {
             "accounts": {
                 acc.id: {
@@ -1475,7 +1476,7 @@ async def get_trade_history_epoch(epoch_number: int):
             },
             "total_last_week_points": sum(d.get('last_week_points', 0) for d in POINTS_CACHE.values()),
         }
-        stats = await trade_history.get_epoch_stats(epoch_number, points_data)
+        stats = await trade_history.get_epoch_stats(epoch_number, points_data, current_epoch=current_epoch)
         return stats
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -1500,6 +1501,29 @@ async def get_trade_history_db_stats():
         stats = await trade_history.get_db_stats()
         stats["last_poll"] = TRADE_HISTORY_LAST_UPDATE
         return stats
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/trade-history/regression")
+async def get_regression():
+    if IS_FRONTEND_ONLY:
+        return await proxy_to_remote("/api/trade-history/regression")
+    try:
+        current_epoch = trade_history.get_epoch_number(datetime.utcnow())
+        points_data = {
+            "accounts": {
+                acc.id: {
+                    "account_name": acc.name,
+                    "points": POINTS_CACHE.get(acc.id, {}).get('points', 0),
+                    "last_week_points": POINTS_CACHE.get(acc.id, {}).get('last_week_points', 0),
+                }
+                for acc in ACCOUNTS
+            },
+            "total_last_week_points": sum(d.get('last_week_points', 0) for d in POINTS_CACHE.values()),
+        }
+        result = await trade_history.get_regression_analysis(points_data, current_epoch)
+        return result
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
