@@ -287,7 +287,7 @@ def data_changed(old_data: Any, new_data: Any) -> bool:
     return json.dumps(old_data, sort_keys=True) != json.dumps(new_data, sort_keys=True)
 
 
-async def fetch_account_api(account: AccountConfig, endpoint: str) -> Dict[str, Any] | None:
+async def fetch_account_api(account: AccountConfig, endpoint: str, params: Dict[str, Any] = None) -> Dict[str, Any] | None:
     """Fetch data from Extended API for a specific account, using proxy if configured."""
     try:
         async with aiohttp.ClientSession() as session:
@@ -300,9 +300,11 @@ async def fetch_account_api(account: AccountConfig, endpoint: str) -> Dict[str, 
                 "timeout": aiohttp.ClientTimeout(total=15.0)
             }
             
-            # Add proxy if configured - this routes the request through the proxy IP
             if account.proxy_url:
                 request_kwargs["proxy"] = account.proxy_url
+
+            if params:
+                request_kwargs["params"] = params
             
             url = f"{account.base_url}{endpoint}"
             
@@ -1440,9 +1442,10 @@ async def trade_history_background_poller():
     print("📊 [TradeHistory] Background poller started (every 10 minutes)")
     while True:
         try:
-            saved = await trade_history.fetch_and_store_all_trades(ACCOUNTS, fetch_account_api)
+            saved_pos = await trade_history.fetch_and_store_all_trades(ACCOUNTS, fetch_account_api)
+            saved_ord = await trade_history.fetch_and_store_all_orders(ACCOUNTS, fetch_account_api)
             TRADE_HISTORY_LAST_UPDATE = time.time()
-            print(f"📊 [TradeHistory] Cycle complete, {saved} new records saved")
+            print(f"📊 [TradeHistory] Cycle complete, {saved_pos} positions + {saved_ord} orders saved")
         except Exception as e:
             print(f"❌ [TradeHistory] Error: {e}")
         await asyncio.sleep(TRADE_HISTORY_POLL_INTERVAL)
@@ -1528,15 +1531,67 @@ async def get_regression():
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@app.get("/api/trade-history/debug/{account_index}")
+async def debug_trade_data(account_index: int):
+    acc = next((a for a in ACCOUNTS if int(a.id.split('_')[1]) == account_index), None)
+    if not acc:
+        raise HTTPException(status_code=404, detail="Account not found")
+    
+    positions = await fetch_account_api(acc, '/user/positions/history', params={"limit": 1000, "offset": 0})
+    orders = await fetch_account_api(acc, '/user/orders/history', params={"limit": 100, "offset": 0})
+    
+    pos_data = positions.get('data', []) if positions else []
+    ord_data = orders.get('data', []) if orders else []
+    
+    total_vol_size = sum(abs(float(p.get('size', 0)) * float(p.get('openPrice', 0))) for p in pos_data)
+    total_vol_max = sum(abs(float(p.get('maxPositionSize', 0)) * float(p.get('openPrice', 0))) for p in pos_data)
+    total_vol_max_close = sum(
+        abs(float(p.get('maxPositionSize', 0)) * float(p.get('exitPrice', 0))) 
+        for p in pos_data if p.get('exitPrice')
+    )
+    
+    ord_volume = 0
+    for o in ord_data:
+        filled = float(o.get('filledSize', 0) or 0)
+        price = float(o.get('avgFillPrice', 0) or o.get('price', 0) or 0)
+        ord_volume += abs(filled * price)
+    
+    return {
+        "account_index": account_index,
+        "positions_count": len(pos_data),
+        "orders_count": len(ord_data),
+        "volume_size_x_price": round(total_vol_size, 2),
+        "volume_maxpos_x_openprice": round(total_vol_max, 2),
+        "volume_maxpos_x_exitprice": round(total_vol_max_close, 2),
+        "volume_open_plus_close": round(total_vol_max + total_vol_max_close, 2),
+        "orders_volume": round(ord_volume, 2),
+        "sample_positions": pos_data[:2],
+        "sample_orders": ord_data[:2],
+    }
+
+
 @app.post("/api/trade-history/refresh")
-async def refresh_trade_history():
+async def refresh_trade_history(full: bool = False):
     if IS_FRONTEND_ONLY:
         return await proxy_to_remote("/api/trade-history/refresh", method="POST")
     try:
-        saved = await trade_history.fetch_and_store_all_trades(ACCOUNTS, fetch_account_api)
+        if full:
+            pool = await trade_history.get_db_pool()
+            async with pool.acquire() as conn:
+                await conn.execute("DELETE FROM trade_positions")
+                await conn.execute("DELETE FROM trade_orders")
+                print(f"🗑️ [TradeHistory] Cleared all data for full refresh")
+        saved_pos = await trade_history.fetch_and_store_all_trades(ACCOUNTS, fetch_account_api)
+        saved_ord = await trade_history.fetch_and_store_all_orders(ACCOUNTS, fetch_account_api)
         global TRADE_HISTORY_LAST_UPDATE
         TRADE_HISTORY_LAST_UPDATE = time.time()
-        return {"success": True, "new_records": saved, "timestamp": time.time()}
+        return {
+            "success": True,
+            "positions_saved": saved_pos,
+            "orders_saved": saved_ord,
+            "full_refresh": full,
+            "timestamp": time.time(),
+        }
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
