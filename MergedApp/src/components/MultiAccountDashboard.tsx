@@ -37,7 +37,7 @@ export const MultiAccountDashboard = ({
   const [showInactive, setShowInactive] = useState(false);
   const [isExpanded, setIsExpanded] = useState(true);
   
-  const { points: pointsData, totalPoints, isLoading: pointsLoading, refresh: refreshPoints, lastUpdate: pointsLastUpdate, error: pointsError } = useEarnedPoints();
+  const { points: pointsData, totalPoints, totalLastWeekPoints, isLoading: pointsLoading, refresh: refreshPoints, lastUpdate: pointsLastUpdate, error: pointsError } = useEarnedPoints();
 
   const activeAccounts = accounts.filter(a => a.isActive);
   const inactiveAccounts = accounts.filter(a => !a.isActive);
@@ -176,8 +176,19 @@ export const MultiAccountDashboard = ({
                 </div>
               ) : (
                 <>
-                  <div className="text-2xl font-bold font-mono text-yellow-500">
-                    {totalPoints.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                  <div className="flex items-baseline gap-2">
+                    <div>
+                      <div className="text-[10px] text-muted-foreground uppercase">Total</div>
+                      <div className="text-2xl font-bold font-mono text-yellow-500">
+                        {totalPoints.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                      </div>
+                    </div>
+                    <div className="border-l border-border/50 pl-2">
+                      <div className="text-[10px] text-muted-foreground uppercase">Last Week</div>
+                      <div className="text-lg font-bold font-mono text-yellow-400">
+                        {totalLastWeekPoints.toLocaleString(undefined, { maximumFractionDigits: 1 })}
+                      </div>
+                    </div>
                   </div>
                   {pointsLastUpdate && (
                     <div className="text-xs text-muted-foreground mt-1">
@@ -241,6 +252,7 @@ export const MultiAccountDashboard = ({
                   isSelected={selectedAccountId === account.id}
                   onClick={() => onAccountSelect?.(account.id)}
                   accountPoints={pointsData?.accounts?.[account.id]?.points ?? null}
+                  accountLastWeekPoints={pointsData?.accounts?.[account.id]?.last_week_points ?? null}
                 />
               ))
             )}

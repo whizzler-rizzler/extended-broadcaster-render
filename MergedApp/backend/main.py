@@ -455,6 +455,31 @@ async def poll_all_accounts_fast():
 
 
 # ============= EARNED POINTS POLLING =============
+def find_last_week_points(data: list) -> float:
+    """Find points from the most recent completed epoch (last week)."""
+    from datetime import datetime, date, timedelta
+    today = date.today()
+    last_week_points = 0.0
+    latest_end_date = None
+    
+    for season in data:
+        if not isinstance(season, dict):
+            continue
+        for epoch in season.get('epochRewards', []):
+            if not isinstance(epoch, dict):
+                continue
+            try:
+                end_date = datetime.strptime(epoch.get('endDate', ''), '%Y-%m-%d').date()
+                if end_date <= today:
+                    if latest_end_date is None or end_date > latest_end_date:
+                        latest_end_date = end_date
+                        last_week_points = float(epoch.get('pointsReward', 0))
+            except (ValueError, TypeError):
+                continue
+    
+    return last_week_points
+
+
 async def fetch_account_points(account: AccountConfig) -> Dict[str, Any] | None:
     """Fetch earned points from Extended Exchange API for a specific account."""
     global POINTS_CACHE, POINTS_LAST_UPDATE
@@ -463,7 +488,6 @@ async def fetch_account_points(account: AccountConfig) -> Dict[str, Any] | None:
         result = await fetch_account_api(account, "/user/rewards/earned")
         
         if result is not None:
-            # API returns: {"status":"OK","data":[{"seasonId":1,"epochRewards":[{"epochId":N,"pointsReward":"123"},...]},...]}
             data = result.get('data', []) if isinstance(result, dict) else []
             total_points = 0.0
             season_points = {}
@@ -481,8 +505,11 @@ async def fetch_account_points(account: AccountConfig) -> Dict[str, Any] | None:
                         season_points[f"season_{season_id}"] = season_total
                         total_points += season_total
             
+            last_week = find_last_week_points(data) if isinstance(data, list) else 0.0
+            
             POINTS_CACHE[account.id] = {
                 "points": total_points,
+                "last_week_points": last_week,
                 "season_points": season_points,
                 "last_update": time.time(),
                 "raw_data": result,
@@ -1199,18 +1226,23 @@ async def get_earned_points():
         data.get('points', 0) 
         for data in POINTS_CACHE.values()
     )
+    total_last_week = sum(
+        data.get('last_week_points', 0)
+        for data in POINTS_CACHE.values()
+    )
     
     return {
         "accounts": {
             acc.id: {
                 "account_name": acc.name,
                 "points": POINTS_CACHE.get(acc.id, {}).get('points', 0),
-                "season_points": POINTS_CACHE.get(acc.id, {}).get('season_points', {}),
+                "last_week_points": POINTS_CACHE.get(acc.id, {}).get('last_week_points', 0),
                 "last_update": POINTS_CACHE.get(acc.id, {}).get('last_update', 0)
             }
             for acc in ACCOUNTS
         },
         "total_points": total_points,
+        "total_last_week_points": total_last_week,
         "last_update": POINTS_LAST_UPDATE,
         "cache_age_seconds": int(time.time() - POINTS_LAST_UPDATE) if POINTS_LAST_UPDATE > 0 else None,
         "poll_interval_seconds": POINTS_POLL_INTERVAL,

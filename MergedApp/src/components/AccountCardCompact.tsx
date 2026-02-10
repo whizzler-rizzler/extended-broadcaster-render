@@ -17,6 +17,7 @@ interface AccountCardCompactProps {
   isSelected?: boolean;
   onClick?: () => void;
   accountPoints?: number | null;
+  accountLastWeekPoints?: number | null;
 }
 
 export const AccountCardCompact = ({
@@ -24,6 +25,7 @@ export const AccountCardCompact = ({
   isSelected,
   onClick,
   accountPoints,
+  accountLastWeekPoints,
 }: AccountCardCompactProps) => {
   const { computed, balance, isActive, name, id, positions, lastUpdate } = account;
   const pnl = Number(computed.totalPnl) || 0;
@@ -131,11 +133,16 @@ export const AccountCardCompact = ({
           
           <div className="flex items-center gap-2">
             {accountPoints !== null && accountPoints !== undefined && (
-              <div className="flex items-center gap-1">
+              <div className="flex items-center gap-1" title={`Total: ${accountPoints.toLocaleString(undefined, { maximumFractionDigits: 1 })} | Last Week: ${(accountLastWeekPoints ?? 0).toLocaleString(undefined, { maximumFractionDigits: 1 })}`}>
                 <Star className="w-3 h-3 text-yellow-500" />
                 <span className="font-mono text-yellow-500 text-[10px] font-semibold">
                   {accountPoints.toLocaleString(undefined, { maximumFractionDigits: 1 })}
                 </span>
+                {accountLastWeekPoints !== null && accountLastWeekPoints !== undefined && accountLastWeekPoints > 0 && (
+                  <span className="font-mono text-yellow-400/70 text-[9px]">
+                    (+{accountLastWeekPoints.toLocaleString(undefined, { maximumFractionDigits: 1 })})
+                  </span>
+                )}
               </div>
             )}
             <div className="flex items-center gap-1">
