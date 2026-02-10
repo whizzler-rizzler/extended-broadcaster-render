@@ -189,7 +189,7 @@ async def save_orders_history(account_id: str, account_index: int, account_name:
                 if filled_qty <= 0:
                     continue
 
-                created_time = order.get('createdAt', 0)
+                created_time = order.get('createdTime', 0) or order.get('createdAt', 0)
                 if not created_time:
                     continue
                 created_at = datetime.utcfromtimestamp(created_time / 1000)
@@ -197,7 +197,7 @@ async def save_orders_history(account_id: str, account_index: int, account_name:
                 epoch_num = get_epoch_number(created_at)
 
                 avg_price = float(order.get('averagePrice', 0) or 0)
-                fee_val = float(order.get('fee', 0) or 0)
+                fee_val = float(order.get('payedFee', 0) or order.get('fee', 0) or 0)
                 is_maker = order.get('type', '') == 'LIMIT'
 
                 await conn.execute("""
