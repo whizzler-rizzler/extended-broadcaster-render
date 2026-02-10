@@ -400,7 +400,7 @@ async def poll_account_fast_data(account: AccountConfig):
 async def poll_account_trades(account: AccountConfig):
     """Poll closed positions (with PnL) for a single account."""
     cache = BROADCASTER_CACHES[account.id]
-    new_trades = await fetch_account_api(account, "/user/positions-history")
+    new_trades = await fetch_account_api(account, "/user/positions/history")
     
     if new_trades is not None and data_changed(cache.trades, new_trades):
         cache.trades = new_trades

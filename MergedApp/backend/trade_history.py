@@ -24,14 +24,15 @@ def get_epoch_start(dt: datetime) -> datetime:
 
 
 def get_epoch_number(dt: datetime) -> int:
-    epoch_1_start = datetime(2025, 4, 28, tzinfo=timezone.utc)
-    delta = dt - epoch_1_start
+    epoch_1_start = datetime(2025, 4, 28)
+    dt_naive = dt.replace(tzinfo=None) if dt.tzinfo else dt
+    delta = dt_naive - epoch_1_start
     week_num = delta.days // 7
     return max(1, week_num + 1)
 
 
 def epoch_number_to_dates(epoch_num: int) -> tuple:
-    epoch_1_start = datetime(2025, 4, 28, tzinfo=timezone.utc)
+    epoch_1_start = datetime(2025, 4, 28)
     start = epoch_1_start + timedelta(weeks=epoch_num - 1)
     end = start + timedelta(days=6)
     return start, end
@@ -52,7 +53,7 @@ async def save_positions_history(account_id: str, account_index: int, account_na
                     continue
 
                 created_time = pos.get('createdTime', 0)
-                created_at = datetime.utcfromtimestamp(created_time / 1000).replace(tzinfo=timezone.utc)
+                created_at = datetime.utcfromtimestamp(created_time / 1000)
                 epoch_start = get_epoch_start(created_at)
                 epoch_num = get_epoch_number(created_at)
 

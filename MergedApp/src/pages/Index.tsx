@@ -7,11 +7,10 @@ import { RestAPIDebugPanel } from "@/components/RestAPIDebugPanel";
 import { WebSocketDebugPanel } from "@/components/WebSocketDebugPanel";
 import { FrequencyMonitor } from "@/components/FrequencyMonitor";
 import { LatencyMonitor } from "@/components/LatencyMonitor";
-import { TradeHistory } from "@/components/TradeHistory";
+import { TradeHistoryWeekly } from "@/components/TradeHistoryWeekly";
 import { OpenOrdersPanel } from "@/Orders/OpenOrdersPanel";
 import { useMultiAccountData } from "@/hooks/useMultiAccountData";
 import { usePublicPricesWebSocket } from "@/hooks/usePublicPricesWebSocket";
-import { useTradeHistory } from "@/hooks/useTradeHistory";
 import { useBroadcasterStats } from "@/hooks/useBroadcasterStats";
 
 const Index = () => {
@@ -32,9 +31,6 @@ const Index = () => {
   
   // Public prices WebSocket for mark prices
   const { prices: publicPrices } = usePublicPricesWebSocket();
-  
-  // Trade history (will be extended for multi-account later)
-  const tradeHistory = useTradeHistory();
   
   // Broadcaster stats for monitoring
   const broadcasterStats = useBroadcasterStats();
@@ -223,9 +219,9 @@ const Index = () => {
         <section className="space-y-4">
           <div className="flex items-center gap-2">
             <div className="w-1 h-6 bg-primary rounded-full" />
-            <h2 className="text-xl font-bold text-primary">HISTORIA TRANSAKCJI</h2>
+            <h2 className="text-xl font-bold text-primary">HISTORIA TRANSAKCJI & STATYSTYKI</h2>
           </div>
-          <TradeHistory trades={tradeHistory.trades} />
+          <TradeHistoryWeekly />
         </section>
 
         {/* Debug Panels */}
