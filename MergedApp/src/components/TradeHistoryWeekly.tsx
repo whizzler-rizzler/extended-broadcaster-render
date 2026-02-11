@@ -96,17 +96,35 @@ interface RegressionFeature {
   name: string;
   coefficient: number;
   importance_pct: number;
-  p_value: number | null;
+}
+
+interface CorrelationResult {
+  name: string;
+  correlation: number;
+  r_squared: number;
+  direction: string;
+}
+
+interface RegressionModel {
+  name: string;
+  type: string;
+  feature_count: number;
+  r_squared: number;
+  adj_r_squared?: number;
+  intercept?: number;
+  features: RegressionFeature[];
+  alpha?: number;
 }
 
 interface RegressionData {
   epoch?: number;
-  r_squared?: number;
-  intercept?: number;
   n_accounts?: number;
-  most_important_factor?: string;
-  features?: RegressionFeature[];
+  data_source?: string;
+  best_model?: string;
+  models?: RegressionModel[];
+  correlations?: CorrelationResult[];
   accounts_used?: string[];
+  account_details?: { name: string; points: number; volume: number; fees: number; orders: number }[];
   error?: string;
 }
 
@@ -205,11 +223,16 @@ export const TradeHistoryWeekly = () => {
   const stats = epochData?.combined_stats;
 
   const featureDisplayNames: Record<string, string> = {
-    avg_duration: "Avg Duration",
     volume: "Volume",
     total_fees: "Total Fees",
+    taker_volume: "Taker Volume",
+    maker_volume: "Maker Volume",
     maker_ratio: "Maker Ratio",
+    order_count: "Order Count",
+    avg_order_size: "Avg Order Size",
     markets_traded: "Markets Traded",
+    avg_leverage: "Avg Leverage",
+    fee_rate_bps: "Fee Rate (bps)",
     positions: "Positions",
   };
 
@@ -358,24 +381,24 @@ export const TradeHistoryWeekly = () => {
               </div>
               <div className="bg-muted/40 rounded-lg p-3 border border-border/50">
                 <div className="text-[10px] text-muted-foreground uppercase tracking-wider">
-                  Trade PnL
+                  Realised PnL
                 </div>
                 <div
-                  className={`text-lg font-bold font-mono flex items-center gap-1 ${stats.total_trade_pnl >= 0 ? "text-[#4ade80]" : "text-red-400"}`}
+                  className={`text-lg font-bold font-mono flex items-center gap-1 ${(stats.total_pnl ?? 0) >= 0 ? "text-[#4ade80]" : "text-red-400"}`}
                 >
-                  {stats.total_trade_pnl >= 0 ? (
+                  {(stats.total_pnl ?? 0) >= 0 ? (
                     <TrendingUp className="w-4 h-4" />
                   ) : (
                     <TrendingDown className="w-4 h-4" />
                   )}
-                  {stats.total_trade_pnl >= 0 ? "+" : ""}
-                  {stats.total_trade_pnl.toLocaleString(undefined, {
+                  {(stats.total_pnl ?? 0) >= 0 ? "+" : ""}
+                  {(stats.total_pnl ?? 0).toLocaleString(undefined, {
                     minimumFractionDigits: 2,
                     maximumFractionDigits: 3,
                   })}
                 </div>
                 <div className="text-[9px] text-muted-foreground mt-0.5">
-                  Fees: {stats.total_open_fees?.toLocaleString(undefined, { maximumFractionDigits: 2 }) ?? "0"} + {stats.total_close_fees?.toLocaleString(undefined, { maximumFractionDigits: 2 }) ?? "0"} | Fund: {stats.total_funding_fees?.toLocaleString(undefined, { maximumFractionDigits: 2 }) ?? "0"} | Net: {stats.total_pnl?.toLocaleString(undefined, { maximumFractionDigits: 2 }) ?? "0"}
+                  Price: {stats.total_trade_pnl?.toLocaleString(undefined, { maximumFractionDigits: 2 }) ?? "0"} | Fund: {stats.total_funding_fees?.toLocaleString(undefined, { maximumFractionDigits: 2 }) ?? "0"} | Fees: {((stats.total_open_fees ?? 0) + (stats.total_close_fees ?? 0)).toLocaleString(undefined, { maximumFractionDigits: 2 })}
                 </div>
               </div>
               <div className="bg-muted/40 rounded-lg p-3 border border-border/50">
@@ -517,37 +540,51 @@ export const TradeHistoryWeekly = () => {
                             </div>
                           </div>
 
-                          <div className="grid grid-cols-2 gap-3">
+                          <div className="grid grid-cols-3 gap-3">
                             <div>
                               <div className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">
-                                Trade PnL
+                                Realised PnL
                               </div>
                               <div
-                                className={`text-sm font-bold font-mono flex items-center gap-1 ${(acc.trade_pnl ?? 0) >= 0 ? "text-[#4ade80]" : "text-red-400"}`}
+                                className={`text-sm font-bold font-mono flex items-center gap-1 ${(acc.realised_pnl ?? 0) >= 0 ? "text-[#4ade80]" : "text-red-400"}`}
                               >
-                                {(acc.trade_pnl ?? 0) >= 0 ? (
+                                {(acc.realised_pnl ?? 0) >= 0 ? (
                                   <TrendingUp className="w-3 h-3" />
                                 ) : (
                                   <TrendingDown className="w-3 h-3" />
                                 )}
-                                {(acc.trade_pnl ?? 0) >= 0 ? "+" : ""}
-                                {(acc.trade_pnl ?? 0).toLocaleString(undefined, {
-                                  minimumFractionDigits: 3,
-                                  maximumFractionDigits: 3,
+                                {(acc.realised_pnl ?? 0) >= 0 ? "+" : ""}
+                                {(acc.realised_pnl ?? 0).toLocaleString(undefined, {
+                                  minimumFractionDigits: 2,
+                                  maximumFractionDigits: 2,
                                 })}
                               </div>
                             </div>
                             <div>
                               <div className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">
-                                Funding Fees
+                                Price PnL
+                              </div>
+                              <div
+                                className={`text-sm font-bold font-mono ${(acc.trade_pnl ?? 0) >= 0 ? "text-[#4ade80]" : "text-red-400"}`}
+                              >
+                                {(acc.trade_pnl ?? 0) >= 0 ? "+" : ""}
+                                {(acc.trade_pnl ?? 0).toLocaleString(undefined, {
+                                  minimumFractionDigits: 2,
+                                  maximumFractionDigits: 2,
+                                })}
+                              </div>
+                            </div>
+                            <div>
+                              <div className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">
+                                Funding
                               </div>
                               <div
                                 className={`text-sm font-bold font-mono ${(acc.funding_fees ?? 0) >= 0 ? "text-[#4ade80]" : "text-red-400"}`}
                               >
                                 {(acc.funding_fees ?? 0) >= 0 ? "+" : ""}
                                 {(acc.funding_fees ?? 0).toLocaleString(undefined, {
-                                  minimumFractionDigits: 3,
-                                  maximumFractionDigits: 3,
+                                  minimumFractionDigits: 2,
+                                  maximumFractionDigits: 2,
                                 })}
                               </div>
                             </div>
@@ -652,72 +689,157 @@ export const TradeHistoryWeekly = () => {
               </div>
             )}
 
-            {regressionData && !regressionData.error && regressionData.features && (
+            {regressionData && !regressionData.error && regressionData.models && regressionData.models.length > 0 && (
               <div className="space-y-3 mt-4">
                 <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-2">
                   <BarChart3 className="w-4 h-4 text-[#a78bfa]" />
-                  Regression Analysis (Epoch {regressionData.epoch})
+                  Points Formula Analysis (Epoch {regressionData.epoch})
                 </h3>
 
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                   <div className="bg-muted/40 rounded-lg p-3 border border-border/50">
                     <div className="text-[10px] text-muted-foreground uppercase tracking-wider">
-                      R² Score
+                      Best Model R²
                     </div>
                     <div className="text-2xl font-bold font-mono text-[#a78bfa]">
-                      {(regressionData.r_squared ?? 0).toFixed(4)}
+                      {(regressionData.models[0]?.r_squared ?? 0).toFixed(4)}
                     </div>
                     <div className="text-[10px] text-muted-foreground">
-                      Model fit quality
+                      {regressionData.best_model}
                     </div>
                   </div>
                   <div className="bg-muted/40 rounded-lg p-3 border border-border/50">
                     <div className="text-[10px] text-muted-foreground uppercase tracking-wider">
-                      Accounts Used
+                      Accounts / Models
                     </div>
                     <div className="text-2xl font-bold font-mono">
-                      {regressionData.n_accounts}
+                      {regressionData.n_accounts} / {regressionData.models.length}
+                    </div>
+                    <div className="text-[10px] text-muted-foreground">
+                      Source: {regressionData.data_source}
                     </div>
                   </div>
                   <div className="bg-muted/40 rounded-lg p-3 border border-border/50">
                     <div className="text-[10px] text-muted-foreground uppercase tracking-wider">
-                      Key Insight
+                      Top Correlating Factor
                     </div>
                     <div className="text-sm font-semibold text-[#22d3ee]">
-                      Most important factor: {featureDisplayNames[regressionData.most_important_factor ?? ""] ?? regressionData.most_important_factor}
+                      {regressionData.correlations && regressionData.correlations.length > 0
+                        ? `${featureDisplayNames[regressionData.correlations[0].name] ?? regressionData.correlations[0].name} (r=${regressionData.correlations[0].correlation.toFixed(3)})`
+                        : "N/A"}
                     </div>
                   </div>
                 </div>
 
-                <div className="bg-muted/40 rounded-lg p-4 border border-border/50 space-y-2">
-                  <div className="text-[10px] text-muted-foreground uppercase tracking-wider mb-2">
-                    Feature Importance
+                <div className="bg-muted/40 rounded-lg p-4 border border-border/50 space-y-3">
+                  <div className="text-[10px] text-muted-foreground uppercase tracking-wider">
+                    Model Comparison
                   </div>
-                  {regressionData.features.map((feat) => (
-                    <div key={feat.name} className="space-y-1">
-                      <div className="flex justify-between text-xs">
-                        <span className="font-semibold">
-                          {featureDisplayNames[feat.name] ?? feat.name}
-                        </span>
-                        <span className="font-mono">
-                          <span className={feat.coefficient >= 0 ? "text-[#4ade80]" : "text-red-400"}>
-                            {feat.coefficient >= 0 ? "+" : ""}{feat.coefficient.toFixed(4)}
-                          </span>
-                          {" "}
-                          <span className="text-muted-foreground">
-                            ({feat.importance_pct.toFixed(1)}%)
-                          </span>
-                        </span>
-                      </div>
-                      <div className="h-2 rounded-full bg-muted/60 overflow-hidden">
-                        <div
-                          className={`h-full rounded-full transition-all ${feat.coefficient >= 0 ? "bg-[#4ade80]" : "bg-red-400"}`}
-                          style={{ width: `${Math.min(feat.importance_pct, 100)}%` }}
-                        />
-                      </div>
-                    </div>
-                  ))}
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-xs">
+                      <thead>
+                        <tr className="border-b border-border/50">
+                          <th className="text-left py-1.5 px-2 text-muted-foreground font-medium">Model</th>
+                          <th className="text-right py-1.5 px-2 text-muted-foreground font-medium">R²</th>
+                          <th className="text-right py-1.5 px-2 text-muted-foreground font-medium">Adj R²</th>
+                          <th className="text-right py-1.5 px-2 text-muted-foreground font-medium">Factors</th>
+                          <th className="text-left py-1.5 px-2 text-muted-foreground font-medium">Top Factor</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {regressionData.models.map((model, idx) => (
+                          <tr
+                            key={model.name}
+                            className={`border-b border-border/30 ${idx === 0 ? "bg-[#a78bfa]/10" : ""}`}
+                          >
+                            <td className="py-1.5 px-2 font-semibold">
+                              {idx === 0 && <span className="text-[#a78bfa] mr-1">★</span>}
+                              {model.name}
+                            </td>
+                            <td className="text-right py-1.5 px-2 font-mono text-[#a78bfa] font-bold">
+                              {model.r_squared.toFixed(4)}
+                            </td>
+                            <td className="text-right py-1.5 px-2 font-mono text-muted-foreground">
+                              {model.adj_r_squared !== undefined ? model.adj_r_squared.toFixed(4) : "-"}
+                            </td>
+                            <td className="text-right py-1.5 px-2 font-mono">
+                              {model.feature_count}
+                            </td>
+                            <td className="py-1.5 px-2">
+                              {model.features && model.features.length > 0
+                                ? `${featureDisplayNames[model.features[0].name] ?? model.features[0].name} (${model.features[0].importance_pct.toFixed(1)}%)`
+                                : "-"}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
                 </div>
+
+                {regressionData.correlations && regressionData.correlations.length > 0 && (
+                  <div className="bg-muted/40 rounded-lg p-4 border border-border/50 space-y-2">
+                    <div className="text-[10px] text-muted-foreground uppercase tracking-wider mb-2">
+                      Per-Factor Correlation with Points
+                    </div>
+                    {regressionData.correlations.map((corr) => (
+                      <div key={corr.name} className="space-y-1">
+                        <div className="flex justify-between text-xs">
+                          <span className="font-semibold">
+                            {featureDisplayNames[corr.name] ?? corr.name}
+                          </span>
+                          <span className="font-mono">
+                            <span className={corr.correlation >= 0 ? "text-[#4ade80]" : "text-red-400"}>
+                              r={corr.correlation >= 0 ? "+" : ""}{corr.correlation.toFixed(4)}
+                            </span>
+                            {" "}
+                            <span className="text-muted-foreground">
+                              (R²={corr.r_squared.toFixed(4)})
+                            </span>
+                          </span>
+                        </div>
+                        <div className="h-2 rounded-full bg-muted/60 overflow-hidden">
+                          <div
+                            className={`h-full rounded-full transition-all ${corr.correlation >= 0 ? "bg-[#4ade80]" : "bg-red-400"}`}
+                            style={{ width: `${Math.min(Math.abs(corr.correlation) * 100, 100)}%` }}
+                          />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {regressionData.models[0]?.features && (
+                  <div className="bg-muted/40 rounded-lg p-4 border border-border/50 space-y-2">
+                    <div className="text-[10px] text-muted-foreground uppercase tracking-wider mb-2">
+                      Best Model Weight Distribution: {regressionData.models[0].name}
+                    </div>
+                    {regressionData.models[0].features.map((feat) => (
+                      <div key={feat.name} className="space-y-1">
+                        <div className="flex justify-between text-xs">
+                          <span className="font-semibold">
+                            {featureDisplayNames[feat.name] ?? feat.name}
+                          </span>
+                          <span className="font-mono">
+                            <span className={feat.coefficient >= 0 ? "text-[#4ade80]" : "text-red-400"}>
+                              {feat.coefficient >= 0 ? "+" : ""}{feat.coefficient.toFixed(4)}
+                            </span>
+                            {" "}
+                            <span className="text-muted-foreground">
+                              ({feat.importance_pct.toFixed(1)}%)
+                            </span>
+                          </span>
+                        </div>
+                        <div className="h-2 rounded-full bg-muted/60 overflow-hidden">
+                          <div
+                            className={`h-full rounded-full transition-all ${feat.coefficient >= 0 ? "bg-[#a78bfa]" : "bg-red-400"}`}
+                            style={{ width: `${Math.min(feat.importance_pct, 100)}%` }}
+                          />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             )}
 

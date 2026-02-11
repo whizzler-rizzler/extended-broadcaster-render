@@ -684,36 +684,169 @@ async def get_db_stats() -> Dict:
         }
 
 
+def _run_ols(X_norm, y, feature_names):
+    n = len(y)
+    X_i = np.column_stack([np.ones(n), X_norm])
+    try:
+        coeffs, _, _, _ = np.linalg.lstsq(X_i, y, rcond=None)
+    except np.linalg.LinAlgError:
+        return None
+    y_pred = X_i @ coeffs
+    ss_res = np.sum((y - y_pred) ** 2)
+    ss_tot = np.sum((y - y.mean()) ** 2)
+    r2 = 1 - (ss_res / ss_tot) if ss_tot > 0 else 0
+    adj_r2 = 1 - (1 - r2) * (n - 1) / max(1, n - len(feature_names) - 1) if n > len(feature_names) + 1 else r2
+    beta = coeffs[1:]
+    abs_imp = np.abs(beta)
+    total_imp = abs_imp.sum()
+    imp_pct = (abs_imp / total_imp * 100) if total_imp > 0 else np.zeros(len(feature_names))
+    features = []
+    for i, name in enumerate(feature_names):
+        features.append({
+            "name": name,
+            "coefficient": round(float(beta[i]), 6),
+            "importance_pct": round(float(imp_pct[i]), 2),
+        })
+    features.sort(key=lambda x: x["importance_pct"], reverse=True)
+    return {
+        "r_squared": round(float(r2), 4),
+        "adj_r_squared": round(float(adj_r2), 4),
+        "intercept": round(float(coeffs[0]), 4),
+        "features": features,
+        "y_pred": y_pred,
+    }
+
+
+def _run_ridge(X_norm, y, feature_names, alpha=1.0):
+    n, p = X_norm.shape
+    y_mean = y.mean()
+    y_centered = y - y_mean
+    I = np.eye(p)
+    try:
+        beta = np.linalg.solve(X_norm.T @ X_norm + alpha * I, X_norm.T @ y_centered)
+    except np.linalg.LinAlgError:
+        return None
+    y_pred = X_norm @ beta + y_mean
+    ss_res = np.sum((y - y_pred) ** 2)
+    ss_tot = np.sum((y - y_mean) ** 2)
+    r2 = 1 - (ss_res / ss_tot) if ss_tot > 0 else 0
+    adj_r2 = 1 - (1 - r2) * (n - 1) / max(1, n - p - 1) if n > p + 1 else r2
+    abs_imp = np.abs(beta)
+    total_imp = abs_imp.sum()
+    imp_pct = (abs_imp / total_imp * 100) if total_imp > 0 else np.zeros(p)
+    features = []
+    for i, name in enumerate(feature_names):
+        features.append({
+            "name": name,
+            "coefficient": round(float(beta[i]), 6),
+            "importance_pct": round(float(imp_pct[i]), 2),
+        })
+    features.sort(key=lambda x: x["importance_pct"], reverse=True)
+    return {
+        "r_squared": round(float(r2), 4),
+        "adj_r_squared": round(float(adj_r2), 4),
+        "alpha": alpha,
+        "features": features,
+        "y_pred": y_pred,
+    }
+
+
+def _per_feature_correlations(X_norm, y, feature_names):
+    results = []
+    for i, name in enumerate(feature_names):
+        x_col = X_norm[:, i]
+        corr = np.corrcoef(x_col, y)[0, 1] if np.std(x_col) > 0 else 0.0
+        X_single = np.column_stack([np.ones(len(y)), x_col])
+        try:
+            coeffs, _, _, _ = np.linalg.lstsq(X_single, y, rcond=None)
+            y_pred = X_single @ coeffs
+            ss_res = np.sum((y - y_pred) ** 2)
+            ss_tot = np.sum((y - y.mean()) ** 2)
+            r2 = 1 - (ss_res / ss_tot) if ss_tot > 0 else 0
+        except Exception:
+            r2 = 0.0
+        results.append({
+            "name": name,
+            "correlation": round(float(corr), 4),
+            "r_squared": round(float(r2), 4),
+            "direction": "positive" if corr >= 0 else "negative",
+        })
+    results.sort(key=lambda x: abs(x["correlation"]), reverse=True)
+    return results
+
+
 async def get_regression_analysis(points_data: Dict, current_epoch: int) -> Dict:
     last_completed_epoch = current_epoch - 1
 
     pool = await get_db_pool()
     async with pool.acquire() as conn:
-        accounts = await conn.fetch("""
-            SELECT
-                account_index,
-                account_id,
-                account_name,
-                COUNT(*) as positions,
-                COUNT(DISTINCT market) as markets_traded,
-                COALESCE(SUM(ABS(max_position_size * open_price)), 0) as volume,
-                COALESCE(SUM(ABS(open_fees) + ABS(close_fees)), 0) as fees,
-                COALESCE(SUM(CASE WHEN open_fees = 0 THEN ABS(max_position_size * open_price) ELSE 0 END), 0) as maker_volume,
-                COALESCE(SUM(CASE WHEN open_fees != 0 THEN ABS(max_position_size * open_price) ELSE 0 END), 0) as taker_volume,
-                COALESCE(AVG(CASE WHEN closed_time IS NOT NULL AND created_time > 0 THEN (closed_time - created_time) / 1000.0 END), 0) as avg_duration_seconds
-            FROM trade_positions
-            WHERE epoch_number = $1
-            GROUP BY account_index, account_id, account_name
-            ORDER BY account_index
-        """, last_completed_epoch)
+        has_orders = await conn.fetchval(
+            "SELECT COUNT(*) FROM trade_orders WHERE epoch_number = $1", last_completed_epoch
+        )
+        if has_orders and has_orders > 0:
+            accounts = await conn.fetch("""
+                SELECT
+                    o.account_index,
+                    o.account_id,
+                    o.account_name,
+                    COUNT(DISTINCT o.id) as order_count,
+                    COUNT(DISTINCT o.market) as markets_traded,
+                    COALESCE(SUM(ABS(o.filled_qty * o.average_price)), 0) as volume,
+                    COALESCE(SUM(ABS(o.fee)), 0) as fees,
+                    COALESCE(SUM(CASE WHEN o.is_maker THEN ABS(o.filled_qty * o.average_price) ELSE 0 END), 0) as maker_volume,
+                    COALESCE(SUM(CASE WHEN NOT o.is_maker THEN ABS(o.filled_qty * o.average_price) ELSE 0 END), 0) as taker_volume,
+                    COALESCE(AVG(ABS(o.filled_qty * o.average_price)), 0) as avg_order_size,
+                    COALESCE(p.avg_leverage, 0) as avg_leverage,
+                    COALESCE(p.positions, 0) as positions,
+                    COALESCE(p.realised_pnl, 0) as realised_pnl
+                FROM trade_orders o
+                LEFT JOIN (
+                    SELECT account_index,
+                        AVG(leverage) as avg_leverage,
+                        COUNT(*) as positions,
+                        SUM(realised_pnl) as realised_pnl
+                    FROM trade_positions WHERE epoch_number = $1
+                    GROUP BY account_index
+                ) p ON o.account_index = p.account_index
+                WHERE o.epoch_number = $1
+                GROUP BY o.account_index, o.account_id, o.account_name,
+                         p.avg_leverage, p.positions, p.realised_pnl
+                ORDER BY o.account_index
+            """, last_completed_epoch)
+        else:
+            accounts = await conn.fetch("""
+                SELECT
+                    account_index,
+                    account_id,
+                    account_name,
+                    COUNT(*) as positions,
+                    0 as order_count,
+                    COUNT(DISTINCT market) as markets_traded,
+                    COALESCE(SUM(ABS(max_position_size * open_price)), 0) as volume,
+                    COALESCE(SUM(ABS(open_fees) + ABS(close_fees)), 0) as fees,
+                    COALESCE(SUM(CASE WHEN open_fees = 0 THEN ABS(max_position_size * open_price) ELSE 0 END), 0) as maker_volume,
+                    COALESCE(SUM(CASE WHEN open_fees != 0 THEN ABS(max_position_size * open_price) ELSE 0 END), 0) as taker_volume,
+                    0 as avg_order_size,
+                    COALESCE(AVG(leverage), 0) as avg_leverage,
+                    COALESCE(SUM(realised_pnl), 0) as realised_pnl
+                FROM trade_positions
+                WHERE epoch_number = $1
+                GROUP BY account_index, account_id, account_name
+                ORDER BY account_index
+            """, last_completed_epoch)
 
     if not accounts:
         return {"error": "No data for the last completed epoch", "epoch": last_completed_epoch}
 
-    feature_names = ["avg_duration", "volume", "total_fees", "maker_ratio", "markets_traded", "positions"]
-    features = []
+    all_feature_names = [
+        "volume", "total_fees", "taker_volume", "maker_volume",
+        "maker_ratio", "order_count", "avg_order_size",
+        "markets_traded", "avg_leverage", "fee_rate_bps",
+    ]
+    raw_rows = []
     targets = []
     account_labels = []
+    account_details = []
 
     for acc in accounts:
         acc_key = acc['account_id']
@@ -726,24 +859,34 @@ async def get_regression_analysis(points_data: Dict, current_epoch: int) -> Dict
             continue
 
         volume = float(acc['volume'])
+        fees = float(acc['fees'])
         maker_vol = float(acc['maker_volume'])
         taker_vol = float(acc['taker_volume'])
         total_vol = maker_vol + taker_vol if (maker_vol + taker_vol) > 0 else 1
         maker_ratio = maker_vol / total_vol
+        order_count = int(acc.get('order_count', 0) or 0)
+        avg_order_size = float(acc.get('avg_order_size', 0) or 0)
+        markets = int(acc['markets_traded'])
+        avg_leverage = float(acc.get('avg_leverage', 0) or 0)
+        fee_rate_bps = (fees / volume * 10000) if volume > 0 else 0
 
         row = [
-            float(acc['avg_duration_seconds']),
-            volume,
-            float(acc['fees']),
-            maker_ratio,
-            int(acc['markets_traded']),
-            int(acc['positions']),
+            volume, fees, taker_vol, maker_vol,
+            maker_ratio, order_count, avg_order_size,
+            markets, avg_leverage, fee_rate_bps,
         ]
-        features.append(row)
+        raw_rows.append(row)
         targets.append(acc_points)
         account_labels.append(acc['account_name'])
+        account_details.append({
+            "name": acc['account_name'],
+            "points": round(acc_points, 2),
+            "volume": round(volume, 2),
+            "fees": round(fees, 4),
+            "orders": order_count,
+        })
 
-    n = len(features)
+    n = len(raw_rows)
     if n < 3:
         return {
             "error": f"Not enough accounts with points data ({n} found, need at least 3)",
@@ -751,70 +894,92 @@ async def get_regression_analysis(points_data: Dict, current_epoch: int) -> Dict
             "accounts_with_points": n,
         }
 
-    X = np.array(features, dtype=np.float64)
+    X_all = np.array(raw_rows, dtype=np.float64)
     y = np.array(targets, dtype=np.float64)
 
-    X_means = X.mean(axis=0)
-    X_stds = X.std(axis=0)
+    X_means = X_all.mean(axis=0)
+    X_stds = X_all.std(axis=0)
     X_stds[X_stds == 0] = 1.0
-    X_norm = (X - X_means) / X_stds
+    X_norm_all = (X_all - X_means) / X_stds
 
-    y_mean = y.mean()
-    ss_tot = np.sum((y - y_mean) ** 2)
+    correlations = _per_feature_correlations(X_norm_all, y, all_feature_names)
 
-    X_with_intercept = np.column_stack([np.ones(n), X_norm])
+    models = []
 
-    try:
-        coeffs, residuals, rank, sv = np.linalg.lstsq(X_with_intercept, y, rcond=None)
-    except np.linalg.LinAlgError:
-        return {"error": "Linear algebra error during regression", "epoch": last_completed_epoch}
-
-    y_pred = X_with_intercept @ coeffs
-    ss_res = np.sum((y - y_pred) ** 2)
-    r_squared = 1 - (ss_res / ss_tot) if ss_tot > 0 else 0
-
-    intercept = coeffs[0]
-    beta = coeffs[1:]
-    std_coeffs = beta.copy()
-
-    abs_importance = np.abs(std_coeffs)
-    total_importance = abs_importance.sum()
-    if total_importance > 0:
-        importance_pct = abs_importance / total_importance * 100
-    else:
-        importance_pct = np.zeros(len(feature_names))
-
-    p = len(feature_names)
-    dof = max(1, n - p - 1)
-    mse = ss_res / dof if dof > 0 else 0
-
-    try:
-        XtX_inv = np.linalg.inv(X_with_intercept.T @ X_with_intercept)
-        se = np.sqrt(np.diag(XtX_inv) * mse)
-        t_stats = coeffs / se
-        p_values_features = [None] * len(feature_names)
-    except Exception:
-        p_values_features = [None] * len(feature_names)
-
-    most_important_idx = int(np.argmax(abs_importance))
-
-    feature_results = []
-    for i, name in enumerate(feature_names):
-        feature_results.append({
-            "name": name,
-            "coefficient": round(float(std_coeffs[i]), 6),
-            "importance_pct": round(float(importance_pct[i]), 2),
-            "p_value": round(float(p_values_features[i]), 4) if p_values_features[i] is not None else None,
+    core_names = ["volume", "total_fees", "taker_volume", "maker_ratio"]
+    core_idx = [all_feature_names.index(f) for f in core_names]
+    X_core = X_norm_all[:, core_idx]
+    result_core = _run_ols(X_core, y, core_names)
+    if result_core:
+        models.append({
+            "name": "Core (Volume + Fees + Taker + Maker Ratio)",
+            "type": "OLS",
+            "feature_count": len(core_names),
+            **{k: v for k, v in result_core.items() if k != "y_pred"},
         })
 
-    feature_results.sort(key=lambda x: x["importance_pct"], reverse=True)
+    result_full = _run_ols(X_norm_all, y, all_feature_names)
+    if result_full:
+        models.append({
+            "name": "Full (All Factors)",
+            "type": "OLS",
+            "feature_count": len(all_feature_names),
+            **{k: v for k, v in result_full.items() if k != "y_pred"},
+        })
+
+    best_alpha = 1.0
+    best_ridge_r2 = -999
+    for alpha in [0.01, 0.1, 0.5, 1.0, 2.0, 5.0, 10.0]:
+        ridge = _run_ridge(X_norm_all, y, all_feature_names, alpha=alpha)
+        if ridge and ridge["r_squared"] > best_ridge_r2:
+            best_ridge_r2 = ridge["r_squared"]
+            best_alpha = alpha
+    best_ridge = _run_ridge(X_norm_all, y, all_feature_names, alpha=best_alpha)
+    if best_ridge:
+        models.append({
+            "name": f"Ridge (alpha={best_alpha})",
+            "type": "Ridge",
+            "feature_count": len(all_feature_names),
+            **{k: v for k, v in best_ridge.items() if k != "y_pred"},
+        })
+
+    top_corr_names = [c["name"] for c in correlations[:5] if abs(c["correlation"]) > 0.1]
+    if len(top_corr_names) >= 2:
+        top_idx = [all_feature_names.index(f) for f in top_corr_names]
+        X_top = X_norm_all[:, top_idx]
+        result_top = _run_ols(X_top, y, top_corr_names)
+        if result_top:
+            models.append({
+                "name": f"Top Correlated ({len(top_corr_names)} factors)",
+                "type": "OLS",
+                "feature_count": len(top_corr_names),
+                **{k: v for k, v in result_top.items() if k != "y_pred"},
+            })
+
+    fee_vol_names = ["total_fees", "volume"]
+    fee_vol_idx = [all_feature_names.index(f) for f in fee_vol_names]
+    X_fv = X_norm_all[:, fee_vol_idx]
+    result_fv = _run_ols(X_fv, y, fee_vol_names)
+    if result_fv:
+        models.append({
+            "name": "Minimal (Fees + Volume)",
+            "type": "OLS",
+            "feature_count": 2,
+            **{k: v for k, v in result_fv.items() if k != "y_pred"},
+        })
+
+    models.sort(key=lambda m: m.get("adj_r_squared", m.get("r_squared", 0)), reverse=True)
+
+    best_model = models[0] if models else None
+    best_model_name = best_model["name"] if best_model else "N/A"
 
     return {
         "epoch": last_completed_epoch,
-        "r_squared": round(float(r_squared), 4),
-        "intercept": round(float(intercept), 4),
         "n_accounts": n,
-        "most_important_factor": feature_names[most_important_idx],
-        "features": feature_results,
+        "data_source": "orders" if has_orders and has_orders > 0 else "positions",
+        "best_model": best_model_name,
+        "models": models,
+        "correlations": correlations,
         "accounts_used": account_labels,
+        "account_details": account_details,
     }
