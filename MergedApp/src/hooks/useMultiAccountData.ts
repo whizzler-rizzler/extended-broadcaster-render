@@ -98,11 +98,23 @@ export const useMultiAccountData = (): UseMultiAccountDataReturn => {
     });
   }, []);
 
+  const knownAccountCountRef = useRef(0);
+
   // Process multi-account snapshot from broadcaster
   const processMultiAccountSnapshot = useCallback((data: any) => {
-    // Handle new multi-account format: { accounts: { account_1: {...}, account_2: {...} } }
     if (data.accounts && typeof data.accounts === 'object') {
-      console.log(`📊 [MultiAccount] Processing ${Object.keys(data.accounts).length} accounts`);
+      const incomingCount = Object.keys(data.accounts).length;
+      
+      if (knownAccountCountRef.current > 0 && incomingCount < knownAccountCountRef.current) {
+        console.warn(`⚠️ [MultiAccount] Ignoring degraded snapshot: got ${incomingCount} accounts, expected ${knownAccountCountRef.current}`);
+        return;
+      }
+      
+      if (incomingCount > knownAccountCountRef.current) {
+        knownAccountCountRef.current = incomingCount;
+      }
+      
+      console.log(`📊 [MultiAccount] Processing ${incomingCount} accounts`);
       Object.entries(data.accounts).forEach(([accountId, accountData]: [string, any]) => {
         processAccountData(accountId, {
           name: accountData.name || accountId,
@@ -113,7 +125,6 @@ export const useMultiAccountData = (): UseMultiAccountDataReturn => {
         });
       });
     } 
-    // Handle legacy single-account format
     else {
       const accountId = data.account_id || 'account_1';
       const accountName = data.account_name || 'Main Account';
