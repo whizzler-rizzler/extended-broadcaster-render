@@ -250,7 +250,8 @@ class MarginAlertManager:
         return None
     
     async def check_and_alert(self, account_id: str, account_name: str, 
-                               margin_ratio: float, equity: float) -> Dict:
+                               margin_ratio: float, equity: float,
+                               has_positions: bool = True) -> Dict:
         """
         Check margin ratio and send appropriate alerts
         Returns dict with results of each channel
@@ -263,6 +264,11 @@ class MarginAlertManager:
             "threshold_triggered": None,
             "alerts_sent": []
         }
+        
+        if not has_positions:
+            for t in MARGIN_THRESHOLDS:
+                self.state.reset_for_account(account_id, t)
+            return results
         
         threshold = self.get_threshold_level(margin_ratio)
         

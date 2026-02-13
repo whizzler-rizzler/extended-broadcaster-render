@@ -128,7 +128,7 @@ export const AccountDetailPanel = ({ account, onClose }: AccountDetailPanelProps
               <div className="text-xs text-muted-foreground">Margin Ratio</div>
               <div className={cn(
                 'text-lg font-bold font-mono',
-                computed.marginRatio > 50 ? 'text-danger' : computed.marginRatio > 30 ? 'text-warning' : 'text-success'
+                computed.marginRatio > 70 ? 'text-danger' : computed.marginRatio > 40 ? 'text-warning' : 'text-success'
               )}>
                 {computed.marginRatio.toFixed(2)}%
               </div>

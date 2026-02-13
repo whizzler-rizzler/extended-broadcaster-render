@@ -1423,13 +1423,17 @@ async def check_margins_and_alert():
             margin_ratio = float(balance_data.get("marginRatio", 0))
             equity = float(balance_data.get("equity", 0))
             
-            if margin_ratio > 0:
+            positions_data = cache.positions.get("data", []) if isinstance(cache.positions, dict) else (cache.positions if isinstance(cache.positions, list) else [])
+            has_positions = len(positions_data) > 0
+            
+            if margin_ratio > 0 or not has_positions:
                 try:
                     result = await alert_manager.check_and_alert(
                         account.id, 
                         account.name, 
                         margin_ratio, 
-                        equity
+                        equity,
+                        has_positions=has_positions
                     )
                     if result.get("alerts_sent"):
                         print(f"🚨 Alert sent for {account.name}: {result['alerts_sent']}")

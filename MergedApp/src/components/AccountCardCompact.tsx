@@ -33,10 +33,9 @@ export const AccountCardCompact = ({
   const marginRatio = Number(computed.marginRatio) || 0;
   const positionCount = computed.positionCount;
 
-  // Status indicators
-  const isHealthy = marginRatio < 30;
-  const isWarning = marginRatio >= 30 && marginRatio < 50;
-  const isDanger = marginRatio >= 50;
+  const isHealthy = marginRatio < 40;
+  const isWarning = marginRatio >= 40 && marginRatio < 70;
+  const isDanger = marginRatio >= 70;
 
   // Time since last update
   const timeSinceUpdate = Math.floor((Date.now() - lastUpdate.getTime()) / 1000);
