@@ -49,8 +49,8 @@ class AlertConfig:
         self.twilio_account_sid = os.environ.get("Twilio_account_sid", "")
         self.twilio_api_key_sid = os.environ.get("Twilio_sid", "")  # API Key SID (SK...)
         self.twilio_api_key_secret = os.environ.get("Twillio_secret_api", "")  # API Key Secret
-        self.phone_number = os.environ.get("Alert_phone_number", "")
-        self.twilio_from_number = os.environ.get("Twilio_from_number", "+12184232606")
+        self.phone_number = os.environ.get("Alert_phone_number", "").strip()
+        self.twilio_from_number = os.environ.get("Twilio_from_number", "+12184232606").strip()
 
 @dataclass
 class AlertState:
@@ -232,10 +232,12 @@ class MarginAlertManager:
             async with session.post(url, data=payload, auth=auth) as resp:
                 result = await resp.json()
                 if resp.status in [200, 201]:
-                    logger.info(f"✅ Phone call initiated to {self.config.phone_number}")
+                    call_sid = result.get("sid", "unknown")
+                    call_status = result.get("status", "unknown")
+                    logger.info(f"✅ Phone call initiated to {self.config.phone_number} (SID: {call_sid}, status: {call_status})")
                     return True
                 else:
-                    logger.error(f"❌ Twilio Call error: {result}")
+                    logger.error(f"❌ Twilio Call error (HTTP {resp.status}): {result}")
                     return False
         except Exception as e:
             logger.error(f"❌ Twilio Call exception: {e}")
