@@ -212,13 +212,13 @@ class MarginAlertManager:
             session = await self.get_session()
             url = f"https://api.twilio.com/2010-04-01/Accounts/{self.config.twilio_account_sid}/Calls.json"
             
-            # TwiML for text-to-speech in Polish
-            twiml = f"""<?xml version="1.0" encoding="UTF-8"?>
-<Response>
-    <Say voice="alice" language="pl-PL">{message}</Say>
-    <Pause length="1"/>
-    <Say voice="alice" language="pl-PL">{message}</Say>
-</Response>"""
+            twiml = (
+                '<Response>'
+                f'<Say voice="Polly.Maja" language="pl-PL">{message}</Say>'
+                '<Pause length="2"/>'
+                f'<Say voice="Polly.Maja" language="pl-PL">{message}</Say>'
+                '</Response>'
+            )
             
             payload = {
                 "To": self.config.phone_number,
@@ -226,21 +226,25 @@ class MarginAlertManager:
                 "Twiml": twiml
             }
             
-            # Use API Key SID + Secret for Basic Auth
             auth = aiohttp.BasicAuth(self.config.twilio_api_key_sid, self.config.twilio_api_key_secret)
+            
+            print(f"📞 [Alerts] Initiating call to {self.config.phone_number} from {self.config.twilio_from_number}")
             
             async with session.post(url, data=payload, auth=auth) as resp:
                 result = await resp.json()
+                print(f"📞 [Alerts] Twilio call response HTTP {resp.status}: {result}")
                 if resp.status in [200, 201]:
                     call_sid = result.get("sid", "unknown")
                     call_status = result.get("status", "unknown")
-                    logger.info(f"✅ Phone call initiated to {self.config.phone_number} (SID: {call_sid}, status: {call_status})")
+                    print(f"✅ [Alerts] Phone call queued (SID: {call_sid}, status: {call_status})")
                     return True
                 else:
-                    logger.error(f"❌ Twilio Call error (HTTP {resp.status}): {result}")
+                    error_code = result.get("code", "?")
+                    error_msg = result.get("message", str(result))
+                    print(f"❌ [Alerts] Twilio Call error (HTTP {resp.status}, code={error_code}): {error_msg}")
                     return False
         except Exception as e:
-            logger.error(f"❌ Twilio Call exception: {e}")
+            print(f"❌ [Alerts] Twilio Call exception: {e}")
             return False
     
     # ==================== MAIN ALERT LOGIC ====================
