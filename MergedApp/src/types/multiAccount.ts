@@ -177,7 +177,7 @@ export const computeAccountStats = (account: SingleAccountData): SingleAccountDa
     totalNotional,
     positionCount: positions.length,
     equity: parseFloat(account.balance?.equity || '0'),
-    marginRatio: parseFloat(account.balance?.marginRatio || '0'),
+    marginRatio: parseFloat(account.balance?.marginRatio || '0') * 100,
     longPositions: longPositions.length,
     shortPositions: shortPositions.length,
     longPnl,

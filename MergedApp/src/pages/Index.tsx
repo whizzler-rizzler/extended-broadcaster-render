@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Bot, Activity, Bell, CheckCircle, XCircle, Loader2 } from "lucide-react";
 import { getApiUrl } from "@/config/api";
 import { MultiAccountDashboard } from "@/components/MultiAccountDashboard";
+import { MarginRiskStrip } from "@/components/MarginRiskStrip";
 import { AccountDetailPanel } from "@/components/AccountDetailPanel";
 import { RestAPIDebugPanel } from "@/components/RestAPIDebugPanel";
 import { WebSocketDebugPanel } from "@/components/WebSocketDebugPanel";
@@ -168,6 +169,12 @@ const Index = () => {
             </details>
           </div>
         )}
+
+        {/* Margin Risk Strip */}
+        <MarginRiskStrip
+          accounts={activeAccounts}
+          onAccountSelect={setSelectedAccountId}
+        />
 
         {/* Frequency Monitor */}
         <FrequencyMonitor 
