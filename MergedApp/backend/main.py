@@ -241,18 +241,16 @@ if not IS_FRONTEND_ONLY:
 
     REYA_ACCOUNTS = load_reya_accounts()
     print(f"🎯 Total Reya accounts configured: {len(REYA_ACCOUNTS)}")
-
-    EDGEX_ACCOUNTS = load_edgex_accounts()
-    print(f"🎯 Total EdgeX accounts configured: {len(EDGEX_ACCOUNTS)}")
-
-    HIBACHI_ACCOUNTS = load_hibachi_accounts()
-    print(f"🎯 Total Hibachi accounts configured: {len(HIBACHI_ACCOUNTS)}")
 else:
     ACCOUNTS = []
     REYA_ACCOUNTS = []
-    EDGEX_ACCOUNTS = []
-    HIBACHI_ACCOUNTS = []
-    print("🌐 FRONTEND_ONLY mode - no local accounts loaded")
+    print("🌐 FRONTEND_ONLY mode - Extended/Reya proxied from remote")
+
+EDGEX_ACCOUNTS = load_edgex_accounts()
+print(f"🎯 Total EdgeX accounts configured: {len(EDGEX_ACCOUNTS)}")
+
+HIBACHI_ACCOUNTS = load_hibachi_accounts()
+print(f"🎯 Total Hibachi accounts configured: {len(HIBACHI_ACCOUNTS)}")
 
 # ============= BROADCASTER GLOBAL STATE =============
 # Cache for each account - keyed by account ID
@@ -916,6 +914,20 @@ async def poll_all_hibachi_accounts():
             print(f"❌ [Hibachi {HIBACHI_ACCOUNTS[i].name}] poll error: {r}")
 
 
+async def local_exchange_poller():
+    print(f"🚀 [LocalPoller] Started for {len(EDGEX_ACCOUNTS)} EdgeX + {len(HIBACHI_ACCOUNTS)} Hibachi accounts")
+    while True:
+        try:
+            if EDGEX_ACCOUNTS:
+                await poll_all_edgex_accounts()
+            if HIBACHI_ACCOUNTS:
+                await poll_all_hibachi_accounts()
+            await asyncio.sleep(2.0)
+        except Exception as e:
+            print(f"❌ [LocalPoller] Error: {e}")
+            await asyncio.sleep(1.0)
+
+
 async def background_poller():
     """
     Main background task that continuously polls Extended + Reya API for all accounts.
@@ -991,8 +1003,11 @@ async def startup_alert_test():
 @app.on_event("startup")
 async def startup_broadcaster():
     if IS_FRONTEND_ONLY:
-        print(f"🌐 [Startup] FRONTEND_ONLY mode - proxying to {REMOTE_API_BASE}")
-        print("✅ [Startup] Frontend-only broadcaster initialized (no polling)")
+        print(f"🌐 [Startup] FRONTEND_ONLY mode - proxying Extended to {REMOTE_API_BASE}")
+        if EDGEX_ACCOUNTS or HIBACHI_ACCOUNTS:
+            asyncio.create_task(local_exchange_poller())
+            print(f"✅ [Startup] Local poller started for {len(EDGEX_ACCOUNTS)} EdgeX + {len(HIBACHI_ACCOUNTS)} Hibachi accounts")
+        print("✅ [Startup] Frontend-only broadcaster initialized")
         return
     
     print(f"⚡ [Startup] Initializing multi-account broadcaster for {len(ACCOUNTS)} accounts...")
@@ -1056,7 +1071,47 @@ async def get_cached_accounts():
     ✅ Zero Extended API calls
     """
     if IS_FRONTEND_ONLY:
-        return await proxy_to_remote("/api/cached-accounts")
+        remote_data = await proxy_to_remote("/api/cached-accounts")
+        if (EDGEX_ACCOUNTS or HIBACHI_ACCOUNTS) and isinstance(remote_data, dict):
+            current_time = time.time()
+            accounts = remote_data.get("accounts", {})
+            for account in EDGEX_ACCOUNTS:
+                cache = EDGEX_CACHES[account.id]
+                accounts[account.id] = {
+                    "id": account.id,
+                    "name": account.name,
+                    "exchange": "edgex",
+                    "positions": cache.positions,
+                    "balance": cache.balance,
+                    "trades": [],
+                    "orders": cache.orders,
+                    "cache_age_ms": {
+                        "positions": int((current_time - cache.last_update["positions"]) * 1000) if cache.last_update["positions"] > 0 else None,
+                        "balance": int((current_time - cache.last_update["balance"]) * 1000) if cache.last_update["balance"] > 0 else None,
+                        "orders": int((current_time - cache.last_update["orders"]) * 1000) if cache.last_update["orders"] > 0 else None,
+                    },
+                    "last_update": cache.last_update.copy()
+                }
+            for account in HIBACHI_ACCOUNTS:
+                cache = HIBACHI_CACHES[account.id]
+                accounts[account.id] = {
+                    "id": account.id,
+                    "name": account.name,
+                    "exchange": "hibachi",
+                    "positions": cache.positions,
+                    "balance": cache.balance,
+                    "trades": [],
+                    "orders": cache.orders,
+                    "cache_age_ms": {
+                        "positions": int((current_time - cache.last_update["positions"]) * 1000) if cache.last_update["positions"] > 0 else None,
+                        "balance": int((current_time - cache.last_update["balance"]) * 1000) if cache.last_update["balance"] > 0 else None,
+                        "orders": int((current_time - cache.last_update["orders"]) * 1000) if cache.last_update["orders"] > 0 else None,
+                    },
+                    "last_update": cache.last_update.copy()
+                }
+            remote_data["accounts"] = accounts
+            remote_data["total_accounts"] = len(accounts)
+        return remote_data
     
     current_time = time.time()
     

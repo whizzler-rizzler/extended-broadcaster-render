@@ -39,8 +39,8 @@ class HibachiAccountCache:
     })
 
 
-def parse_rest_proxy(account_num: int) -> Optional[str]:
-    proxy_raw = os.getenv(f"Rest_account_{account_num}_proxy", "").strip()
+def _parse_proxy_raw(proxy_raw: str) -> Optional[str]:
+    proxy_raw = proxy_raw.strip()
     if not proxy_raw:
         return None
     if proxy_raw.startswith("http://") or proxy_raw.startswith("https://"):
@@ -52,26 +52,45 @@ def parse_rest_proxy(account_num: int) -> Optional[str]:
     return None
 
 
+def _find_proxy(account_num: int) -> Optional[str]:
+    for env_name in [
+        f"Hibachi_{account_num}_proxy",
+        f"Rest_account_{account_num}_proxy",
+    ]:
+        raw = os.getenv(env_name, "").strip()
+        if raw:
+            parsed = _parse_proxy_raw(raw)
+            if parsed:
+                return parsed
+    return None
+
+
 def load_hibachi_accounts() -> List[HibachiAccountConfig]:
     accounts = []
     for i in range(1, 20):
-        account_id = os.getenv(f"Hibachi_{i}_AccountID", "").strip()
-        public_key = os.getenv(f"Hibachi_{i}_public_key", "").strip()
+        account_id = (
+            os.getenv(f"Hibachi_{i}_AccountID", "").strip()
+            or os.getenv(f"Hibachi_{i}_trading_Account_ID", "").strip()
+        )
+        api_key = (
+            os.getenv(f"Hibachi_{i}_api_key", "").strip()
+            or os.getenv(f"Hibachi_{i}_priv_key", "").strip()
+        )
 
-        if not account_id or not public_key:
+        if not account_id or not api_key:
             continue
 
-        proxy_url = parse_rest_proxy(i)
+        proxy_url = _find_proxy(i)
 
         accounts.append(HibachiAccountConfig(
             id=f"hibachi_{i}",
             name=f"Hibachi {i}",
             account_id=account_id,
-            api_key=public_key,
+            api_key=api_key,
             proxy_url=proxy_url,
         ))
-        proxy_info = f" (via Rest_account_{i}_proxy)" if proxy_url else ""
-        print(f"✅ Loaded Hibachi Account {i}: ID={account_id[:8]}...{proxy_info}")
+        proxy_info = f" (via proxy)" if proxy_url else " (direct)"
+        print(f"✅ Loaded Hibachi Account {i}: ID={account_id}{proxy_info}")
 
     return accounts
 

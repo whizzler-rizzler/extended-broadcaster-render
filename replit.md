@@ -140,9 +140,19 @@ Other settings:
 
 Broadcaster mode settings:
 - `BROADCASTER_MODE` - Operating mode: `COLLECTOR` (default) or `FRONTEND_ONLY`
-  - `COLLECTOR`: Full mode - polls Lighter API, connects WebSocket, caches data, serves frontend
-  - `FRONTEND_ONLY`: Lightweight mode - only serves frontend, proxies API requests to remote backend
+  - `COLLECTOR`: Full mode - polls all exchange APIs locally, caches data, serves frontend
+  - `FRONTEND_ONLY`: Lightweight mode - proxies Extended/Reya to remote backend, but polls EdgeX + Hibachi locally
 - `REMOTE_API_BASE` - URL of remote backend (required for FRONTEND_ONLY mode), e.g. `https://your-render-app.onrender.com`
+
+Hibachi account settings:
+- `Hibachi_{N}_AccountID` or `Hibachi_{N}_trading_Account_ID` - Account ID
+- `Hibachi_{N}_api_key` or `Hibachi_{N}_priv_key` - API key for Authorization header
+- `Hibachi_{N}_proxy` - Optional proxy URL (falls back to `Rest_account_{N}_proxy`)
+
+EdgeX account settings:
+- `EdgeX_{N}_AccountID` - Account ID
+- `EdgeX_{N}_priv_key` - Private key for signing
+- `EdgeX_{N}_publicKeyYCoordinate` - Public key Y coordinate
 
 Frontend build settings:
 - `VITE_API_BASE` - Build-time API base URL for frontend (empty string for same-origin, or full URL for cross-origin)
