@@ -247,8 +247,9 @@ if not IS_FRONTEND_ONLY:
     print(f"🎯 Total Reya accounts configured: {len(REYA_ACCOUNTS)}")
 else:
     ACCOUNTS = []
-    REYA_ACCOUNTS = []
-    print("🌐 FRONTEND_ONLY mode - Extended/Reya proxied from remote")
+    REYA_ACCOUNTS = load_reya_accounts()
+    print(f"🎯 Total Reya accounts configured: {len(REYA_ACCOUNTS)}")
+    print("🌐 FRONTEND_ONLY mode - Extended proxied from remote, Reya polled locally")
 
 EDGEX_ACCOUNTS = load_edgex_accounts()
 print(f"🎯 Total EdgeX accounts configured: {len(EDGEX_ACCOUNTS)}")
@@ -954,9 +955,11 @@ async def poll_all_grvt_accounts():
 
 
 async def local_exchange_poller():
-    print(f"🚀 [LocalPoller] Started for {len(EDGEX_ACCOUNTS)} EdgeX + {len(HIBACHI_ACCOUNTS)} Hibachi + {len(GRVT_ACCOUNTS)} GRVT accounts")
+    print(f"🚀 [LocalPoller] Started for {len(REYA_ACCOUNTS)} Reya + {len(EDGEX_ACCOUNTS)} EdgeX + {len(HIBACHI_ACCOUNTS)} Hibachi + {len(GRVT_ACCOUNTS)} GRVT accounts")
     while True:
         try:
+            if REYA_ACCOUNTS:
+                await poll_all_reya_accounts()
             if EDGEX_ACCOUNTS:
                 await poll_all_edgex_accounts()
             if HIBACHI_ACCOUNTS:
@@ -1050,9 +1053,9 @@ async def startup_alert_test():
 async def startup_broadcaster():
     if IS_FRONTEND_ONLY:
         print(f"🌐 [Startup] FRONTEND_ONLY mode - proxying Extended to {REMOTE_API_BASE}")
-        if EDGEX_ACCOUNTS or HIBACHI_ACCOUNTS or GRVT_ACCOUNTS:
+        if REYA_ACCOUNTS or EDGEX_ACCOUNTS or HIBACHI_ACCOUNTS or GRVT_ACCOUNTS:
             asyncio.create_task(local_exchange_poller())
-            print(f"✅ [Startup] Local poller started for {len(EDGEX_ACCOUNTS)} EdgeX + {len(HIBACHI_ACCOUNTS)} Hibachi + {len(GRVT_ACCOUNTS)} GRVT accounts")
+            print(f"✅ [Startup] Local poller started for {len(REYA_ACCOUNTS)} Reya + {len(EDGEX_ACCOUNTS)} EdgeX + {len(HIBACHI_ACCOUNTS)} Hibachi + {len(GRVT_ACCOUNTS)} GRVT accounts")
         print("✅ [Startup] Frontend-only broadcaster initialized")
         return
     
@@ -1118,9 +1121,26 @@ async def get_cached_accounts():
     """
     if IS_FRONTEND_ONLY:
         remote_data = await proxy_to_remote("/api/cached-accounts")
-        if (EDGEX_ACCOUNTS or HIBACHI_ACCOUNTS or GRVT_ACCOUNTS) and isinstance(remote_data, dict):
+        if (REYA_ACCOUNTS or EDGEX_ACCOUNTS or HIBACHI_ACCOUNTS or GRVT_ACCOUNTS) and isinstance(remote_data, dict):
             current_time = time.time()
             accounts = remote_data.get("accounts", {})
+            for account in REYA_ACCOUNTS:
+                cache = REYA_CACHES[account.id]
+                accounts[account.id] = {
+                    "id": account.id,
+                    "name": account.name,
+                    "exchange": "reya",
+                    "positions": cache.positions,
+                    "balance": cache.balance,
+                    "trades": [],
+                    "orders": cache.orders,
+                    "cache_age_ms": {
+                        "positions": int((current_time - cache.last_update["positions"]) * 1000) if cache.last_update["positions"] > 0 else None,
+                        "balance": int((current_time - cache.last_update["balance"]) * 1000) if cache.last_update["balance"] > 0 else None,
+                        "orders": int((current_time - cache.last_update["orders"]) * 1000) if cache.last_update["orders"] > 0 else None,
+                    },
+                    "last_update": cache.last_update.copy()
+                }
             for account in EDGEX_ACCOUNTS:
                 cache = EDGEX_CACHES[account.id]
                 accounts[account.id] = {
