@@ -39,9 +39,12 @@ class ReyaAccountCache:
 def load_reya_accounts() -> List[ReyaAccountConfig]:
     accounts = []
     for i in range(1, 20):
-        wallet = os.getenv(f"Reya_{i}_wallet_adress", "").strip()
+        wallet_main = os.getenv(f"Reya_{i}_wallet_main", "").strip()
+        wallet_addr = os.getenv(f"Reya_{i}_wallet_adress", "").strip()
+        wallet = wallet_main or wallet_addr
         if not wallet:
             continue
+        source = "wallet_main" if wallet_main else "wallet_adress"
         proxy_raw = os.getenv(f"Reya_{i}_proxy", "").strip()
         proxy_url = None
         if proxy_raw:
@@ -60,7 +63,7 @@ def load_reya_accounts() -> List[ReyaAccountConfig]:
             proxy_url=proxy_url,
         ))
         proxy_info = " (via proxy)" if proxy_url else ""
-        print(f"✅ Loaded Reya Account {i}: {wallet[:10]}...{wallet[-6:]}{proxy_info}")
+        print(f"✅ Loaded Reya Account {i}: {wallet[:10]}...{wallet[-6:]} (from {source}){proxy_info}")
 
     return accounts
 
