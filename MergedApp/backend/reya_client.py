@@ -93,8 +93,8 @@ async def fetch_reya_api(account: ReyaAccountConfig, endpoint: str) -> Any:
                 result = await _do_request(account.proxy_url)
                 if result is not None:
                     return result
-            except Exception:
-                pass
+            except Exception as proxy_err:
+                print(f"⚠️ [{account.name}][{endpoint}] proxy failed ({type(proxy_err).__name__}), trying direct...")
         return await _do_request(None)
     except Exception as e:
         error_type = type(e).__name__

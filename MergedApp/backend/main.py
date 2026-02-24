@@ -790,12 +790,11 @@ MARGIN_CHECK_COUNTER = 0  # Check margins every 20 cycles (5 seconds)
 
 async def background_poller():
     """
-    Main background task that continuously polls Extended API for all accounts.
+    Main background task that continuously polls Extended + Reya API for all accounts.
     
     With proxies per account, rate limiting is avoided.
-    - Fast loop (250ms): positions + balance + orders (4x/sec per account)
-    - Trades loop (1000ms): trades (1x/sec per account)
-    - Margin check (5s): check margins and send alerts
+    - Main loop (2s): positions + balance + orders + trades for all accounts
+    - Margin check (6s): check margins and send alerts
     """
     global TRADES_POLL_COUNTER, MARGIN_CHECK_COUNTER, REYA_POLL_COUNTER
     
@@ -803,33 +802,29 @@ async def background_poller():
     proxied_accounts = sum(1 for a in ACCOUNTS if a.proxy_url)
     print(f"🚀 [Broadcaster] Background poller started for {len(ACCOUNTS)} Extended + {len(REYA_ACCOUNTS)} Reya accounts")
     print(f"🔒 Accounts with proxy: {proxied_accounts}/{len(ACCOUNTS)}")
-    print(f"⚡ Polling rates: positions/balance/orders 4x/s, trades 1x/s, margin check 1x/5s, Reya 1x/2s")
+    print(f"⚡ Polling rates: all data 1x/2s, margin check 1x/6s")
     
     while True:
         try:
-            # Fast polling: positions + balance + orders for all accounts (every 250ms = 4x/sec)
             await poll_all_accounts_fast()
             await poll_all_accounts_orders()
             
-            # Reya polling: every 8 cycles (2 seconds) - Reya API is slower
             REYA_POLL_COUNTER += 1
-            if REYA_POLL_COUNTER >= 8:
+            if REYA_POLL_COUNTER >= 1:
                 await poll_all_reya_accounts()
                 REYA_POLL_COUNTER = 0
             
-            # Trades polling: every 4 cycles (1 second)
             TRADES_POLL_COUNTER += 1
-            if TRADES_POLL_COUNTER >= 4:
+            if TRADES_POLL_COUNTER >= 1:
                 await poll_all_accounts_trades()
                 TRADES_POLL_COUNTER = 0
             
-            # Margin check: every 20 cycles (5 seconds)
             MARGIN_CHECK_COUNTER += 1
-            if MARGIN_CHECK_COUNTER >= 20:
+            if MARGIN_CHECK_COUNTER >= 3:
                 await check_margins_and_alert()
                 MARGIN_CHECK_COUNTER = 0
             
-            await asyncio.sleep(0.25)
+            await asyncio.sleep(2.0)
             
         except Exception as e:
             print(f"❌ [Broadcaster] Poller error: {e}")
