@@ -776,9 +776,12 @@ async def poll_reya_account_data(account: ReyaAccountConfig):
 async def poll_all_reya_accounts():
     if not REYA_ACCOUNTS:
         return
-    await asyncio.gather(*[
+    results = await asyncio.gather(*[
         poll_reya_account_data(account) for account in REYA_ACCOUNTS
     ], return_exceptions=True)
+    for i, r in enumerate(results):
+        if isinstance(r, Exception):
+            print(f"❌ [Reya {REYA_ACCOUNTS[i].name}] poll error: {r}")
 
 
 REYA_POLL_COUNTER = 0

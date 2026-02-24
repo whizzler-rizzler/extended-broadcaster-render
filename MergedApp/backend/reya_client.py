@@ -66,29 +66,39 @@ def load_reya_accounts() -> List[ReyaAccountConfig]:
 
 
 async def fetch_reya_api(account: ReyaAccountConfig, endpoint: str) -> Any:
-    try:
-        request_kwargs = {
-            "headers": {
-                "Accept": "application/json",
-                "User-Agent": "extended-broadcaster/3.0",
-            },
-            "timeout": aiohttp.ClientTimeout(total=15.0),
-        }
-        if account.proxy_url:
-            request_kwargs["proxy"] = account.proxy_url
+    url = f"{REYA_API_BASE}/wallet/{account.wallet_address}{endpoint}"
+    headers = {
+        "Accept": "application/json",
+        "User-Agent": "extended-broadcaster/3.0",
+    }
+    timeout = aiohttp.ClientTimeout(total=15.0)
 
-        url = f"{REYA_API_BASE}/wallet/{account.wallet_address}{endpoint}"
-
+    async def _do_request(proxy: Optional[str] = None) -> Any:
+        kwargs: Dict[str, Any] = {"headers": headers, "timeout": timeout}
+        if proxy:
+            kwargs["proxy"] = proxy
         async with aiohttp.ClientSession() as session:
-            async with session.get(url, **request_kwargs) as response:
+            async with session.get(url, **kwargs) as response:
                 if response.status == 200:
                     return await response.json()
                 else:
-                    print(f"⚠️ [Reya {account.name}][{endpoint}] HTTP {response.status}")
+                    body = await response.text()
+                    via = " via proxy" if proxy else ""
+                    print(f"⚠️ [{account.name}][{endpoint}]{via} HTTP {response.status}: {body[:120]}")
                     return None
+
+    try:
+        if account.proxy_url:
+            try:
+                result = await _do_request(account.proxy_url)
+                if result is not None:
+                    return result
+            except Exception:
+                pass
+        return await _do_request(None)
     except Exception as e:
         error_type = type(e).__name__
-        print(f"❌ [Reya {account.name}][{endpoint}] {error_type}: {e}")
+        print(f"❌ [{account.name}][{endpoint}] {error_type}: {e}")
         return None
 
 
