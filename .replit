@@ -68,6 +68,6 @@ REMOTE_API_BASE = "https://ws-trader-pulse.onrender.com"
 
 [deployment]
 build = ["cd", "MergedApp", "&&", "npm", "install", "&&", "npm", "run", "build"]
-run = ["sh", "-c", "cd MergedApp/backend && uvicorn main:app --host 0.0.0.0 --port 80"]
-deploymentTarget = "static"
+run = ["npx", "serve", "-s", "MergedApp/dist", "-l", "5000"]
+deploymentTarget = "autoscale"
 publicDir = "MergedApp/dist"
