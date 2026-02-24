@@ -1,174 +1,68 @@
-# Extended Exchange Broadcaster Service
+# Multi-Account Trading Dashboard
 
-A Python-based broadcaster service that acts as a data intermediary for Extended Exchange (Starknet) trading platform.
-
-## Overview
-
-This service monitors Extended Exchange accounts using REST API polling (2x per second), then redistributes the data through its own REST API and WebSocket endpoints with rate limiting and caching.
+Multi-account trading dashboard (React + Python FastAPI) monitoring real-time accounts across multiple exchanges: Extended (24 accounts), Reya, EdgeX (4 accounts), Hibachi (2 accounts), and GRVT (2 accounts). Total: 31 active accounts.
 
 ## Architecture
 
 ```
-Backend/
-  __init__.py
-  api.py              - FastAPI application with REST endpoints and WebSocket server
-  cache.py            - In-memory caching layer with TTL support
-  config.py           - Configuration and environment variable loading
-  error_collector.py  - Centralized error tracking and logging
-  lighter_client.py   - Lighter SDK wrapper for REST API polling with retry logic
-  latency.py          - Latency tracking utilities
-  supabase_client.py  - Supabase integration for data persistence
-  websocket_client.py - WebSocket client for real-time Lighter updates with reconnect
-  websocket_server.py - WebSocket server for broadcasting to clients
-mFrontend/            - React frontend (Vite)
-main.py               - Application entry point
-supabase_schema.sql   - SQL schema for Supabase tables
+MergedApp/
+  backend/
+    main.py              - FastAPI application with REST endpoints, WebSocket server, local poller
+    edgex_client.py      - EdgeX exchange client (4 accounts) with REST polling
+    hibachi_client.py    - Hibachi exchange client (2 accounts) with REST polling
+    grvt_client.py       - GRVT exchange client (2 accounts) with cookie-based auth and REST polling
+  src/
+    components/
+      MultiAccountDashboard.tsx  - Main dashboard component
+      AccountCardCompact.tsx     - Individual account card component
+    hooks/
+      useMultiAccountData.ts     - Data fetching hook with WebSocket support
+    types/
+      multiAccount.ts            - TypeScript type definitions
+  vite.config.ts         - Vite config with API proxy to backend
+  package.json           - Frontend dependencies
 ```
 
-## Features
+## Operating Mode
 
-- **REST API Polling**: Polls Lighter accounts at configurable intervals (default: 0.5s)
-- **Active Orders Polling**: Fetches active orders for each account every 2 seconds
-- **WebSocket Client**: Real-time updates from Lighter.xyz via proxy (using aiohttp-socks)
-- **Caching**: In-memory cache with configurable TTL
-- **REST API**: Serves cached account data with rate limiting
-- **WebSocket Broadcasting**: Pushes updates to connected clients
-- **Status Dashboard**: Visual display of connections, positions, and orders
-- **Proxy Support**: Both REST API and WebSocket connections use configured proxies
-- **Supabase Persistence**: Optional data persistence to Supabase (snapshots, positions, orders, trades)
-- **React Frontend**: Modern dashboard built with Vite/React
+Backend runs in `FRONTEND_ONLY` mode:
+- **Extended/Reya**: Proxied from remote backend (`REMOTE_API_BASE`)
+- **EdgeX**: Polled locally (4 accounts)
+- **Hibachi**: Polled locally (2 accounts)
+- **GRVT**: Polled locally (2 accounts) with cookie-based authentication
 
-## Reconnect & Retry Logic
+## Exchange Integration Details
 
-Both WebSocket and REST API clients use a multi-phase retry strategy:
+### GRVT
+- **Auth**: Cookie-based – POST to `edge.grvt.io/auth/api_key/login` with `{"api_key": "..."}` and `Cookie: rm=true;`
+- **Response**: `Set-Cookie: gravity=...` + `x-grvt-account-id` header; session ~58 minutes
+- **Endpoints**: `account_summary`, `positions`, `open_orders` – all POST to `trades.grvt.io/full/v1/`
+- **Secrets**: `GRVT_N_api_key`, `GRVT_N_trading_account_ID`, `GRVT_N_Secret_Private_Key`, `GRVT_N_account_ID`
+- **Geo-blocking**: API geo-blocked – requires proxy; proxy fallback tries `Rest_account_N_proxy` sequentially
+- **Data normalization**: `size` (negative=SHORT), prices in 9 decimal (if >1e6 divide by 1e9), `est_liquidation_price`, `leverage`, `unrealized_pnl`
+- **Balance**: `total_equity`, `initial_margin`, `maintenance_margin`, `available_balance`, `spot_balances[].balance`
 
-- **Ping/heartbeat**: WebSocket sends ping every 30 seconds
-- **Phase 1**: Retry every 60 seconds (up to 5 attempts)
-- **Phase 2**: After 5 failures, retry every 5 minutes
-- **No limit**: Retries continue indefinitely until success
-- **Auto-reset**: After successful connection, retry state resets to Phase 1
+### Hibachi
+- `maintenanceMargin / balance` = margin ratio
+- Leverage fallback from `total_notional / balance`
+- Secrets: `Hibachi_N_AccountID`, `Hibachi_N_api_key`
 
-Health status includes:
-- Connection state (connected/disconnected)
-- Retry phase and attempt count
-- Uptime, message counts, error details
-- Success rate for REST API
+### EdgeX
+- Errors whitelist/invalid_account_id are API-side issues – not fixable locally
+- Secrets: `EdgeX_N_AccountID`, `EdgeX_N_priv_key`, `EdgeX_N_publicKeyYCoordinate`
 
-## API Endpoints
-
-### Core Endpoints
-- `GET /` - React dashboard
-- `GET /health` - Health check
-- `GET /api/status` - Service status and metrics
-- `GET /api/latency` - Latency metrics
-- `GET /api/portfolio` - Aggregated portfolio data
-
-### Account Data
-- `GET /api/accounts` - All cached accounts
-- `GET /api/accounts/{index}` - Specific account data
-
-### WebSocket Data
-- `GET /api/ws/positions` - All positions from WebSocket
-- `GET /api/ws/positions/{index}` - Positions for specific account
-- `GET /api/ws/orders` - All orders from WebSocket
-- `GET /api/ws/orders/{index}` - Orders for specific account
-- `GET /api/ws/trades` - All trades from WebSocket
-- `GET /api/ws/trades/{index}` - Trades for specific account
-
-### Connection Health
-- `GET /api/ws/health` - WebSocket connections health status
-- `GET /api/rest/health` - REST API connections health status
-- `GET /api/connections/health` - Combined health (WebSocket + REST)
-- `POST /api/ws/reconnect` - Force reconnect WebSocket (optional: ?account_index=X)
-- `POST /api/rest/reconnect` - Force reset REST retry (optional: ?account_index=X)
-- `POST /api/connections/reconnect` - Force reconnect all connections
-
-### Error Logging
-- `GET /api/errors` - Recent errors with summary (limit param optional)
-- `POST /api/errors/clear` - Clear error log
-
-### Historical Data (Supabase)
-- `GET /api/history/accounts/{index}` - Account historical snapshots
-- `GET /api/history/trades/{index}` - Trade history
-- `GET /api/supabase/status` - Supabase connection status
-
-### WebSocket
-- `WS /ws` - WebSocket for real-time updates
-
-### Order Book (Real-time via Extended Stream)
-- `GET /api/orderbook` - All cached order books for all markets
-- `GET /api/orderbook/{market}` - Order book for specific market (e.g., ETH-PERP)
-- `GET /api/orderbook-status` - Order book WebSocket connection status
-
-### Earned Points (polling every 10 minutes)
-- `GET /api/points` - All accounts earned points with total sum
-- `GET /api/points/{index}` - Points for specific account
-- `POST /api/points/refresh` - Force refresh points from Extended API
-
-Note: Points API depends on Extended Exchange `/points/earned` endpoint which is documented but may not be active yet (returns 404). Code is ready to work when endpoint becomes available.
+### Extended
+- 24 accounts proxied from remote backend
+- Secrets: `Extended_N_{CODE}_API_KEY`, etc.
 
 ## Configuration
 
-Environment variables for account configuration follow this pattern:
-- `Extended_{N}_{CODE}_API_KEY` - API key for account N
-- `Extended_{N}_{CODE}_CLIENT_ID` - Client ID
-- `Extended_{N}_{CODE}_STARKNET_PRIVATE` - Starknet private key
-- `Extended_{N}_{CODE}_STARKNET_PUBLIC` - Starknet public key
-- `Extended_{N}_{CODE}_VAULT_NUMBER` - Vault number
-- `Extended_{N}_PROXY_{N}_URL` - Proxy URL (see Proxy Configuration below)
+- `BROADCASTER_MODE` = `FRONTEND_ONLY`
+- `REMOTE_API_BASE` = URL of remote backend for Extended/Reya
+- `POLL_INTERVAL` = polling interval (default 0.5s)
+- Backend runs on port 8000, Frontend (Vite) on port 5000
 
-### Proxy Configuration
+## Workflows
 
-Proxy URLs support two formats:
-
-1. **Full URL format (recommended)**:
-   ```
-   http://username:password@ip:port/
-   ```
-   Example: `http://ilbefxoi-staticresidential:mhaamz128dg0@82.27.111.128:5335/`
-
-2. **Legacy format**:
-   ```
-   IP:PORT:Username:Password
-   ```
-   Example: `82.27.111.128:5335:ilbefxoi-staticresidential:mhaamz128dg0`
-
-Other settings:
-- `POLL_INTERVAL` - Polling interval in seconds (default: 0.5)
-- `CACHE_TTL` - Cache TTL in seconds (default: 5)
-- `RATE_LIMIT` - API rate limit (default: 100/minute)
-
-Broadcaster mode settings:
-- `BROADCASTER_MODE` - Operating mode: `COLLECTOR` (default) or `FRONTEND_ONLY`
-  - `COLLECTOR`: Full mode - polls all exchange APIs locally, caches data, serves frontend
-  - `FRONTEND_ONLY`: Lightweight mode - proxies Extended/Reya to remote backend, but polls EdgeX + Hibachi locally
-- `REMOTE_API_BASE` - URL of remote backend (required for FRONTEND_ONLY mode), e.g. `https://your-render-app.onrender.com`
-
-Hibachi account settings:
-- `Hibachi_{N}_AccountID` or `Hibachi_{N}_trading_Account_ID` - Account ID
-- `Hibachi_{N}_api_key` or `Hibachi_{N}_priv_key` - API key for Authorization header
-- `Hibachi_{N}_proxy` - Optional proxy URL (falls back to `Rest_account_{N}_proxy`)
-
-EdgeX account settings:
-- `EdgeX_{N}_AccountID` - Account ID
-- `EdgeX_{N}_priv_key` - Private key for signing
-- `EdgeX_{N}_publicKeyYCoordinate` - Public key Y coordinate
-
-Frontend build settings:
-- `VITE_API_BASE` - Build-time API base URL for frontend (empty string for same-origin, or full URL for cross-origin)
-
-Supabase settings (optional):
-- `Supabase_Url` - Supabase project URL
-- `Supabase_service_role` - Supabase service role key (for server-side access)
-
-## Deployment
-
-Configured for Render.com deployment via GitHub integration. See `render.yaml` for configuration.
-
-## Running Locally
-
-```bash
-python main.py
-```
-
-The service will start on port 5000 by default.
+- **MergedApp Backend**: `cd MergedApp/backend && uvicorn main:app --host 0.0.0.0 --port 8000`
+- **MergedApp Frontend**: `cd MergedApp && npm run dev`
