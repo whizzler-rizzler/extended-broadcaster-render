@@ -39,9 +39,14 @@ export const MultiAccountDashboard = ({
   
   const { points: pointsData, totalPoints, totalLastWeekPoints, isLoading: pointsLoading, refresh: refreshPoints, lastUpdate: pointsLastUpdate, error: pointsError } = useEarnedPoints();
 
+  const extendedAccounts = accounts.filter(a => !a.id.startsWith('reya_'));
+  const reyaAccounts = accounts.filter(a => a.id.startsWith('reya_'));
+  const activeExtended = extendedAccounts.filter(a => a.isActive);
+  const activeReya = reyaAccounts.filter(a => a.isActive);
   const activeAccounts = accounts.filter(a => a.isActive);
   const inactiveAccounts = accounts.filter(a => !a.isActive);
-  const displayedAccounts = showInactive ? accounts : activeAccounts;
+  const displayedExtended = showInactive ? extendedAccounts : activeExtended;
+  const displayedReya = showInactive ? reyaAccounts : activeReya;
 
   return (
     <div className="space-y-4">
@@ -233,30 +238,75 @@ export const MultiAccountDashboard = ({
         </div>
 
         {isExpanded && (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4">
-            {displayedAccounts.length === 0 ? (
-              <Card className="col-span-full p-8 text-center">
-                <Activity className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
-                <p className="text-muted-foreground">
-                  Waiting for accounts to connect...
-                </p>
-                <p className="text-xs text-muted-foreground mt-2">
-                  Accounts will appear automatically when detected
-                </p>
-              </Card>
-            ) : (
-              displayedAccounts.map(account => (
-                <AccountCardCompact
-                  key={account.id}
-                  account={account}
-                  isSelected={selectedAccountId === account.id}
-                  onClick={() => onAccountSelect?.(account.id)}
-                  accountPoints={pointsData?.accounts?.[account.id]?.points ?? null}
-                  accountLastWeekPoints={pointsData?.accounts?.[account.id]?.last_week_points ?? null}
-                />
-              ))
+          <>
+            {/* Extended Exchange Accounts */}
+            <div className="space-y-2">
+              <div className="flex items-center gap-2 px-1">
+                <Badge variant="outline" className="text-xs px-2 py-0.5 border-blue-500/50 text-blue-400">
+                  Extended Exchange
+                </Badge>
+                <span className="text-xs text-muted-foreground">
+                  {activeExtended.length} active
+                </span>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4">
+                {displayedExtended.length === 0 ? (
+                  <Card className="col-span-full p-8 text-center">
+                    <Activity className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
+                    <p className="text-muted-foreground">
+                      Waiting for Extended accounts...
+                    </p>
+                  </Card>
+                ) : (
+                  displayedExtended.map(account => (
+                    <AccountCardCompact
+                      key={account.id}
+                      account={account}
+                      isSelected={selectedAccountId === account.id}
+                      onClick={() => onAccountSelect?.(account.id)}
+                      accountPoints={pointsData?.accounts?.[account.id]?.points ?? null}
+                      accountLastWeekPoints={pointsData?.accounts?.[account.id]?.last_week_points ?? null}
+                    />
+                  ))
+                )}
+              </div>
+            </div>
+
+            {/* Reya Network Accounts */}
+            {(displayedReya.length > 0 || reyaAccounts.length > 0) && (
+              <div className="space-y-2 mt-4">
+                <div className="flex items-center gap-2 px-1">
+                  <Badge variant="outline" className="text-xs px-2 py-0.5 border-purple-500/50 text-purple-400">
+                    Reya Network
+                  </Badge>
+                  <span className="text-xs text-muted-foreground">
+                    {activeReya.length} active
+                  </span>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4">
+                  {displayedReya.length === 0 ? (
+                    <Card className="col-span-full p-6 text-center">
+                      <Activity className="w-8 h-8 mx-auto text-muted-foreground mb-2" />
+                      <p className="text-sm text-muted-foreground">
+                        Waiting for Reya accounts...
+                      </p>
+                    </Card>
+                  ) : (
+                    displayedReya.map(account => (
+                      <AccountCardCompact
+                        key={account.id}
+                        account={account}
+                        isSelected={selectedAccountId === account.id}
+                        onClick={() => onAccountSelect?.(account.id)}
+                        accountPoints={null}
+                        accountLastWeekPoints={null}
+                      />
+                    ))
+                  )}
+                </div>
+              </div>
             )}
-          </div>
+          </>
         )}
       </div>
     </div>

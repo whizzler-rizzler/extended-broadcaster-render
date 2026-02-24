@@ -14,6 +14,11 @@ from dataclasses import dataclass, field
 from supabase_client import supabase_client
 from margin_alerts import alert_manager, MARGIN_THRESHOLDS
 import trade_history
+from reya_client import (
+    load_reya_accounts, fetch_reya_api, normalize_reya_positions,
+    normalize_reya_balance, normalize_reya_orders,
+    ReyaAccountConfig, ReyaAccountCache,
+)
 
 app = FastAPI(title="Extended API Multi-Account Broadcaster")
 
@@ -223,15 +228,22 @@ if not IS_FRONTEND_ONLY:
     ACCOUNTS = load_accounts()
     if not ACCOUNTS:
         raise ValueError("No account API keys configured! Set ACCOUNT_1_API_KEY or EXTENDED_API_KEY")
-    print(f"🎯 Total accounts configured: {len(ACCOUNTS)}")
+    print(f"🎯 Total Extended accounts configured: {len(ACCOUNTS)}")
+
+    REYA_ACCOUNTS = load_reya_accounts()
+    print(f"🎯 Total Reya accounts configured: {len(REYA_ACCOUNTS)}")
 else:
     ACCOUNTS = []
+    REYA_ACCOUNTS = []
     print("🌐 FRONTEND_ONLY mode - no local accounts loaded")
 
 # ============= BROADCASTER GLOBAL STATE =============
 # Cache for each account - keyed by account ID
 BROADCASTER_CACHES: Dict[str, AccountCache] = {
     account.id: AccountCache() for account in ACCOUNTS
+}
+REYA_CACHES: Dict[str, ReyaAccountCache] = {
+    account.id: ReyaAccountCache() for account in REYA_ACCOUNTS
 }
 
 # Set of connected WebSocket clients
@@ -703,6 +715,74 @@ async def poll_all_accounts_orders():
     ], return_exceptions=True)
 
 
+# ============= REYA POLLING =============
+async def poll_reya_account_data(account: ReyaAccountConfig):
+    cache = REYA_CACHES[account.id]
+
+    positions_task = fetch_reya_api(account, "/positions")
+    balance_task = fetch_reya_api(account, "/accountBalances")
+    orders_task = fetch_reya_api(account, "/openOrders")
+    accounts_task = fetch_reya_api(account, "/accounts")
+
+    raw_positions, raw_balances, raw_orders, raw_accounts = await asyncio.gather(
+        positions_task, balance_task, orders_task, accounts_task,
+        return_exceptions=True
+    )
+
+    changes = []
+
+    if not isinstance(raw_positions, Exception) and raw_positions is not None:
+        normalized = normalize_reya_positions(raw_positions)
+        if data_changed(cache.positions, normalized):
+            cache.positions = normalized
+            cache.last_update["positions"] = time.time()
+            changes.append("positions")
+
+    if not isinstance(raw_balances, Exception) and raw_balances is not None:
+        normalized_balance = normalize_reya_balance(
+            raw_balances,
+            raw_accounts if not isinstance(raw_accounts, Exception) else None
+        )
+        if data_changed(cache.balance, normalized_balance):
+            cache.balance = normalized_balance
+            cache.last_update["balance"] = time.time()
+            changes.append("balance")
+
+    if not isinstance(raw_orders, Exception) and raw_orders is not None:
+        normalized_orders = normalize_reya_orders(raw_orders)
+        if data_changed(cache.orders, normalized_orders):
+            cache.orders = normalized_orders
+            cache.last_update["orders"] = time.time()
+            changes.append("orders")
+
+    if not isinstance(raw_accounts, Exception) and raw_accounts is not None:
+        cache.accounts = raw_accounts
+        cache.last_update["accounts"] = time.time()
+
+    if changes:
+        print(f"📊 [{account.name}] Reya changes: {', '.join(changes)}")
+        await broadcast_to_clients({
+            "type": "account_update",
+            "account_id": account.id,
+            "account_name": account.name,
+            "exchange": "reya",
+            "positions": cache.positions if "positions" in changes else None,
+            "balance": cache.balance if "balance" in changes else None,
+            "orders": cache.orders if "orders" in changes else None,
+            "timestamp": time.time()
+        })
+
+
+async def poll_all_reya_accounts():
+    if not REYA_ACCOUNTS:
+        return
+    await asyncio.gather(*[
+        poll_reya_account_data(account) for account in REYA_ACCOUNTS
+    ], return_exceptions=True)
+
+
+REYA_POLL_COUNTER = 0
+
 MARGIN_CHECK_COUNTER = 0  # Check margins every 20 cycles (5 seconds)
 
 async def background_poller():
@@ -714,19 +794,25 @@ async def background_poller():
     - Trades loop (1000ms): trades (1x/sec per account)
     - Margin check (5s): check margins and send alerts
     """
-    global TRADES_POLL_COUNTER, MARGIN_CHECK_COUNTER
+    global TRADES_POLL_COUNTER, MARGIN_CHECK_COUNTER, REYA_POLL_COUNTER
     
     # Count accounts with proxies
     proxied_accounts = sum(1 for a in ACCOUNTS if a.proxy_url)
-    print(f"🚀 [Broadcaster] Background poller started for {len(ACCOUNTS)} accounts")
+    print(f"🚀 [Broadcaster] Background poller started for {len(ACCOUNTS)} Extended + {len(REYA_ACCOUNTS)} Reya accounts")
     print(f"🔒 Accounts with proxy: {proxied_accounts}/{len(ACCOUNTS)}")
-    print(f"⚡ Polling rates: positions/balance/orders 4x/s, trades 1x/s, margin check 1x/5s")
+    print(f"⚡ Polling rates: positions/balance/orders 4x/s, trades 1x/s, margin check 1x/5s, Reya 1x/2s")
     
     while True:
         try:
             # Fast polling: positions + balance + orders for all accounts (every 250ms = 4x/sec)
             await poll_all_accounts_fast()
             await poll_all_accounts_orders()
+            
+            # Reya polling: every 8 cycles (2 seconds) - Reya API is slower
+            REYA_POLL_COUNTER += 1
+            if REYA_POLL_COUNTER >= 8:
+                await poll_all_reya_accounts()
+                REYA_POLL_COUNTER = 0
             
             # Trades polling: every 4 cycles (1 second)
             TRADES_POLL_COUNTER += 1
@@ -844,6 +930,7 @@ async def get_cached_accounts():
         accounts_data[account.id] = {
             "id": account.id,
             "name": account.name,
+            "exchange": "extended",
             "positions": cache.positions,
             "balance": cache.balance,
             "trades": cache.trades,
@@ -856,10 +943,28 @@ async def get_cached_accounts():
             },
             "last_update": cache.last_update.copy()
         }
-    
+
+    for account in REYA_ACCOUNTS:
+        cache = REYA_CACHES[account.id]
+        accounts_data[account.id] = {
+            "id": account.id,
+            "name": account.name,
+            "exchange": "reya",
+            "positions": cache.positions,
+            "balance": cache.balance,
+            "trades": [],
+            "orders": cache.orders,
+            "cache_age_ms": {
+                "positions": int((current_time - cache.last_update["positions"]) * 1000) if cache.last_update["positions"] > 0 else None,
+                "balance": int((current_time - cache.last_update["balance"]) * 1000) if cache.last_update["balance"] > 0 else None,
+                "orders": int((current_time - cache.last_update["orders"]) * 1000) if cache.last_update["orders"] > 0 else None,
+            },
+            "last_update": cache.last_update.copy()
+        }
+
     return {
         "accounts": accounts_data,
-        "total_accounts": len(ACCOUNTS),
+        "total_accounts": len(ACCOUNTS) + len(REYA_ACCOUNTS),
         "timestamp": current_time
     }
 
@@ -977,16 +1082,29 @@ async def websocket_broadcast(websocket: WebSocket):
             accounts_snapshot[account.id] = {
                 "id": account.id,
                 "name": account.name,
+                "exchange": "extended",
                 "positions": cache.positions,
                 "balance": cache.balance,
                 "trades": cache.trades,
                 "orders": cache.orders,
             }
-        
+
+        for account in REYA_ACCOUNTS:
+            cache = REYA_CACHES[account.id]
+            accounts_snapshot[account.id] = {
+                "id": account.id,
+                "name": account.name,
+                "exchange": "reya",
+                "positions": cache.positions,
+                "balance": cache.balance,
+                "trades": [],
+                "orders": cache.orders,
+            }
+
         snapshot = {
             "type": "snapshot",
             "accounts": accounts_snapshot,
-            "total_accounts": len(ACCOUNTS),
+            "total_accounts": len(ACCOUNTS) + len(REYA_ACCOUNTS),
             "timestamp": time.time()
         }
         await websocket.send_json(snapshot)

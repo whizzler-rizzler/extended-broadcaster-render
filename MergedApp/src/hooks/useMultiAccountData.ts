@@ -166,13 +166,15 @@ export const useMultiAccountData = (): UseMultiAccountDataReturn => {
             // Full snapshot of all accounts
             processMultiAccountSnapshot(message);
           } else if (message.type === 'account_update') {
-            // Real-time update for a single account
             const accountId = message.account_id || 'account_1';
-            processAccountData(accountId, {
+            const updateData: any = {
               name: message.account_name,
               balance: message.balance,
               positions: message.positions,
-            });
+            };
+            if (message.orders) updateData.orders = message.orders;
+            if (message.trades) updateData.trades = message.trades;
+            processAccountData(accountId, updateData);
           } else if (message.type === 'trades_update') {
             const accountId = message.account_id || 'account_1';
             processAccountData(accountId, { trades: message.trades });
@@ -318,12 +320,15 @@ export const useMultiAccountData = (): UseMultiAccountDataReturn => {
     };
   }, [connectWebSocket, fetchRestData]);
 
-  // Derive active accounts list (sorted by account number)
+  // Derive active accounts list (sorted: extended first by number, then reya by number)
   const activeAccounts = Array.from(state.accounts.values())
     .filter(a => a.isActive)
     .sort((a, b) => {
-      const numA = parseInt(a.id.replace('account_', '')) || 0;
-      const numB = parseInt(b.id.replace('account_', '')) || 0;
+      const aIsReya = a.id.startsWith('reya_');
+      const bIsReya = b.id.startsWith('reya_');
+      if (aIsReya !== bIsReya) return aIsReya ? 1 : -1;
+      const numA = parseInt(a.id.replace('account_', '').replace('reya_', '')) || 0;
+      const numB = parseInt(b.id.replace('account_', '').replace('reya_', '')) || 0;
       return numA - numB;
     });
   
