@@ -42,6 +42,7 @@ function getExchangeKey(account: SingleAccountData): string {
   if (account.id.startsWith('hyperliquid_')) return 'hyperliquid';
   if (account.id.startsWith('edgex_')) return 'edgex';
   if (account.id.startsWith('hibachi_')) return 'hibachi';
+  if (account.id.startsWith('grvt_')) return 'grvt';
   return 'extended';
 }
 
@@ -52,6 +53,7 @@ const EXCHANGE_META: Record<string, { label: string; color: string; borderColor:
   hyperliquid: { label: 'Hyperliquid', color: 'text-orange-400', borderColor: 'border-orange-500/50' },
   edgex: { label: 'EdgeX Exchange', color: 'text-green-400', borderColor: 'border-green-500/50' },
   hibachi: { label: 'Hibachi', color: 'text-red-400', borderColor: 'border-red-500/50' },
+  grvt: { label: 'GRVT', color: 'text-yellow-400', borderColor: 'border-yellow-500/50' },
 };
 
 function fmt$(v: number, decimals = 0): string {
@@ -179,7 +181,7 @@ export const MultiAccountDashboard = ({
       groupMap.get(key)!.push(acc);
     }
     const groups: ExchangeGroup[] = [];
-    const order = ['extended', 'reya', 'pacifica', 'hyperliquid'];
+    const order = ['extended', 'reya', 'pacifica', 'hyperliquid', 'edgex', 'hibachi', 'grvt'];
     for (const key of order) {
       if (groupMap.has(key)) {
         const accs = groupMap.get(key)!;
