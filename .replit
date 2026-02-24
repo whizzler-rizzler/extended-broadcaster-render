@@ -1,11 +1,11 @@
-modules = ["python-3.11", "nodejs-20", "postgresql-16"]
+modules = ["python-3.11", "nodejs-20"]
 [agent]
 expertMode = true
 integrations = ["github:1.0.0"]
 
 [nix]
 channel = "stable-25_05"
-packages = ["gmp", "libxcrypt", "postgresql"]
+packages = ["libxcrypt"]
 
 [workflows]
 runButton = "Project"
@@ -17,59 +17,29 @@ author = "agent"
 
 [[workflows.workflow.tasks]]
 task = "workflow.run"
-args = "MergedApp Frontend"
-
-[[workflows.workflow.tasks]]
-task = "workflow.run"
-args = "MergedApp Backend"
+args = "Extended Frontend"
 
 [[workflows.workflow]]
-name = "MergedApp Frontend"
+name = "Extended Frontend"
 author = "agent"
-
-[[workflows.workflow.tasks]]
-task = "shell.exec"
-args = "cd MergedApp && npm run dev"
-waitForPort = 5000
 
 [workflows.workflow.metadata]
 outputType = "webview"
 
-[[workflows.workflow]]
-name = "MergedApp Backend"
-author = "agent"
-
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "cd MergedApp/backend && uvicorn main:app --host 0.0.0.0 --port 8000"
-waitForPort = 8000
-
-[workflows.workflow.metadata]
-outputType = "console"
+args = "cd mFrontend && npm run build && cd .. && python -m uvicorn Backend.api:app --host 0.0.0.0 --port 5000"
+waitForPort = 5000
 
 [[ports]]
 localPort = 5000
 externalPort = 80
 
 [[ports]]
-localPort = 5001
+localPort = 34573
 externalPort = 3000
-
-[[ports]]
-localPort = 8000
-externalPort = 8000
 
 [userenv]
 
 [userenv.shared]
 POLL_INTERVAL = "0.25"
-REMOTE_API_BASE = "https://ws-trader-pulse.onrender.com"
-
-[userenv.development]
-BROADCASTER_MODE = "COLLECTOR"
-
-[deployment]
-build = ["bash", "build.sh"]
-run = ["bash", "-c", "cd MergedApp/backend && uvicorn main:app --host 0.0.0.0 --port 5000"]
-deploymentTarget = "vm"
-publicDir = "MergedApp/dist"
