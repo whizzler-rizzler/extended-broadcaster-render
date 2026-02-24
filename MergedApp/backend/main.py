@@ -24,6 +24,10 @@ from edgex_client import (
     normalize_edgex_balance, normalize_edgex_orders, fetch_edgex_ticker_prices,
     EdgeXAccountConfig, EdgeXAccountCache,
 )
+from hibachi_client import (
+    load_hibachi_accounts, poll_hibachi_account,
+    HibachiAccountConfig, HibachiAccountCache,
+)
 
 app = FastAPI(title="Extended API Multi-Account Broadcaster")
 
@@ -240,10 +244,14 @@ if not IS_FRONTEND_ONLY:
 
     EDGEX_ACCOUNTS = load_edgex_accounts()
     print(f"🎯 Total EdgeX accounts configured: {len(EDGEX_ACCOUNTS)}")
+
+    HIBACHI_ACCOUNTS = load_hibachi_accounts()
+    print(f"🎯 Total Hibachi accounts configured: {len(HIBACHI_ACCOUNTS)}")
 else:
     ACCOUNTS = []
     REYA_ACCOUNTS = []
     EDGEX_ACCOUNTS = []
+    HIBACHI_ACCOUNTS = []
     print("🌐 FRONTEND_ONLY mode - no local accounts loaded")
 
 # ============= BROADCASTER GLOBAL STATE =============
@@ -256,6 +264,9 @@ REYA_CACHES: Dict[str, ReyaAccountCache] = {
 }
 EDGEX_CACHES: Dict[str, EdgeXAccountCache] = {
     account.id: EdgeXAccountCache() for account in EDGEX_ACCOUNTS
+}
+HIBACHI_CACHES: Dict[str, HibachiAccountCache] = {
+    account.id: HibachiAccountCache() for account in HIBACHI_ACCOUNTS
 }
 
 # Set of connected WebSocket clients
@@ -798,6 +809,7 @@ async def poll_all_reya_accounts():
 
 REYA_POLL_COUNTER = 0
 EDGEX_POLL_COUNTER = 0
+HIBACHI_POLL_COUNTER = 0
 
 MARGIN_CHECK_COUNTER = 0  # Check margins every 20 cycles (5 seconds)
 
@@ -874,6 +886,36 @@ async def poll_all_edgex_accounts():
         if isinstance(r, Exception):
             print(f"❌ [EdgeX {EDGEX_ACCOUNTS[i].name}] poll error: {r}")
 
+
+# ============= HIBACHI POLLING =============
+async def poll_hibachi_account_data(account: HibachiAccountConfig):
+    cache = HIBACHI_CACHES[account.id]
+    changed = await poll_hibachi_account(account, cache)
+    if changed:
+        print(f"📊 [{account.name}] Hibachi changes detected")
+        await broadcast_to_clients({
+            "type": "account_update",
+            "account_id": account.id,
+            "account_name": account.name,
+            "exchange": "hibachi",
+            "positions": cache.positions,
+            "balance": cache.balance,
+            "orders": cache.orders,
+            "timestamp": time.time()
+        })
+
+
+async def poll_all_hibachi_accounts():
+    if not HIBACHI_ACCOUNTS:
+        return
+    results = await asyncio.gather(*[
+        poll_hibachi_account_data(account) for account in HIBACHI_ACCOUNTS
+    ], return_exceptions=True)
+    for i, r in enumerate(results):
+        if isinstance(r, Exception):
+            print(f"❌ [Hibachi {HIBACHI_ACCOUNTS[i].name}] poll error: {r}")
+
+
 async def background_poller():
     """
     Main background task that continuously polls Extended + Reya API for all accounts.
@@ -882,11 +924,11 @@ async def background_poller():
     - Main loop (2s): positions + balance + orders + trades for all accounts
     - Margin check (6s): check margins and send alerts
     """
-    global TRADES_POLL_COUNTER, MARGIN_CHECK_COUNTER, REYA_POLL_COUNTER, EDGEX_POLL_COUNTER
+    global TRADES_POLL_COUNTER, MARGIN_CHECK_COUNTER, REYA_POLL_COUNTER, EDGEX_POLL_COUNTER, HIBACHI_POLL_COUNTER
     
     # Count accounts with proxies
     proxied_accounts = sum(1 for a in ACCOUNTS if a.proxy_url)
-    print(f"🚀 [Broadcaster] Background poller started for {len(ACCOUNTS)} Extended + {len(REYA_ACCOUNTS)} Reya + {len(EDGEX_ACCOUNTS)} EdgeX accounts")
+    print(f"🚀 [Broadcaster] Background poller started for {len(ACCOUNTS)} Extended + {len(REYA_ACCOUNTS)} Reya + {len(EDGEX_ACCOUNTS)} EdgeX + {len(HIBACHI_ACCOUNTS)} Hibachi accounts")
     print(f"🔒 Accounts with proxy: {proxied_accounts}/{len(ACCOUNTS)}")
     print(f"⚡ Polling rates: all data 1x/2s, margin check 1x/6s")
     
@@ -904,6 +946,11 @@ async def background_poller():
             if EDGEX_POLL_COUNTER >= 1:
                 await poll_all_edgex_accounts()
                 EDGEX_POLL_COUNTER = 0
+
+            HIBACHI_POLL_COUNTER += 1
+            if HIBACHI_POLL_COUNTER >= 1:
+                await poll_all_hibachi_accounts()
+                HIBACHI_POLL_COUNTER = 0
             
             TRADES_POLL_COUNTER += 1
             if TRADES_POLL_COUNTER >= 1:
@@ -1069,9 +1116,27 @@ async def get_cached_accounts():
             "last_update": cache.last_update.copy()
         }
 
+    for account in HIBACHI_ACCOUNTS:
+        cache = HIBACHI_CACHES[account.id]
+        accounts_data[account.id] = {
+            "id": account.id,
+            "name": account.name,
+            "exchange": "hibachi",
+            "positions": cache.positions,
+            "balance": cache.balance,
+            "trades": [],
+            "orders": cache.orders,
+            "cache_age_ms": {
+                "positions": int((current_time - cache.last_update["positions"]) * 1000) if cache.last_update["positions"] > 0 else None,
+                "balance": int((current_time - cache.last_update["balance"]) * 1000) if cache.last_update["balance"] > 0 else None,
+                "orders": int((current_time - cache.last_update["orders"]) * 1000) if cache.last_update["orders"] > 0 else None,
+            },
+            "last_update": cache.last_update.copy()
+        }
+
     return {
         "accounts": accounts_data,
-        "total_accounts": len(ACCOUNTS) + len(REYA_ACCOUNTS) + len(EDGEX_ACCOUNTS),
+        "total_accounts": len(ACCOUNTS) + len(REYA_ACCOUNTS) + len(EDGEX_ACCOUNTS) + len(HIBACHI_ACCOUNTS),
         "timestamp": current_time
     }
 
@@ -1220,10 +1285,22 @@ async def websocket_broadcast(websocket: WebSocket):
                 "orders": cache.orders,
             }
 
+        for account in HIBACHI_ACCOUNTS:
+            cache = HIBACHI_CACHES[account.id]
+            accounts_snapshot[account.id] = {
+                "id": account.id,
+                "name": account.name,
+                "exchange": "hibachi",
+                "positions": cache.positions,
+                "balance": cache.balance,
+                "trades": [],
+                "orders": cache.orders,
+            }
+
         snapshot = {
             "type": "snapshot",
             "accounts": accounts_snapshot,
-            "total_accounts": len(ACCOUNTS) + len(REYA_ACCOUNTS) + len(EDGEX_ACCOUNTS),
+            "total_accounts": len(ACCOUNTS) + len(REYA_ACCOUNTS) + len(EDGEX_ACCOUNTS) + len(HIBACHI_ACCOUNTS),
             "timestamp": time.time()
         }
         await websocket.send_json(snapshot)
