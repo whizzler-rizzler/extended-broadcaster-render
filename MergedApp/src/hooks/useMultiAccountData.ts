@@ -320,9 +320,10 @@ export const useMultiAccountData = (): UseMultiAccountDataReturn => {
     };
   }, [connectWebSocket, fetchRestData]);
 
+  const HIDDEN_EXCHANGES = ['edgex_'];
   // Derive active accounts list (sorted: extended first by number, then reya by number)
   const activeAccounts = Array.from(state.accounts.values())
-    .filter(a => a.isActive)
+    .filter(a => a.isActive && !HIDDEN_EXCHANGES.some(prefix => a.id.startsWith(prefix)))
     .sort((a, b) => {
       const aIsReya = a.id.startsWith('reya_');
       const bIsReya = b.id.startsWith('reya_');
@@ -332,8 +333,11 @@ export const useMultiAccountData = (): UseMultiAccountDataReturn => {
       return numA - numB;
     });
   
-  // Compute aggregated portfolio
-  const portfolio = aggregatePortfolio(state.accounts);
+  // Compute aggregated portfolio (excluding hidden exchanges)
+  const filteredAccountsMap = new Map(
+    Array.from(state.accounts.entries()).filter(([id]) => !HIDDEN_EXCHANGES.some(prefix => id.startsWith(prefix)))
+  );
+  const portfolio = aggregatePortfolio(filteredAccountsMap);
 
   return {
     accounts: state.accounts,

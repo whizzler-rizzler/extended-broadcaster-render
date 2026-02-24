@@ -173,9 +173,16 @@ export const MultiAccountDashboard = ({
   
   const { points: pointsData, totalPoints, totalLastWeekPoints, isLoading: pointsLoading, refresh: refreshPoints, lastUpdate: pointsLastUpdate, error: pointsError } = useEarnedPoints();
 
+  const HIDDEN_EXCHANGES = new Set(['edgex']);
+
+  const filteredAccounts = useMemo(() =>
+    accounts.filter(acc => !HIDDEN_EXCHANGES.has(getExchangeKey(acc))),
+    [accounts]
+  );
+
   const exchangeGroups = useMemo(() => {
     const groupMap = new Map<string, SingleAccountData[]>();
-    for (const acc of accounts) {
+    for (const acc of filteredAccounts) {
       const key = getExchangeKey(acc);
       if (!groupMap.has(key)) groupMap.set(key, []);
       groupMap.get(key)!.push(acc);
@@ -221,7 +228,7 @@ export const MultiAccountDashboard = ({
     });
   };
 
-  const inactiveCount = accounts.filter(a => !a.isActive).length;
+  const inactiveCount = filteredAccounts.filter(a => !a.isActive).length;
 
   return (
     <div className="space-y-3">

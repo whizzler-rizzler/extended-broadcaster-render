@@ -89,7 +89,8 @@ export const FrequencyMonitor = ({ broadcasterStats, lastWsUpdate, isWsConnected
     }
     
     // Use local account data - calculate age from lastUpdate timestamp
-    return Array.from(accounts.values()).map(acc => {
+    const HIDDEN_EXCHANGES = ['edgex_'];
+    return Array.from(accounts.values()).filter(acc => !HIDDEN_EXCHANGES.some(prefix => acc.id.startsWith(prefix))).map(acc => {
       const lastUpdateTime = acc.lastUpdate ? new Date(acc.lastUpdate).getTime() : 0;
       // Use Math.max to prevent negative values when server time is slightly ahead
       const ageSeconds = lastUpdateTime > 0 ? Math.max(0, Math.floor((now - lastUpdateTime) / 1000)) : null;
