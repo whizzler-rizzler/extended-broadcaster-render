@@ -1,4 +1,4 @@
-modules = ["python-3.11", "nodejs-20"]
+modules = ["python-3.11", "nodejs-20", "postgresql-16"]
 [agent]
 expertMode = true
 integrations = ["github:1.0.0"]
@@ -49,6 +49,10 @@ outputType = "webview"
 [[ports]]
 localPort = 5000
 externalPort = 80
+
+[[ports]]
+localPort = 8000
+externalPort = 8000
 
 [userenv]
 
