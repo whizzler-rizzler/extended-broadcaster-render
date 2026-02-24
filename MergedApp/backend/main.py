@@ -16,7 +16,7 @@ from margin_alerts import alert_manager, MARGIN_THRESHOLDS
 import trade_history
 from reya_client import (
     load_reya_accounts, fetch_reya_api, normalize_reya_positions,
-    normalize_reya_balance, normalize_reya_orders,
+    normalize_reya_balance, normalize_reya_orders, fetch_reya_market_prices,
     ReyaAccountConfig, ReyaAccountCache,
 )
 
@@ -733,20 +733,19 @@ async def poll_reya_account_data(account: ReyaAccountConfig):
 
     if not isinstance(raw_positions, Exception) and raw_positions is not None:
         normalized = normalize_reya_positions(raw_positions)
-        if data_changed(cache.positions, normalized):
-            cache.positions = normalized
-            cache.last_update["positions"] = time.time()
-            changes.append("positions")
+        cache.positions = normalized
+        cache.last_update["positions"] = time.time()
+        changes.append("positions")
 
     if not isinstance(raw_balances, Exception) and raw_balances is not None:
         normalized_balance = normalize_reya_balance(
             raw_balances,
-            raw_accounts if not isinstance(raw_accounts, Exception) else None
+            raw_accounts if not isinstance(raw_accounts, Exception) else None,
+            positions=cache.positions
         )
-        if data_changed(cache.balance, normalized_balance):
-            cache.balance = normalized_balance
-            cache.last_update["balance"] = time.time()
-            changes.append("balance")
+        cache.balance = normalized_balance
+        cache.last_update["balance"] = time.time()
+        changes.append("balance")
 
     if not isinstance(raw_orders, Exception) and raw_orders is not None:
         normalized_orders = normalize_reya_orders(raw_orders)
@@ -776,6 +775,7 @@ async def poll_reya_account_data(account: ReyaAccountConfig):
 async def poll_all_reya_accounts():
     if not REYA_ACCOUNTS:
         return
+    await fetch_reya_market_prices()
     results = await asyncio.gather(*[
         poll_reya_account_data(account) for account in REYA_ACCOUNTS
     ], return_exceptions=True)
