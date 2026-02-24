@@ -172,9 +172,23 @@ async def fetch_hibachi_prices():
     return HIBACHI_PRICES
 
 
-def normalize_hibachi_positions(positions_raw: list) -> list:
+def normalize_hibachi_positions(positions_raw: list, account_info: dict = None) -> list:
     if not positions_raw:
         return []
+
+    leverage_map: Dict[str, float] = {}
+    if account_info:
+        for lev in account_info.get("leverages", []):
+            sym = lev.get("symbol", "")
+            imr = float(lev.get("initialMarginRate", "0"))
+            if imr > 0:
+                leverage_map[sym] = round(1.0 / imr, 1)
+
+    balance = float(account_info.get("balance", "0")) if account_info else 0
+    maint_margin = float(account_info.get("maintenanceMargin", "0")) if account_info else 0
+    total_notional = float(account_info.get("totalPositionNotional", "0")) if account_info else 0
+    maint_margin_rate = maint_margin / total_notional if total_notional > 0 else 0.03
+
     normalized = []
     for pos in positions_raw:
         quantity = float(pos.get("quantity", "0"))
@@ -190,11 +204,26 @@ def normalize_hibachi_positions(positions_raw: list) -> list:
         open_price = float(pos.get("openPrice", "0"))
         mark_price = float(pos.get("markPrice", "0"))
         notional = float(pos.get("notionalValue", "0"))
-        entry_notional = float(pos.get("entryNotional", "0"))
 
         unrealized_trading = float(pos.get("unrealizedTradingPnl", "0"))
         unrealized_funding = float(pos.get("unrealizedFundingPnl", "0"))
         total_pnl = unrealized_trading + unrealized_funding
+
+        pos_leverage = leverage_map.get(symbol, 0)
+        if pos_leverage == 0 and notional > 0 and balance > 0:
+            pos_leverage = round(total_notional / balance, 1) if total_notional > 0 else round(notional / balance, 1)
+
+        liq_price = 0.0
+        if abs_qty > 0 and balance > 0 and mark_price > 0:
+            pos_share = notional / total_notional if total_notional > 0 else 1.0
+            pos_margin_alloc = balance * pos_share
+            if side == "LONG":
+                liq_price = mark_price - (pos_margin_alloc - notional * maint_margin_rate) / abs_qty
+            else:
+                liq_price = mark_price + (pos_margin_alloc - notional * maint_margin_rate) / abs_qty
+            liq_price = max(0, liq_price)
+
+        pos_margin = notional / pos_leverage if pos_leverage > 0 else 0
 
         normalized.append({
             "market": market,
@@ -203,12 +232,12 @@ def normalize_hibachi_positions(positions_raw: list) -> list:
             "value": str(notional),
             "openPrice": open_price,
             "markPrice": mark_price,
-            "liquidationPrice": 0,
+            "liquidationPrice": round(liq_price, 2),
             "unrealisedPnl": total_pnl,
             "midPriceUnrealisedPnl": total_pnl,
             "realisedPnl": 0,
-            "margin": 0,
-            "leverage": str(round(notional / float(pos.get("openPrice", "1")) if open_price > 0 else 0, 1)),
+            "margin": round(pos_margin, 2),
+            "leverage": str(pos_leverage),
             "status": "OPENED",
             "createdAt": 0,
             "updatedAt": int(time.time() * 1000),
@@ -227,6 +256,7 @@ def normalize_hibachi_balance(account_info: dict, positions: list = None) -> dic
             "availableForWithdrawal": "0",
             "unrealisedPnl": "0",
             "initialMargin": "0",
+            "maintenanceMargin": "0",
             "marginRatio": "0",
             "updatedTime": int(time.time() * 1000),
             "exposure": "0",
@@ -235,14 +265,14 @@ def normalize_hibachi_balance(account_info: dict, positions: list = None) -> dic
 
     balance = float(account_info.get("balance", "0"))
     max_withdraw = float(account_info.get("maximalWithdraw", "0"))
+    initial_margin = float(account_info.get("initialMargin", "0"))
+    maintenance_margin = float(account_info.get("maintenanceMargin", "0"))
     total_notional = float(account_info.get("totalPositionNotional", "0"))
-    total_order_notional = float(account_info.get("totalOrderNotional", "0"))
     total_unrealized_pnl = float(account_info.get("totalUnrealizedPnl", "0"))
 
-    used_margin = balance - max_withdraw
     margin_ratio = 0.0
-    if balance > 0 and used_margin > 0:
-        margin_ratio = used_margin / balance
+    if balance > 0:
+        margin_ratio = maintenance_margin / balance
 
     leverage = 0.0
     if balance > 0 and total_notional > 0:
@@ -256,8 +286,9 @@ def normalize_hibachi_balance(account_info: dict, positions: list = None) -> dic
         "availableForTrade": str(max_withdraw),
         "availableForWithdrawal": str(max_withdraw),
         "unrealisedPnl": str(total_unrealized_pnl),
-        "initialMargin": str(used_margin),
-        "marginRatio": str(margin_ratio),
+        "initialMargin": str(initial_margin),
+        "maintenanceMargin": str(maintenance_margin),
+        "marginRatio": str(round(margin_ratio, 6)),
         "updatedTime": int(time.time() * 1000),
         "exposure": str(total_notional),
         "leverage": str(round(leverage, 2)),
@@ -297,7 +328,7 @@ async def poll_hibachi_account(account: HibachiAccountConfig, cache: HibachiAcco
 
     if account_info:
         raw_positions = account_info.get("positions", [])
-        positions = normalize_hibachi_positions(raw_positions)
+        positions = normalize_hibachi_positions(raw_positions, account_info)
         balance = normalize_hibachi_balance(account_info, positions)
 
         if positions != cache.positions:
