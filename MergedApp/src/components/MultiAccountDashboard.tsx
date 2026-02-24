@@ -40,6 +40,7 @@ function getExchangeKey(account: SingleAccountData): string {
   if (account.id.startsWith('reya_')) return 'reya';
   if (account.id.startsWith('pacifica_')) return 'pacifica';
   if (account.id.startsWith('hyperliquid_')) return 'hyperliquid';
+  if (account.id.startsWith('edgex_')) return 'edgex';
   return 'extended';
 }
 
@@ -48,6 +49,7 @@ const EXCHANGE_META: Record<string, { label: string; color: string; borderColor:
   reya: { label: 'Reya Network', color: 'text-purple-400', borderColor: 'border-purple-500/50' },
   pacifica: { label: 'Pacifica', color: 'text-teal-400', borderColor: 'border-teal-500/50' },
   hyperliquid: { label: 'Hyperliquid', color: 'text-orange-400', borderColor: 'border-orange-500/50' },
+  edgex: { label: 'EdgeX Exchange', color: 'text-green-400', borderColor: 'border-green-500/50' },
 };
 
 function fmt$(v: number, decimals = 0): string {

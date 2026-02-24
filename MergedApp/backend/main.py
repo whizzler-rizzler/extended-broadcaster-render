@@ -19,6 +19,11 @@ from reya_client import (
     normalize_reya_balance, normalize_reya_orders, fetch_reya_market_prices,
     ReyaAccountConfig, ReyaAccountCache,
 )
+from edgex_client import (
+    load_edgex_accounts, fetch_edgex_api, normalize_edgex_positions,
+    normalize_edgex_balance, normalize_edgex_orders, fetch_edgex_ticker_prices,
+    EdgeXAccountConfig, EdgeXAccountCache,
+)
 
 app = FastAPI(title="Extended API Multi-Account Broadcaster")
 
@@ -232,9 +237,13 @@ if not IS_FRONTEND_ONLY:
 
     REYA_ACCOUNTS = load_reya_accounts()
     print(f"🎯 Total Reya accounts configured: {len(REYA_ACCOUNTS)}")
+
+    EDGEX_ACCOUNTS = load_edgex_accounts()
+    print(f"🎯 Total EdgeX accounts configured: {len(EDGEX_ACCOUNTS)}")
 else:
     ACCOUNTS = []
     REYA_ACCOUNTS = []
+    EDGEX_ACCOUNTS = []
     print("🌐 FRONTEND_ONLY mode - no local accounts loaded")
 
 # ============= BROADCASTER GLOBAL STATE =============
@@ -244,6 +253,9 @@ BROADCASTER_CACHES: Dict[str, AccountCache] = {
 }
 REYA_CACHES: Dict[str, ReyaAccountCache] = {
     account.id: ReyaAccountCache() for account in REYA_ACCOUNTS
+}
+EDGEX_CACHES: Dict[str, EdgeXAccountCache] = {
+    account.id: EdgeXAccountCache() for account in EDGEX_ACCOUNTS
 }
 
 # Set of connected WebSocket clients
@@ -785,8 +797,82 @@ async def poll_all_reya_accounts():
 
 
 REYA_POLL_COUNTER = 0
+EDGEX_POLL_COUNTER = 0
 
 MARGIN_CHECK_COUNTER = 0  # Check margins every 20 cycles (5 seconds)
+
+
+# ============= EDGEX POLLING =============
+async def poll_edgex_account_data(account: EdgeXAccountConfig):
+    cache = EDGEX_CACHES[account.id]
+
+    account_info_task = fetch_edgex_api(
+        account, "/api/v1/private/account/getAccountById",
+        params={"accountId": account.account_id}
+    )
+    positions_task = fetch_edgex_api(
+        account, "/api/v1/private/account/getPositionByContractId",
+        params={"accountId": account.account_id}
+    )
+    orders_task = fetch_edgex_api(
+        account, "/api/v1/private/order/getOrderPage",
+        params={"accountId": account.account_id, "size": "50", "status": "OPEN"}
+    )
+
+    raw_account_info, raw_positions, raw_orders = await asyncio.gather(
+        account_info_task, positions_task, orders_task,
+        return_exceptions=True
+    )
+
+    changes = []
+
+    if not isinstance(raw_positions, Exception) and raw_positions is not None:
+        pos_list = raw_positions if isinstance(raw_positions, list) else []
+        normalized = normalize_edgex_positions(pos_list)
+        cache.positions = normalized
+        cache.last_update["positions"] = time.time()
+        changes.append("positions")
+
+    if not isinstance(raw_account_info, Exception) and raw_account_info is not None:
+        cache.account_info = raw_account_info
+        cache.last_update["account_info"] = time.time()
+        normalized_balance = normalize_edgex_balance(raw_account_info, positions=cache.positions)
+        cache.balance = normalized_balance
+        cache.last_update["balance"] = time.time()
+        changes.append("balance")
+
+    if not isinstance(raw_orders, Exception) and raw_orders is not None:
+        order_list = raw_orders.get("dataList", []) if isinstance(raw_orders, dict) else (raw_orders if isinstance(raw_orders, list) else [])
+        normalized_orders = normalize_edgex_orders(order_list)
+        if data_changed(cache.orders, normalized_orders):
+            cache.orders = normalized_orders
+            cache.last_update["orders"] = time.time()
+            changes.append("orders")
+
+    if changes:
+        print(f"📊 [{account.name}] EdgeX changes: {', '.join(changes)}")
+        await broadcast_to_clients({
+            "type": "account_update",
+            "account_id": account.id,
+            "account_name": account.name,
+            "exchange": "edgex",
+            "positions": cache.positions if "positions" in changes else None,
+            "balance": cache.balance if "balance" in changes else None,
+            "orders": cache.orders if "orders" in changes else None,
+            "timestamp": time.time()
+        })
+
+
+async def poll_all_edgex_accounts():
+    if not EDGEX_ACCOUNTS:
+        return
+    await fetch_edgex_ticker_prices()
+    results = await asyncio.gather(*[
+        poll_edgex_account_data(account) for account in EDGEX_ACCOUNTS
+    ], return_exceptions=True)
+    for i, r in enumerate(results):
+        if isinstance(r, Exception):
+            print(f"❌ [EdgeX {EDGEX_ACCOUNTS[i].name}] poll error: {r}")
 
 async def background_poller():
     """
@@ -796,11 +882,11 @@ async def background_poller():
     - Main loop (2s): positions + balance + orders + trades for all accounts
     - Margin check (6s): check margins and send alerts
     """
-    global TRADES_POLL_COUNTER, MARGIN_CHECK_COUNTER, REYA_POLL_COUNTER
+    global TRADES_POLL_COUNTER, MARGIN_CHECK_COUNTER, REYA_POLL_COUNTER, EDGEX_POLL_COUNTER
     
     # Count accounts with proxies
     proxied_accounts = sum(1 for a in ACCOUNTS if a.proxy_url)
-    print(f"🚀 [Broadcaster] Background poller started for {len(ACCOUNTS)} Extended + {len(REYA_ACCOUNTS)} Reya accounts")
+    print(f"🚀 [Broadcaster] Background poller started for {len(ACCOUNTS)} Extended + {len(REYA_ACCOUNTS)} Reya + {len(EDGEX_ACCOUNTS)} EdgeX accounts")
     print(f"🔒 Accounts with proxy: {proxied_accounts}/{len(ACCOUNTS)}")
     print(f"⚡ Polling rates: all data 1x/2s, margin check 1x/6s")
     
@@ -813,6 +899,11 @@ async def background_poller():
             if REYA_POLL_COUNTER >= 1:
                 await poll_all_reya_accounts()
                 REYA_POLL_COUNTER = 0
+
+            EDGEX_POLL_COUNTER += 1
+            if EDGEX_POLL_COUNTER >= 1:
+                await poll_all_edgex_accounts()
+                EDGEX_POLL_COUNTER = 0
             
             TRADES_POLL_COUNTER += 1
             if TRADES_POLL_COUNTER >= 1:
@@ -960,9 +1051,27 @@ async def get_cached_accounts():
             "last_update": cache.last_update.copy()
         }
 
+    for account in EDGEX_ACCOUNTS:
+        cache = EDGEX_CACHES[account.id]
+        accounts_data[account.id] = {
+            "id": account.id,
+            "name": account.name,
+            "exchange": "edgex",
+            "positions": cache.positions,
+            "balance": cache.balance,
+            "trades": [],
+            "orders": cache.orders,
+            "cache_age_ms": {
+                "positions": int((current_time - cache.last_update["positions"]) * 1000) if cache.last_update["positions"] > 0 else None,
+                "balance": int((current_time - cache.last_update["balance"]) * 1000) if cache.last_update["balance"] > 0 else None,
+                "orders": int((current_time - cache.last_update["orders"]) * 1000) if cache.last_update["orders"] > 0 else None,
+            },
+            "last_update": cache.last_update.copy()
+        }
+
     return {
         "accounts": accounts_data,
-        "total_accounts": len(ACCOUNTS) + len(REYA_ACCOUNTS),
+        "total_accounts": len(ACCOUNTS) + len(REYA_ACCOUNTS) + len(EDGEX_ACCOUNTS),
         "timestamp": current_time
     }
 
@@ -1099,10 +1208,22 @@ async def websocket_broadcast(websocket: WebSocket):
                 "orders": cache.orders,
             }
 
+        for account in EDGEX_ACCOUNTS:
+            cache = EDGEX_CACHES[account.id]
+            accounts_snapshot[account.id] = {
+                "id": account.id,
+                "name": account.name,
+                "exchange": "edgex",
+                "positions": cache.positions,
+                "balance": cache.balance,
+                "trades": [],
+                "orders": cache.orders,
+            }
+
         snapshot = {
             "type": "snapshot",
             "accounts": accounts_snapshot,
-            "total_accounts": len(ACCOUNTS) + len(REYA_ACCOUNTS),
+            "total_accounts": len(ACCOUNTS) + len(REYA_ACCOUNTS) + len(EDGEX_ACCOUNTS),
             "timestamp": time.time()
         }
         await websocket.send_json(snapshot)
