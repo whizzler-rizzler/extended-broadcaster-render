@@ -183,14 +183,28 @@ export const MultiAccountDashboard = ({
   );
 
   const exchangeGroups = useMemo(() => {
+    const extractNum = (id: string): number => {
+      const m = id.match(/(\d+)/) || id.match(/(\d+)$/);
+      return m ? parseInt(m[1], 10) : 0;
+    };
+    const sortByNum = (a: SingleAccountData, b: SingleAccountData) => {
+      const na = a.name?.match(/(\d+)/);
+      const nb = b.name?.match(/(\d+)/);
+      if (na && nb) return parseInt(na[1], 10) - parseInt(nb[1], 10);
+      return extractNum(a.id) - extractNum(b.id);
+    };
+
     const groupMap = new Map<string, SingleAccountData[]>();
     for (const acc of filteredAccounts) {
       const key = getExchangeKey(acc);
       if (!groupMap.has(key)) groupMap.set(key, []);
       groupMap.get(key)!.push(acc);
     }
+    for (const [, accs] of groupMap) {
+      accs.sort(sortByNum);
+    }
     const groups: ExchangeGroup[] = [];
-    const order = ['extended', 'reya', 'pacifica', 'hyperliquid', 'edgex', 'hibachi', 'grvt'];
+    const order = ['reya', 'hibachi', 'grvt', '01exchange', 'extended', 'pacifica', 'hyperliquid', 'edgex'];
     for (const key of order) {
       if (groupMap.has(key)) {
         const accs = groupMap.get(key)!;

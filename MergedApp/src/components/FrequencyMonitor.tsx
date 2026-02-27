@@ -90,18 +90,43 @@ export const FrequencyMonitor = ({ broadcasterStats, lastWsUpdate, isWsConnected
     
     // Use local account data - calculate age from lastUpdate timestamp
     const HIDDEN_EXCHANGES = ['edgex_'];
-    return Array.from(accounts.values()).filter(acc => !HIDDEN_EXCHANGES.some(prefix => acc.id.startsWith(prefix))).map(acc => {
-      const lastUpdateTime = acc.lastUpdate ? new Date(acc.lastUpdate).getTime() : 0;
-      // Use Math.max to prevent negative values when server time is slightly ahead
-      const ageSeconds = lastUpdateTime > 0 ? Math.max(0, Math.floor((now - lastUpdateTime) / 1000)) : null;
-      return {
-        id: acc.id,
-        name: acc.name,
-        timeSinceUpdate: ageSeconds,
-        isHealthy: ageSeconds !== null && ageSeconds < 30, // healthy if updated within 30s
-        isInitialized: acc.positions.length > 0 || acc.balance !== null
-      };
-    });
+    const extractNum = (id: string): number => {
+      const m = id.match(/(\d+)/);
+      return m ? parseInt(m[1], 10) : 0;
+    };
+    const getExchangePrefix = (id: string): string => {
+      if (id.startsWith('01_')) return '01';
+      if (id.startsWith('account_')) return 'extended';
+      const m = id.match(/^([a-zA-Z]+)/);
+      return m ? m[1] : id;
+    };
+    const exchangeOrder = ['reya', 'hibachi', 'grvt', '01', 'extended'];
+    return Array.from(accounts.values())
+      .filter(acc => !HIDDEN_EXCHANGES.some(prefix => acc.id.startsWith(prefix)))
+      .map(acc => {
+        const lastUpdateTime = acc.lastUpdate ? new Date(acc.lastUpdate).getTime() : 0;
+        const ageSeconds = lastUpdateTime > 0 ? Math.max(0, Math.floor((now - lastUpdateTime) / 1000)) : null;
+        return {
+          id: acc.id,
+          name: acc.name,
+          timeSinceUpdate: ageSeconds,
+          isHealthy: ageSeconds !== null && ageSeconds < 30,
+          isInitialized: acc.positions.length > 0 || acc.balance !== null
+        };
+      })
+      .sort((a, b) => {
+        const prefA = getExchangePrefix(a.id);
+        const prefB = getExchangePrefix(b.id);
+        const orderA = exchangeOrder.indexOf(prefA);
+        const orderB = exchangeOrder.indexOf(prefB);
+        const rankA = orderA >= 0 ? orderA : exchangeOrder.length;
+        const rankB = orderB >= 0 ? orderB : exchangeOrder.length;
+        if (rankA !== rankB) return rankA - rankB;
+        const nameNumA = a.name?.match(/(\d+)/);
+        const nameNumB = b.name?.match(/(\d+)/);
+        if (nameNumA && nameNumB) return parseInt(nameNumA[1], 10) - parseInt(nameNumB[1], 10);
+        return extractNum(a.id) - extractNum(b.id);
+      });
   }, [accounts, broadcasterStats, now]);
 
   return (
