@@ -1,5 +1,6 @@
 #!/bin/bash
+set -e
 cd MergedApp
 npm install
-# Build with empty VITE_API_BASE for same-origin deployment (backend serves frontend)
+pip install -r backend/requirements.txt
 VITE_API_BASE="" npm run build
