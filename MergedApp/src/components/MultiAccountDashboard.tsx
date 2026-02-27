@@ -43,6 +43,7 @@ function getExchangeKey(account: SingleAccountData): string {
   if (account.id.startsWith('edgex_')) return 'edgex';
   if (account.id.startsWith('hibachi_')) return 'hibachi';
   if (account.id.startsWith('grvt_')) return 'grvt';
+  if (account.id.startsWith('01_')) return '01exchange';
   return 'extended';
 }
 
@@ -54,6 +55,7 @@ const EXCHANGE_META: Record<string, { label: string; color: string; borderColor:
   edgex: { label: 'EdgeX Exchange', color: 'text-green-400', borderColor: 'border-green-500/50' },
   hibachi: { label: 'Hibachi', color: 'text-red-400', borderColor: 'border-red-500/50' },
   grvt: { label: 'GRVT', color: 'text-yellow-400', borderColor: 'border-yellow-500/50' },
+  '01exchange': { label: '01 Exchange', color: 'text-cyan-400', borderColor: 'border-cyan-500/50' },
 };
 
 function fmt$(v: number, decimals = 0): string {

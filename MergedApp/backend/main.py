@@ -32,6 +32,10 @@ from grvt_client import (
     load_grvt_accounts, poll_grvt_account,
     GrvtAccountConfig, GrvtAccountCache,
 )
+from zero_one_client import (
+    load_01_accounts, poll_01_account, resolve_all_account_ids,
+    ZeroOneAccountConfig, ZeroOneAccountCache,
+)
 
 app = FastAPI(title="Extended API Multi-Account Broadcaster")
 
@@ -260,6 +264,9 @@ print(f"🎯 Total Hibachi accounts configured: {len(HIBACHI_ACCOUNTS)}")
 GRVT_ACCOUNTS = load_grvt_accounts()
 print(f"🎯 Total GRVT accounts configured: {len(GRVT_ACCOUNTS)}")
 
+ZERO_ONE_ACCOUNTS = load_01_accounts()
+print(f"🎯 Total 01 Exchange accounts configured: {len(ZERO_ONE_ACCOUNTS)}")
+
 # ============= BROADCASTER GLOBAL STATE =============
 # Cache for each account - keyed by account ID
 BROADCASTER_CACHES: Dict[str, AccountCache] = {
@@ -276,6 +283,9 @@ HIBACHI_CACHES: Dict[str, HibachiAccountCache] = {
 }
 GRVT_CACHES: Dict[str, GrvtAccountCache] = {
     account.id: GrvtAccountCache() for account in GRVT_ACCOUNTS
+}
+ZERO_ONE_CACHES: Dict[str, ZeroOneAccountCache] = {
+    account.id: ZeroOneAccountCache() for account in ZERO_ONE_ACCOUNTS
 }
 
 # Set of connected WebSocket clients
@@ -820,6 +830,7 @@ REYA_POLL_COUNTER = 0
 EDGEX_POLL_COUNTER = 0
 HIBACHI_POLL_COUNTER = 0
 GRVT_POLL_COUNTER = 0
+ZERO_ONE_POLL_COUNTER = 0
 
 MARGIN_CHECK_COUNTER = 0  # Check margins every 20 cycles (5 seconds)
 
@@ -954,8 +965,38 @@ async def poll_all_grvt_accounts():
             print(f"❌ [GRVT {GRVT_ACCOUNTS[i].name}] poll error: {r}")
 
 
+async def poll_01_account_data(account: ZeroOneAccountConfig):
+    cache = ZERO_ONE_CACHES[account.id]
+    changed = await poll_01_account(account, cache)
+    if changed:
+        print(f"📊 [{account.name}] 01 Exchange changes detected")
+        await broadcast_to_clients({
+            "type": "account_update",
+            "account_id": account.id,
+            "account_name": account.name,
+            "exchange": "01exchange",
+            "positions": cache.positions,
+            "balance": cache.balance,
+            "orders": cache.orders,
+            "timestamp": time.time()
+        })
+
+
+async def poll_all_01_accounts():
+    if not ZERO_ONE_ACCOUNTS:
+        return
+    results = await asyncio.gather(*[
+        poll_01_account_data(account) for account in ZERO_ONE_ACCOUNTS
+    ], return_exceptions=True)
+    for i, r in enumerate(results):
+        if isinstance(r, Exception):
+            print(f"❌ [01 Exchange {ZERO_ONE_ACCOUNTS[i].name}] poll error: {r}")
+
+
 async def local_exchange_poller():
-    print(f"🚀 [LocalPoller] Started for {len(REYA_ACCOUNTS)} Reya + {len(EDGEX_ACCOUNTS)} EdgeX + {len(HIBACHI_ACCOUNTS)} Hibachi + {len(GRVT_ACCOUNTS)} GRVT accounts")
+    print(f"🚀 [LocalPoller] Started for {len(REYA_ACCOUNTS)} Reya + {len(EDGEX_ACCOUNTS)} EdgeX + {len(HIBACHI_ACCOUNTS)} Hibachi + {len(GRVT_ACCOUNTS)} GRVT + {len(ZERO_ONE_ACCOUNTS)} 01 Exchange accounts")
+    if ZERO_ONE_ACCOUNTS:
+        await resolve_all_account_ids(ZERO_ONE_ACCOUNTS)
     while True:
         try:
             if REYA_ACCOUNTS:
@@ -966,6 +1007,8 @@ async def local_exchange_poller():
                 await poll_all_hibachi_accounts()
             if GRVT_ACCOUNTS:
                 await poll_all_grvt_accounts()
+            if ZERO_ONE_ACCOUNTS:
+                await poll_all_01_accounts()
             await asyncio.sleep(2.0)
         except Exception as e:
             print(f"❌ [LocalPoller] Error: {e}")
@@ -980,13 +1023,16 @@ async def background_poller():
     - Main loop (2s): positions + balance + orders + trades for all accounts
     - Margin check (6s): check margins and send alerts
     """
-    global TRADES_POLL_COUNTER, MARGIN_CHECK_COUNTER, REYA_POLL_COUNTER, EDGEX_POLL_COUNTER, HIBACHI_POLL_COUNTER, GRVT_POLL_COUNTER
+    global TRADES_POLL_COUNTER, MARGIN_CHECK_COUNTER, REYA_POLL_COUNTER, EDGEX_POLL_COUNTER, HIBACHI_POLL_COUNTER, GRVT_POLL_COUNTER, ZERO_ONE_POLL_COUNTER
     
     # Count accounts with proxies
     proxied_accounts = sum(1 for a in ACCOUNTS if a.proxy_url)
-    print(f"🚀 [Broadcaster] Background poller started for {len(ACCOUNTS)} Extended + {len(REYA_ACCOUNTS)} Reya + {len(EDGEX_ACCOUNTS)} EdgeX + {len(HIBACHI_ACCOUNTS)} Hibachi + {len(GRVT_ACCOUNTS)} GRVT accounts")
+    print(f"🚀 [Broadcaster] Background poller started for {len(ACCOUNTS)} Extended + {len(REYA_ACCOUNTS)} Reya + {len(EDGEX_ACCOUNTS)} EdgeX + {len(HIBACHI_ACCOUNTS)} Hibachi + {len(GRVT_ACCOUNTS)} GRVT + {len(ZERO_ONE_ACCOUNTS)} 01 Exchange accounts")
     print(f"🔒 Accounts with proxy: {proxied_accounts}/{len(ACCOUNTS)}")
     print(f"⚡ Polling rates: all data 1x/2s, margin check 1x/6s")
+    
+    if ZERO_ONE_ACCOUNTS:
+        await resolve_all_account_ids(ZERO_ONE_ACCOUNTS)
     
     while True:
         try:
@@ -1012,6 +1058,11 @@ async def background_poller():
             if GRVT_POLL_COUNTER >= 1:
                 await poll_all_grvt_accounts()
                 GRVT_POLL_COUNTER = 0
+
+            ZERO_ONE_POLL_COUNTER += 1
+            if ZERO_ONE_POLL_COUNTER >= 1:
+                await poll_all_01_accounts()
+                ZERO_ONE_POLL_COUNTER = 0
             
             TRADES_POLL_COUNTER += 1
             if TRADES_POLL_COUNTER >= 1:
@@ -1192,6 +1243,23 @@ async def get_cached_accounts():
                     },
                     "last_update": cache.last_update.copy()
                 }
+            for account in ZERO_ONE_ACCOUNTS:
+                cache = ZERO_ONE_CACHES[account.id]
+                accounts[account.id] = {
+                    "id": account.id,
+                    "name": account.name,
+                    "exchange": "01exchange",
+                    "positions": cache.positions,
+                    "balance": cache.balance,
+                    "trades": [],
+                    "orders": cache.orders,
+                    "cache_age_ms": {
+                        "positions": int((current_time - cache.last_update["positions"]) * 1000) if cache.last_update["positions"] > 0 else None,
+                        "balance": int((current_time - cache.last_update["balance"]) * 1000) if cache.last_update["balance"] > 0 else None,
+                        "orders": int((current_time - cache.last_update["orders"]) * 1000) if cache.last_update["orders"] > 0 else None,
+                    },
+                    "last_update": cache.last_update.copy()
+                }
             remote_data["accounts"] = accounts
             remote_data["total_accounts"] = len(accounts)
         return remote_data
@@ -1290,9 +1358,27 @@ async def get_cached_accounts():
             "last_update": cache.last_update.copy()
         }
 
+    for account in ZERO_ONE_ACCOUNTS:
+        cache = ZERO_ONE_CACHES[account.id]
+        accounts_data[account.id] = {
+            "id": account.id,
+            "name": account.name,
+            "exchange": "01exchange",
+            "positions": cache.positions,
+            "balance": cache.balance,
+            "trades": [],
+            "orders": cache.orders,
+            "cache_age_ms": {
+                "positions": int((current_time - cache.last_update["positions"]) * 1000) if cache.last_update["positions"] > 0 else None,
+                "balance": int((current_time - cache.last_update["balance"]) * 1000) if cache.last_update["balance"] > 0 else None,
+                "orders": int((current_time - cache.last_update["orders"]) * 1000) if cache.last_update["orders"] > 0 else None,
+            },
+            "last_update": cache.last_update.copy()
+        }
+
     return {
         "accounts": accounts_data,
-        "total_accounts": len(ACCOUNTS) + len(REYA_ACCOUNTS) + len(EDGEX_ACCOUNTS) + len(HIBACHI_ACCOUNTS) + len(GRVT_ACCOUNTS),
+        "total_accounts": len(ACCOUNTS) + len(REYA_ACCOUNTS) + len(EDGEX_ACCOUNTS) + len(HIBACHI_ACCOUNTS) + len(GRVT_ACCOUNTS) + len(ZERO_ONE_ACCOUNTS),
         "timestamp": current_time
     }
 
@@ -1465,10 +1551,22 @@ async def websocket_broadcast(websocket: WebSocket):
                 "orders": cache.orders,
             }
 
+        for account in ZERO_ONE_ACCOUNTS:
+            cache = ZERO_ONE_CACHES[account.id]
+            accounts_snapshot[account.id] = {
+                "id": account.id,
+                "name": account.name,
+                "exchange": "01exchange",
+                "positions": cache.positions,
+                "balance": cache.balance,
+                "trades": [],
+                "orders": cache.orders,
+            }
+
         snapshot = {
             "type": "snapshot",
             "accounts": accounts_snapshot,
-            "total_accounts": len(ACCOUNTS) + len(REYA_ACCOUNTS) + len(EDGEX_ACCOUNTS) + len(HIBACHI_ACCOUNTS) + len(GRVT_ACCOUNTS),
+            "total_accounts": len(ACCOUNTS) + len(REYA_ACCOUNTS) + len(EDGEX_ACCOUNTS) + len(HIBACHI_ACCOUNTS) + len(GRVT_ACCOUNTS) + len(ZERO_ONE_ACCOUNTS),
             "timestamp": time.time()
         }
         await websocket.send_json(snapshot)
