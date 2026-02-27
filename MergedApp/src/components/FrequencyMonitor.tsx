@@ -122,10 +122,14 @@ export const FrequencyMonitor = ({ broadcasterStats, lastWsUpdate, isWsConnected
         const rankA = orderA >= 0 ? orderA : exchangeOrder.length;
         const rankB = orderB >= 0 ? orderB : exchangeOrder.length;
         if (rankA !== rankB) return rankA - rankB;
-        const nameNumA = a.name?.match(/(\d+)/);
-        const nameNumB = b.name?.match(/(\d+)/);
-        if (nameNumA && nameNumB) return parseInt(nameNumA[1], 10) - parseInt(nameNumB[1], 10);
-        return extractNum(a.id) - extractNum(b.id);
+        const accNum = (name: string, id: string) => {
+          const m = name.match(/(?:Exchange|Extended|Reya|Hibachi|GRVT|Account)\s+(\d+)/i);
+          if (m) return parseInt(m[1], 10);
+          const idM = id.match(/_(\d+)$/);
+          if (idM) return parseInt(idM[1], 10);
+          return extractNum(id);
+        };
+        return accNum(a.name || '', a.id) - accNum(b.name || '', b.id);
       });
   }, [accounts, broadcasterStats, now]);
 

@@ -187,11 +187,15 @@ export const MultiAccountDashboard = ({
       const m = id.match(/(\d+)/) || id.match(/(\d+)$/);
       return m ? parseInt(m[1], 10) : 0;
     };
+    const extractAccountNum = (name: string, id: string): number => {
+      const m = name.match(/(?:Exchange|Extended|Reya|Hibachi|GRVT|Account)\s+(\d+)/i);
+      if (m) return parseInt(m[1], 10);
+      const idM = id.match(/_(\d+)$/);
+      if (idM) return parseInt(idM[1], 10);
+      return extractNum(id);
+    };
     const sortByNum = (a: SingleAccountData, b: SingleAccountData) => {
-      const na = a.name?.match(/(\d+)/);
-      const nb = b.name?.match(/(\d+)/);
-      if (na && nb) return parseInt(na[1], 10) - parseInt(nb[1], 10);
-      return extractNum(a.id) - extractNum(b.id);
+      return extractAccountNum(a.name || '', a.id) - extractAccountNum(b.name || '', b.id);
     };
 
     const groupMap = new Map<string, SingleAccountData[]>();
@@ -205,35 +209,30 @@ export const MultiAccountDashboard = ({
     }
     const groups: ExchangeGroup[] = [];
     const order = ['reya', 'hibachi', 'grvt', '01exchange', 'extended', 'pacifica', 'hyperliquid', 'edgex'];
+    const makeGroup = (key: string, accs: SingleAccountData[]) => {
+      const meta = EXCHANGE_META[key] || { label: key, color: 'text-gray-400', borderColor: 'border-gray-500/50' };
+      const sorted = [...accs].sort(sortByNum);
+      return {
+        key,
+        label: meta.label,
+        color: meta.color,
+        borderColor: meta.borderColor,
+        accounts: sorted,
+        activeAccounts: sorted.filter(a => a.isActive),
+      };
+    };
     for (const key of order) {
       if (groupMap.has(key)) {
-        const accs = groupMap.get(key)!;
-        const meta = EXCHANGE_META[key] || { label: key, color: 'text-gray-400', borderColor: 'border-gray-500/50' };
-        groups.push({
-          key,
-          label: meta.label,
-          color: meta.color,
-          borderColor: meta.borderColor,
-          accounts: accs,
-          activeAccounts: accs.filter(a => a.isActive),
-        });
+        groups.push(makeGroup(key, groupMap.get(key)!));
       }
     }
     for (const [key, accs] of groupMap) {
       if (!order.includes(key)) {
-        const meta = EXCHANGE_META[key] || { label: key, color: 'text-gray-400', borderColor: 'border-gray-500/50' };
-        groups.push({
-          key,
-          label: meta.label,
-          color: meta.color,
-          borderColor: meta.borderColor,
-          accounts: accs,
-          activeAccounts: accs.filter(a => a.isActive),
-        });
+        groups.push(makeGroup(key, accs));
       }
     }
     return groups;
-  }, [accounts]);
+  }, [filteredAccounts]);
 
   const toggleExchange = (key: string) => {
     setExpandedExchanges(prev => {
