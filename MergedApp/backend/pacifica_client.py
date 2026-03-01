@@ -108,8 +108,11 @@ async def _fetch_json(url: str, proxy: Optional[str] = None, api_key: Optional[s
         return None
 
 
-def normalize_pacifica_positions(raw_positions: List[Dict]) -> List[Dict]:
+def normalize_pacifica_positions(raw_positions: List[Dict], total_unrealised_pnl: float = 0) -> List[Dict]:
     positions = []
+    parsed = []
+    total_notional = 0
+
     for p in raw_positions:
         symbol = p.get("symbol", "?")
         side_raw = p.get("side", "")
@@ -118,21 +121,41 @@ def normalize_pacifica_positions(raw_positions: List[Dict]) -> List[Dict]:
         amount = float(p.get("amount", 0))
         entry_price = float(p.get("entry_price", 0))
         notional = amount * entry_price
+        total_notional += notional
         funding = float(p.get("funding", 0))
         liq_price = p.get("liquidation_price")
 
-        positions.append({
-            "market": f"{symbol}-PERP",
+        parsed.append({
+            "symbol": symbol,
             "side": side,
-            "size": amount,
-            "entryPrice": entry_price,
-            "markPrice": 0,
-            "unrealisedPnl": 0,
+            "amount": amount,
+            "entry_price": entry_price,
             "notional": notional,
-            "leverage": 0,
-            "liquidationPrice": float(liq_price) if liq_price else None,
             "funding": funding,
+            "liq_price": liq_price,
             "isolated": p.get("isolated", False),
+        })
+
+    for p in parsed:
+        pnl_share = (p["notional"] / total_notional * total_unrealised_pnl) if total_notional > 0 else 0
+        mark_price = (p["entry_price"] + pnl_share / p["amount"]) if p["amount"] > 0 else p["entry_price"]
+        if p["side"] == "SHORT":
+            mark_price = (p["entry_price"] - pnl_share / p["amount"]) if p["amount"] > 0 else p["entry_price"]
+
+        positions.append({
+            "market": f"{p['symbol']}-PERP",
+            "side": p["side"],
+            "size": p["amount"],
+            "entryPrice": p["entry_price"],
+            "markPrice": round(mark_price, 2),
+            "unrealisedPnl": round(pnl_share, 2),
+            "notional": p["notional"],
+            "value": str(round(p["notional"], 2)),
+            "leverage": 0,
+            "liquidationPrice": float(p["liq_price"]) if p["liq_price"] else None,
+            "funding": p["funding"],
+            "isolated": p["isolated"],
+            "status": "OPENED",
         })
     return positions
 
@@ -205,8 +228,14 @@ async def poll_pacifica_account(account: PacificaAccountConfig, cache: PacificaA
     raw_positions = await _fetch_json(positions_url, proxy=proxy, api_key=api_key)
     raw_orders = await _fetch_json(orders_url, proxy=proxy, api_key=api_key)
 
+    total_unrealised_pnl = 0
+    if raw_account is not None:
+        acct_equity = float(raw_account.get("account_equity", 0))
+        acct_balance = float(raw_account.get("balance", 0))
+        total_unrealised_pnl = acct_equity - acct_balance
+
     if raw_positions is not None:
-        normalized = normalize_pacifica_positions(raw_positions)
+        normalized = normalize_pacifica_positions(raw_positions, total_unrealised_pnl)
         if normalized != cache.positions:
             cache.positions = normalized
             changed = True

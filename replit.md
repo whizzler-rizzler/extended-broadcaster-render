@@ -1,6 +1,6 @@
 # Multi-Account Trading Dashboard
 
-Multi-account trading dashboard (React + Python FastAPI) monitoring real-time accounts across multiple exchanges: Extended (24 accounts), Reya (6 accounts), EdgeX (4 accounts - hidden on frontend), Hibachi (2 accounts), GRVT (4 accounts), 01 Exchange (6 accounts). Total: 46 accounts in API, 42 displayed on frontend (without EdgeX).
+Multi-account trading dashboard (React + Python FastAPI) monitoring real-time accounts across multiple exchanges: Extended (24 accounts), Reya (6 accounts), EdgeX (4 accounts - hidden on frontend), Hibachi (2 accounts), GRVT (4 accounts), 01 Exchange (6 accounts), Pacifica (2 accounts). Total: 48 accounts in API, 44 displayed on frontend (without EdgeX).
 
 ## Architecture
 
@@ -13,6 +13,7 @@ MergedApp/
     grvt_client.py       - GRVT exchange client (4 accounts) with cookie-based auth and REST polling
     reya_client.py       - Reya exchange client (6 accounts) with REST polling
     zero_one_client.py   - 01 Exchange client (6 accounts) with public REST API polling
+    pacifica_client.py   - Pacifica exchange client (2 accounts) with public REST API polling
   src/
     components/
       MultiAccountDashboard.tsx  - Main dashboard component
@@ -34,7 +35,8 @@ Backend runs in `FRONTEND_ONLY` mode:
 - **EdgeX**: Polled locally (4 accounts) - hidden on frontend
 - **Hibachi**: Polled locally (2 accounts)
 - **GRVT**: Polled locally (4 accounts) with cookie-based authentication
-- **01 Exchange**: Polled locally (5 accounts) via public REST API
+- **01 Exchange**: Polled locally (6 accounts) via public REST API
+- **Pacifica**: Polled locally (2 accounts) via public REST API
 
 ## Exchange Integration Details
 
@@ -64,6 +66,14 @@ Backend runs in `FRONTEND_ONLY` mode:
 ### EdgeX
 - Hidden on frontend via `HIDDEN_EXCHANGES` in `useMultiAccountData.ts`, `FrequencyMonitor.tsx`, `MultiAccountDashboard.tsx`
 - Secrets: `EdgeX_N_AccountID`, `EdgeX_N_priv_key`, `EdgeX_N_publicKeyYCoordinate`
+
+### Pacifica
+- **API**: Public REST API at `https://api.pacifica.fi/api/v1` - NO authentication required for reads
+- **Endpoints**: `GET /account?account={pubkey}` (balance, equity, margin), `GET /positions?account={pubkey}`, `GET /orders?account={pubkey}`
+- **Secrets**: `Pacifica_account_N_adress` = Solana wallet pubkey, `Pacifica_N_api_key` (optional, for rate limits only - currently NOT sent)
+- **PNL calculation**: API doesn't provide mark price or unrealised PNL per position; PNL is computed as `account_equity - balance` from account endpoint and distributed across positions proportionally by notional
+- **Frontend key**: `pacifica_` prefix, exchange name `pacifica`, color `text-teal-400`
+- **Proxy**: Only uses dedicated `Pacifica_N_proxy` (no fallback to Rest_account proxy)
 
 ### Extended
 - 24 accounts proxied from remote backend
