@@ -100,7 +100,7 @@ export const FrequencyMonitor = ({ broadcasterStats, lastWsUpdate, isWsConnected
       const m = id.match(/^([a-zA-Z]+)/);
       return m ? m[1] : id;
     };
-    const exchangeOrder = ['reya', 'hibachi', 'grvt', '01', 'extended'];
+    const exchangeOrder = ['reya', 'hibachi', 'grvt', '01', 'pacifica', 'extended'];
     return Array.from(accounts.values())
       .filter(acc => !HIDDEN_EXCHANGES.some(prefix => acc.id.startsWith(prefix)))
       .map(acc => {

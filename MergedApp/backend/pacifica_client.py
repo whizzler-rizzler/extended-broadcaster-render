@@ -66,8 +66,6 @@ def load_pacifica_accounts() -> List[PacificaAccountConfig]:
 
         proxy_url = None
         proxy_raw = os.environ.get(f"Pacifica_{i}_proxy", "").strip()
-        if not proxy_raw:
-            proxy_raw = os.environ.get(f"Rest_account_{i}_proxy", "").strip()
         if proxy_raw:
             proxy_url = _parse_proxy(proxy_raw)
 
@@ -91,8 +89,6 @@ def load_pacifica_accounts() -> List[PacificaAccountConfig]:
 
 async def _fetch_json(url: str, proxy: Optional[str] = None, api_key: Optional[str] = None) -> Optional[Dict]:
     headers = {"Accept": "application/json"}
-    if api_key:
-        headers["PF-API-KEY"] = api_key
 
     try:
         async with aiohttp.ClientSession() as session:
@@ -148,7 +144,8 @@ def normalize_pacifica_balance(raw_account: Dict, positions: List[Dict]) -> Dict
     cross_mmr = float(raw_account.get("cross_mmr", 0))
     available = float(raw_account.get("available_to_spend", 0))
 
-    margin_ratio = cross_mmr if cross_mmr > 0 else (total_margin / equity * 100 if equity > 0 else 0)
+    margin_ratio_pct = cross_mmr if cross_mmr > 0 else (total_margin / equity * 100 if equity > 0 else 0)
+    margin_ratio = margin_ratio_pct / 100
 
     total_notional = sum(p.get("notional", 0) for p in positions)
     leverage = total_notional / equity if equity > 0 else 0
@@ -158,7 +155,7 @@ def normalize_pacifica_balance(raw_account: Dict, positions: List[Dict]) -> Dict
         "equity": equity,
         "availableBalance": max(0, available),
         "totalMarginUsed": total_margin,
-        "marginRatio": round(margin_ratio, 2),
+        "marginRatio": str(round(margin_ratio, 6)),
         "leverage": round(leverage, 2),
         "unrealisedPnl": round(equity - balance, 2),
         "walletBalance": balance,
