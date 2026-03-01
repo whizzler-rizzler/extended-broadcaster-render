@@ -142,17 +142,21 @@ def normalize_pacifica_positions(raw_positions: List[Dict], total_unrealised_pnl
         if p["side"] == "SHORT":
             mark_price = (p["entry_price"] - pnl_share / p["amount"]) if p["amount"] > 0 else p["entry_price"]
 
+        liq = float(p["liq_price"]) if p["liq_price"] else 0
+
         positions.append({
             "market": f"{p['symbol']}-PERP",
             "side": p["side"],
             "size": p["amount"],
+            "openPrice": p["entry_price"],
             "entryPrice": p["entry_price"],
             "markPrice": round(mark_price, 2),
             "unrealisedPnl": round(pnl_share, 2),
+            "midPriceUnrealisedPnl": round(pnl_share, 2),
             "notional": p["notional"],
             "value": str(round(p["notional"], 2)),
             "leverage": 0,
-            "liquidationPrice": float(p["liq_price"]) if p["liq_price"] else None,
+            "liquidationPrice": liq,
             "funding": p["funding"],
             "isolated": p["isolated"],
             "status": "OPENED",
@@ -177,6 +181,7 @@ def normalize_pacifica_balance(raw_account: Dict, positions: List[Dict]) -> Dict
         "balance": balance,
         "equity": equity,
         "availableBalance": max(0, available),
+        "availableForTrade": str(round(max(0, available), 2)),
         "totalMarginUsed": total_margin,
         "marginRatio": str(round(margin_ratio, 6)),
         "leverage": round(leverage, 2),
