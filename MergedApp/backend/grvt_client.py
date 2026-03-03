@@ -423,22 +423,81 @@ async def poll_grvt_account(account: GrvtAccountConfig, cache: GrvtAccountCache)
     return changed
 
 
-async def fetch_grvt_points(account: GrvtAccountConfig, cache: GrvtAccountCache) -> Dict[str, Any] | None:
-    try:
-        resp = await fetch_grvt_api(account, "get_point_summary", {})
-        if resp is None:
+_GRVT_POINTS_AUTH_EXPIRED = "__auth_expired__"
+
+
+async def _grvt_points_request(account_name: str, url: str, headers: dict, proxy: Optional[str] = None) -> Any:
+    timeout = aiohttp.ClientTimeout(total=15.0)
+    kwargs: Dict[str, Any] = {"headers": headers, "timeout": timeout, "json": {}}
+    if proxy:
+        kwargs["proxy"] = proxy
+    async with aiohttp.ClientSession() as session:
+        async with session.post(url, **kwargs) as response:
+            if response.status == 200:
+                return await response.json()
+            if response.status == 401:
+                return _GRVT_POINTS_AUTH_EXPIRED
+            body = await response.text()
+            via = " via proxy" if proxy else ""
+            print(f"⚠️ [{account_name}][points]{via} HTTP {response.status}: {body[:120]}")
             return None
 
-        result = resp.get("result", resp) if isinstance(resp, dict) else {}
-        total_points = float(result.get("total_points", 0))
-        community_points = float(result.get("community_referral_points", 0))
 
-        return {
-            "points": total_points,
-            "community_points": community_points,
-            "last_update": time.time(),
-            "account_name": account.name,
-        }
-    except Exception as e:
-        print(f"❌ [{account.name}] GRVT points fetch error: {e}")
-        return None
+async def fetch_grvt_points(account: GrvtAccountConfig, cache: GrvtAccountCache) -> Dict[str, Any] | None:
+    if not account.session_cookie:
+        auth_ok = await authenticate_grvt(account)
+        if not auth_ok:
+            return None
+
+    headers = {
+        "Content-Type": "application/json",
+        "Cookie": f"gravity={account.session_cookie}",
+    }
+    if account.session_account_id:
+        headers["X-Grvt-Account-Id"] = account.session_account_id
+
+    for base_url in ["https://edge.grvt.io", GRVT_TRADES_URL]:
+        url = f"{base_url}/full/v1/get_point_summary"
+        try:
+            result_data = None
+            if account.proxy_url:
+                try:
+                    result_data = await _grvt_points_request(account.name, url, headers, account.proxy_url)
+                except Exception:
+                    pass
+
+            if result_data is _GRVT_POINTS_AUTH_EXPIRED:
+                result_data = None
+
+            if result_data is None:
+                result_data = await _grvt_points_request(account.name, url, headers)
+
+            if result_data is _GRVT_POINTS_AUTH_EXPIRED:
+                account.session_cookie = None
+                account.session_expires = 0
+                print(f"⚠️ [{account.name}] GRVT points 401 - session expired, will re-auth")
+                auth_ok = await authenticate_grvt(account)
+                if not auth_ok:
+                    return None
+                headers["Cookie"] = f"gravity={account.session_cookie}"
+                if account.session_account_id:
+                    headers["X-Grvt-Account-Id"] = account.session_account_id
+                result_data = await _grvt_points_request(account.name, url, headers)
+                if result_data is _GRVT_POINTS_AUTH_EXPIRED or result_data is None:
+                    continue
+
+            if result_data is not None:
+                result = result_data.get("result", result_data) if isinstance(result_data, dict) else {}
+                total_points = float(result.get("total_points", 0))
+                community_points = float(result.get("community_referral_points", 0))
+                return {
+                    "points": total_points,
+                    "community_points": community_points,
+                    "last_update": time.time(),
+                    "account_name": account.name,
+                }
+        except Exception as e:
+            print(f"⚠️ [{account.name}] GRVT points {base_url} error: {e}")
+            continue
+
+    return None

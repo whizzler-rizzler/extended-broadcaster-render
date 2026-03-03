@@ -82,7 +82,7 @@ Backend runs in `FRONTEND_ONLY` mode:
 ## Points System
 
 - **Extended**: Points fetched locally from Extended API every 10 minutes (`poll_all_accounts_points`). Displayed as yellow "Ext" label in dashboard header.
-- **GRVT**: Points fetched locally via `fetch_grvt_points()` every 10 minutes (`poll_all_grvt_points`). Uses cookie auth (same as trading API). Displayed as purple "GRVT" label in dashboard header. Per-account points shown on GRVT account cards.
+- **GRVT**: Points fetched locally via `fetch_grvt_points()` every 10 minutes (`poll_all_grvt_points`). Uses cookie auth (same as trading API). Tries `edge.grvt.io` first, then `trades.grvt.io` as fallback. Handles 401 with automatic re-auth retry. Note: Cloudflare may block edge.grvt.io (403) from server IPs. Displayed as purple "GRVT" label in dashboard header. Per-account points shown on GRVT account cards.
 - **Other exchanges** (Hibachi, Reya, Pacifica, 01 Exchange): No points API available.
 - **Endpoints**: `/api/points` (combined Extended + GRVT), `/api/points/refresh` (force refresh both), `/api/points/grvt` (GRVT only)
 - **Frontend**: `useEarnedPoints.ts` hook fetches `/api/points` every 60s; returns `totalPoints` (Extended), `grvtTotalPoints`, per-account data for cards.

@@ -313,14 +313,118 @@ ORDERBOOK_PROXY_URL = os.getenv("ORDERBOOK_PROXY_URL")
 ORDERBOOK_DEPTH = 20
 
 # ============= EARNED POINTS STATE =============
-# Cache for earned points per account - fetched every 10 minutes
-# Format: {account_id: {"points": float, "last_update": float, "raw_data": dict}}
 POINTS_CACHE: Dict[str, Dict[str, Any]] = {}
 POINTS_LAST_UPDATE: float = 0
-POINTS_POLL_INTERVAL = 600  # 10 minutes in seconds
+POINTS_POLL_INTERVAL = 600
 
 GRVT_POINTS_CACHE: Dict[str, Dict[str, Any]] = {}
 GRVT_POINTS_LAST_UPDATE: float = 0
+
+import asyncpg
+
+async def _get_points_db_pool():
+    db_url = os.environ.get("DATABASE_URL")
+    if not db_url:
+        return None
+    try:
+        return await asyncpg.create_pool(db_url, min_size=1, max_size=3)
+    except Exception as e:
+        print(f"⚠️ [PointsDB] Pool error: {e}")
+        return None
+
+_points_pool = None
+
+async def get_points_pool():
+    global _points_pool
+    if _points_pool is None:
+        _points_pool = await _get_points_db_pool()
+    return _points_pool
+
+async def save_points_to_db():
+    pool = await get_points_pool()
+    if not pool:
+        return
+    try:
+        async with pool.acquire() as conn:
+            for acc_id, data in POINTS_CACHE.items():
+                await conn.execute("""
+                    INSERT INTO points_cache (account_id, exchange, account_name, points, this_week_points, last_week_points, season_points, raw_data, last_update, updated_at)
+                    VALUES ($1, 'extended', $2, $3, $4, $5, $6::jsonb, $7::jsonb, $8, NOW())
+                    ON CONFLICT (account_id) DO UPDATE SET
+                        account_name = $2, points = $3, this_week_points = $4, last_week_points = $5,
+                        season_points = $6::jsonb, raw_data = $7::jsonb, last_update = $8, updated_at = NOW()
+                """,
+                    acc_id,
+                    data.get('account_name', ''),
+                    data.get('points', 0),
+                    data.get('this_week_points', 0),
+                    data.get('last_week_points', 0),
+                    json.dumps(data.get('season_points', {})),
+                    json.dumps(data.get('raw_data', {})),
+                    data.get('last_update', 0),
+                )
+            for acc_id, data in GRVT_POINTS_CACHE.items():
+                await conn.execute("""
+                    INSERT INTO points_cache (account_id, exchange, account_name, points, community_points, last_update, updated_at)
+                    VALUES ($1, 'grvt', $2, $3, $4, $5, NOW())
+                    ON CONFLICT (account_id) DO UPDATE SET
+                        account_name = $2, points = $3, community_points = $4, last_update = $5, updated_at = NOW()
+                """,
+                    acc_id,
+                    data.get('account_name', ''),
+                    data.get('points', 0),
+                    data.get('community_points', 0),
+                    data.get('last_update', 0),
+                )
+        print(f"💾 [PointsDB] Saved {len(POINTS_CACHE)} Extended + {len(GRVT_POINTS_CACHE)} GRVT to DB")
+    except Exception as e:
+        print(f"❌ [PointsDB] Save error: {e}")
+
+async def load_points_from_db():
+    global POINTS_CACHE, GRVT_POINTS_CACHE, POINTS_LAST_UPDATE, GRVT_POINTS_LAST_UPDATE
+    pool = await get_points_pool()
+    if not pool:
+        return False
+    try:
+        async with pool.acquire() as conn:
+            rows = await conn.fetch("SELECT * FROM points_cache")
+            loaded_ext = 0
+            loaded_grvt = 0
+            for row in rows:
+                acc_id = row['account_id']
+                exchange = row['exchange']
+                if exchange == 'extended':
+                    POINTS_CACHE[acc_id] = {
+                        "points": float(row['points'] or 0),
+                        "this_week_points": float(row['this_week_points'] or 0),
+                        "last_week_points": float(row['last_week_points'] or 0),
+                        "season_points": json.loads(row['season_points']) if row['season_points'] else {},
+                        "raw_data": json.loads(row['raw_data']) if row['raw_data'] else {},
+                        "last_update": float(row['last_update'] or 0),
+                        "account_name": row['account_name'] or '',
+                    }
+                    loaded_ext += 1
+                elif exchange == 'grvt':
+                    GRVT_POINTS_CACHE[acc_id] = {
+                        "points": float(row['points'] or 0),
+                        "community_points": float(row['community_points'] or 0),
+                        "last_update": float(row['last_update'] or 0),
+                        "account_name": row['account_name'] or '',
+                    }
+                    loaded_grvt += 1
+            if loaded_ext > 0:
+                POINTS_LAST_UPDATE = max((d.get('last_update', 0) for d in POINTS_CACHE.values()), default=0)
+            if loaded_grvt > 0:
+                GRVT_POINTS_LAST_UPDATE = max((d.get('last_update', 0) for d in GRVT_POINTS_CACHE.values()), default=0)
+            if loaded_ext > 0 or loaded_grvt > 0:
+                print(f"📂 [PointsDB] Loaded from DB: {loaded_ext} Extended + {loaded_grvt} GRVT accounts")
+                return True
+            else:
+                print(f"📂 [PointsDB] No cached points in DB yet")
+                return False
+    except Exception as e:
+        print(f"⚠️ [PointsDB] Load error: {e}")
+        return False
 
 
 # ============= PROXY FUNCTION FOR FRONTEND_ONLY MODE =============
@@ -564,12 +668,13 @@ async def poll_all_accounts_fast():
 
 
 # ============= EARNED POINTS POLLING =============
-def find_last_week_points(data: list) -> float:
-    """Find points from the most recent completed epoch (last week)."""
-    from datetime import datetime, date, timedelta
+def find_weekly_points(data: list) -> Dict[str, float]:
+    """Find points from current epoch (this week) and last completed epoch (last week)."""
+    from datetime import datetime, date
     today = date.today()
+    this_week_points = 0.0
     last_week_points = 0.0
-    latest_end_date = None
+    latest_completed_end = None
     
     for season in data:
         if not isinstance(season, dict):
@@ -579,14 +684,22 @@ def find_last_week_points(data: list) -> float:
                 continue
             try:
                 end_date = datetime.strptime(epoch.get('endDate', ''), '%Y-%m-%d').date()
-                if end_date <= today:
-                    if latest_end_date is None or end_date > latest_end_date:
-                        latest_end_date = end_date
-                        last_week_points = float(epoch.get('pointsReward', 0))
+                start_date_str = epoch.get('startDate', '')
+                reward = float(epoch.get('pointsReward', 0))
+                
+                if end_date > today:
+                    this_week_points += reward
+                else:
+                    if latest_completed_end is None or end_date > latest_completed_end:
+                        latest_completed_end = end_date
+                        last_week_points = reward
             except (ValueError, TypeError):
                 continue
     
-    return last_week_points
+    return {
+        "this_week": this_week_points,
+        "last_week": last_week_points
+    }
 
 
 async def fetch_account_points(account: AccountConfig) -> Dict[str, Any] | None:
@@ -614,11 +727,12 @@ async def fetch_account_points(account: AccountConfig) -> Dict[str, Any] | None:
                         season_points[f"season_{season_id}"] = season_total
                         total_points += season_total
             
-            last_week = find_last_week_points(data) if isinstance(data, list) else 0.0
+            weekly = find_weekly_points(data) if isinstance(data, list) else {"this_week": 0.0, "last_week": 0.0}
             
             POINTS_CACHE[account.id] = {
                 "points": total_points,
-                "last_week_points": last_week,
+                "this_week_points": weekly["this_week"],
+                "last_week_points": weekly["last_week"],
                 "season_points": season_points,
                 "last_update": time.time(),
                 "raw_data": result,
@@ -688,15 +802,21 @@ async def points_background_poller():
     """
     print(f"💎 [Points] Background poller started (interval: {POINTS_POLL_INTERVAL}s = 10 min)")
     
+    loaded = await load_points_from_db()
+    if loaded:
+        print(f"💎 [Points] Using cached DB data while fetching fresh points...")
+    
     await asyncio.sleep(5)
     await poll_all_accounts_points()
     await poll_all_grvt_points()
+    await save_points_to_db()
     
     while True:
         try:
             await asyncio.sleep(POINTS_POLL_INTERVAL)
             await poll_all_accounts_points()
             await poll_all_grvt_points()
+            await save_points_to_db()
         except Exception as e:
             print(f"❌ [Points] Poller error: {e}")
             await asyncio.sleep(60)
@@ -1211,6 +1331,9 @@ async def startup_broadcaster():
         if REYA_ACCOUNTS or EDGEX_ACCOUNTS or HIBACHI_ACCOUNTS or GRVT_ACCOUNTS:
             asyncio.create_task(local_exchange_poller())
             print(f"✅ [Startup] Local poller started for {len(REYA_ACCOUNTS)} Reya + {len(EDGEX_ACCOUNTS)} EdgeX + {len(HIBACHI_ACCOUNTS)} Hibachi + {len(GRVT_ACCOUNTS)} GRVT accounts")
+        asyncio.create_task(points_background_poller())
+        asyncio.create_task(trade_history_background_poller())
+        print(f"✅ [Startup] Points poller + Trade History started ({len(ALL_EXTENDED_ACCOUNTS)} Extended + {len(GRVT_ACCOUNTS)} GRVT accounts)")
         print("✅ [Startup] Frontend-only broadcaster initialized")
         return
     
@@ -1963,6 +2086,10 @@ async def get_earned_points():
         data.get('points', 0) 
         for data in POINTS_CACHE.values()
     )
+    total_this_week = sum(
+        data.get('this_week_points', 0)
+        for data in POINTS_CACHE.values()
+    )
     total_last_week = sum(
         data.get('last_week_points', 0)
         for data in POINTS_CACHE.values()
@@ -1984,12 +2111,14 @@ async def get_earned_points():
             acc.id: {
                 "account_name": acc.name,
                 "points": POINTS_CACHE.get(acc.id, {}).get('points', 0),
+                "this_week_points": POINTS_CACHE.get(acc.id, {}).get('this_week_points', 0),
                 "last_week_points": POINTS_CACHE.get(acc.id, {}).get('last_week_points', 0),
                 "last_update": POINTS_CACHE.get(acc.id, {}).get('last_update', 0)
             }
             for acc in ALL_EXTENDED_ACCOUNTS
         },
         "total_points": total_points,
+        "total_this_week_points": total_this_week,
         "total_last_week_points": total_last_week,
         "grvt": {
             "accounts": grvt_accounts,
@@ -2335,7 +2464,11 @@ async def debug_trade_data(account_index: int):
 @app.post("/api/trade-history/refresh")
 async def refresh_trade_history(full: bool = False):
     if IS_FRONTEND_ONLY:
-        return await proxy_to_remote("/api/trade-history/refresh", method="POST")
+        return await proxy_to_remote_with_fallback(
+            "/api/trade-history/refresh",
+            method="POST",
+            fallback={"success": False, "message": "Trade history refresh not available in frontend-only mode"}
+        )
     try:
         if full:
             pool = await trade_history.get_db_pool()
