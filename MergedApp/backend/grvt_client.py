@@ -421,3 +421,24 @@ async def poll_grvt_account(account: GrvtAccountConfig, cache: GrvtAccountCache)
             changed = True
 
     return changed
+
+
+async def fetch_grvt_points(account: GrvtAccountConfig, cache: GrvtAccountCache) -> Dict[str, Any] | None:
+    try:
+        resp = await fetch_grvt_api(account, "get_point_summary", {})
+        if resp is None:
+            return None
+
+        result = resp.get("result", resp) if isinstance(resp, dict) else {}
+        total_points = float(result.get("total_points", 0))
+        community_points = float(result.get("community_referral_points", 0))
+
+        return {
+            "points": total_points,
+            "community_points": community_points,
+            "last_update": time.time(),
+            "account_name": account.name,
+        }
+    except Exception as e:
+        print(f"❌ [{account.name}] GRVT points fetch error: {e}")
+        return None

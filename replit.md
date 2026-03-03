@@ -79,6 +79,14 @@ Backend runs in `FRONTEND_ONLY` mode:
 - 24 accounts proxied from remote backend
 - Secrets: `Extended_N_{CODE}_API_KEY`, etc.
 
+## Points System
+
+- **Extended**: Points fetched locally from Extended API every 10 minutes (`poll_all_accounts_points`). Displayed as yellow "Ext" label in dashboard header.
+- **GRVT**: Points fetched locally via `fetch_grvt_points()` every 10 minutes (`poll_all_grvt_points`). Uses cookie auth (same as trading API). Displayed as purple "GRVT" label in dashboard header. Per-account points shown on GRVT account cards.
+- **Other exchanges** (Hibachi, Reya, Pacifica, 01 Exchange): No points API available.
+- **Endpoints**: `/api/points` (combined Extended + GRVT), `/api/points/refresh` (force refresh both), `/api/points/grvt` (GRVT only)
+- **Frontend**: `useEarnedPoints.ts` hook fetches `/api/points` every 60s; returns `totalPoints` (Extended), `grvtTotalPoints`, per-account data for cards.
+
 ## Configuration
 
 - `BROADCASTER_MODE` = `FRONTEND_ONLY`

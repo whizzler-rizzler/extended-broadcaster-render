@@ -8,10 +8,24 @@ interface AccountPoints {
   last_update: number;
 }
 
+interface GrvtAccountPoints {
+  account_name: string;
+  points: number;
+  community_points: number;
+  last_update: number;
+}
+
+interface GrvtPointsData {
+  accounts: Record<string, GrvtAccountPoints>;
+  total_points: number;
+  last_update: number;
+}
+
 interface PointsData {
   accounts: Record<string, AccountPoints>;
   total_points: number;
   total_last_week_points: number;
+  grvt?: GrvtPointsData;
   last_update: number;
   cache_age_seconds: number | null;
   poll_interval_seconds: number;
@@ -21,6 +35,7 @@ interface UseEarnedPointsResult {
   points: PointsData | null;
   totalPoints: number;
   totalLastWeekPoints: number;
+  grvtTotalPoints: number;
   isLoading: boolean;
   error: string | null;
   refresh: () => Promise<void>;
@@ -46,7 +61,8 @@ export const useEarnedPoints = (): UseEarnedPointsResult => {
       const data: PointsData = await response.json();
       setPoints(data);
       setLastUpdate(new Date());
-      console.log(`💎 [Points] Fetched: ${data.total_points.toLocaleString()} total points, ${data.total_last_week_points?.toLocaleString() ?? 0} last week`);
+      const grvtInfo = data.grvt ? `, GRVT: ${data.grvt.total_points.toLocaleString()}` : '';
+      console.log(`💎 [Points] Extended: ${data.total_points.toLocaleString()} total, +${data.total_last_week_points?.toLocaleString() ?? 0}/w${grvtInfo}`);
     } catch (err) {
       console.error('❌ [Points] Fetch error:', err);
       setError(err instanceof Error ? err.message : 'Unknown error');
@@ -87,6 +103,7 @@ export const useEarnedPoints = (): UseEarnedPointsResult => {
     points,
     totalPoints: points?.total_points ?? 0,
     totalLastWeekPoints: points?.total_last_week_points ?? 0,
+    grvtTotalPoints: points?.grvt?.total_points ?? 0,
     isLoading,
     error,
     refresh,

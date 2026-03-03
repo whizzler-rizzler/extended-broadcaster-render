@@ -29,7 +29,7 @@ from hibachi_client import (
     HibachiAccountConfig, HibachiAccountCache,
 )
 from grvt_client import (
-    load_grvt_accounts, poll_grvt_account,
+    load_grvt_accounts, poll_grvt_account, fetch_grvt_points,
     GrvtAccountConfig, GrvtAccountCache,
 )
 from zero_one_client import (
@@ -244,9 +244,11 @@ def load_accounts() -> List[AccountConfig]:
     
     return accounts
 
-# Load accounts only in COLLECTOR mode
+ALL_EXTENDED_ACCOUNTS = load_accounts()
+print(f"🔑 Total Extended accounts with API keys: {len(ALL_EXTENDED_ACCOUNTS)}")
+
 if not IS_FRONTEND_ONLY:
-    ACCOUNTS = load_accounts()
+    ACCOUNTS = ALL_EXTENDED_ACCOUNTS
     if not ACCOUNTS:
         raise ValueError("No account API keys configured! Set ACCOUNT_1_API_KEY or EXTENDED_API_KEY")
     print(f"🎯 Total Extended accounts configured: {len(ACCOUNTS)}")
@@ -317,6 +319,9 @@ POINTS_CACHE: Dict[str, Dict[str, Any]] = {}
 POINTS_LAST_UPDATE: float = 0
 POINTS_POLL_INTERVAL = 600  # 10 minutes in seconds
 
+GRVT_POINTS_CACHE: Dict[str, Dict[str, Any]] = {}
+GRVT_POINTS_LAST_UPDATE: float = 0
+
 
 # ============= PROXY FUNCTION FOR FRONTEND_ONLY MODE =============
 async def proxy_to_remote(endpoint: str, method: str = "GET") -> Dict[str, Any]:
@@ -343,6 +348,41 @@ async def proxy_to_remote(endpoint: str, method: str = "GET") -> Dict[str, Any]:
         raise HTTPException(status_code=503, detail=f"Remote API connection error: {str(e)}")
 
 
+async def proxy_to_remote_with_fallback(
+    endpoint: str, 
+    method: str = "GET", 
+    fallback_response: Optional[Dict[str, Any]] = None
+) -> Dict[str, Any]:
+    """
+    Proxy request to remote backend with fallback on 404 or other errors.
+    Used for optional endpoints like trade-history and points in FRONTEND_ONLY mode.
+    """
+    if not REMOTE_API_BASE:
+        return fallback_response or {"message": "Not available - REMOTE_API_BASE not configured", "data": []}
+    
+    try:
+        async with aiohttp.ClientSession() as session:
+            url = f"{REMOTE_API_BASE}{endpoint}"
+            if method == "POST":
+                async with session.post(url, timeout=aiohttp.ClientTimeout(total=30.0)) as resp:
+                    if resp.status in [200, 201]:
+                        return await resp.json()
+                    elif resp.status == 404:
+                        return fallback_response or {"message": "Not available", "data": []}
+                    else:
+                        return fallback_response or {"message": f"Remote API error: {resp.status}", "data": []}
+            else:
+                async with session.get(url, timeout=aiohttp.ClientTimeout(total=30.0)) as resp:
+                    if resp.status == 200:
+                        return await resp.json()
+                    elif resp.status == 404:
+                        return fallback_response or {"message": "Not available", "data": []}
+                    else:
+                        return fallback_response or {"message": f"Remote API error: {resp.status}", "data": []}
+    except aiohttp.ClientError as e:
+        return fallback_response or {"message": f"Connection error: {str(e)}", "data": []}
+
+
 # ============= UTILITY FUNCTIONS =============
 def data_changed(old_data: Any, new_data: Any) -> bool:
     """Compare two data structures to detect changes."""
@@ -353,7 +393,7 @@ def data_changed(old_data: Any, new_data: Any) -> bool:
     return json.dumps(old_data, sort_keys=True) != json.dumps(new_data, sort_keys=True)
 
 
-async def fetch_account_api(account: AccountConfig, endpoint: str, params: Dict[str, Any] = None) -> Dict[str, Any] | None:
+async def fetch_account_api(account: AccountConfig, endpoint: str, params: Optional[Dict[str, Any]] = None) -> Dict[str, Any] | None:
     """Fetch data from Extended API for a specific account, using proxy if configured."""
     try:
         async with aiohttp.ClientSession() as session:
@@ -594,30 +634,51 @@ async def fetch_account_points(account: AccountConfig) -> Dict[str, Any] | None:
 
 
 async def poll_all_accounts_points():
-    """Fetch earned points for all accounts in parallel."""
+    """Fetch earned points for all Extended accounts in parallel (works in both modes)."""
     results = await asyncio.gather(*[
-        fetch_account_points(account) for account in ACCOUNTS
+        fetch_account_points(account) for account in ALL_EXTENDED_ACCOUNTS
     ], return_exceptions=True)
     
-    # Count successful fetches
     success_count = sum(1 for r in results if r is not None and not isinstance(r, Exception))
     total_points = sum(
         POINTS_CACHE.get(acc.id, {}).get('points', 0) 
-        for acc in ACCOUNTS
+        for acc in ALL_EXTENDED_ACCOUNTS
     )
     
-    print(f"💎 [Points] Updated {success_count}/{len(ACCOUNTS)} accounts | Total: {total_points:,.2f} points")
+    print(f"💎 [Points] Updated {success_count}/{len(ALL_EXTENDED_ACCOUNTS)} accounts | Total: {total_points:,.2f} points")
     
-    # Broadcast points update to clients
     await broadcast_to_clients({
         "type": "points_update",
         "accounts": {
             acc.id: POINTS_CACHE.get(acc.id, {"points": 0, "account_name": acc.name})
-            for acc in ACCOUNTS
+            for acc in ALL_EXTENDED_ACCOUNTS
         },
         "total_points": total_points,
         "timestamp": time.time()
     })
+
+
+async def poll_all_grvt_points():
+    """Fetch earned points for all GRVT accounts in parallel."""
+    global GRVT_POINTS_LAST_UPDATE
+    if not GRVT_ACCOUNTS:
+        return
+    results = await asyncio.gather(*[
+        fetch_grvt_points(account, GRVT_CACHES[account.id])
+        for account in GRVT_ACCOUNTS
+    ], return_exceptions=True)
+
+    success_count = 0
+    for account, result in zip(GRVT_ACCOUNTS, results):
+        if isinstance(result, dict) and result is not None:
+            GRVT_POINTS_CACHE[account.id] = result
+            success_count += 1
+        elif isinstance(result, Exception):
+            print(f"❌ [{account.name}] GRVT points exception: {result}")
+
+    total = sum(d.get("points", 0) for d in GRVT_POINTS_CACHE.values())
+    GRVT_POINTS_LAST_UPDATE = time.time()
+    print(f"💎 [GRVT Points] Updated {success_count}/{len(GRVT_ACCOUNTS)} accounts | Total: {total:,.2f} points")
 
 
 async def points_background_poller():
@@ -627,17 +688,18 @@ async def points_background_poller():
     """
     print(f"💎 [Points] Background poller started (interval: {POINTS_POLL_INTERVAL}s = 10 min)")
     
-    # Initial fetch after 5 seconds
     await asyncio.sleep(5)
     await poll_all_accounts_points()
+    await poll_all_grvt_points()
     
     while True:
         try:
             await asyncio.sleep(POINTS_POLL_INTERVAL)
             await poll_all_accounts_points()
+            await poll_all_grvt_points()
         except Exception as e:
             print(f"❌ [Points] Poller error: {e}")
-            await asyncio.sleep(60)  # Wait 1 minute on error
+            await asyncio.sleep(60)
 
 
 # ============= ORDER BOOK WEBSOCKET CLIENT =============
@@ -1897,9 +1959,6 @@ async def get_earned_points():
         - total_points: Sum of all points across accounts
         - last_update: Timestamp of last successful fetch
     """
-    if IS_FRONTEND_ONLY:
-        return await proxy_to_remote("/api/points")
-    
     total_points = sum(
         data.get('points', 0) 
         for data in POINTS_CACHE.values()
@@ -1909,6 +1968,17 @@ async def get_earned_points():
         for data in POINTS_CACHE.values()
     )
     
+    grvt_total = sum(d.get("points", 0) for d in GRVT_POINTS_CACHE.values())
+    grvt_accounts = {
+        acc.id: {
+            "account_name": acc.name,
+            "points": GRVT_POINTS_CACHE.get(acc.id, {}).get('points', 0),
+            "community_points": GRVT_POINTS_CACHE.get(acc.id, {}).get('community_points', 0),
+            "last_update": GRVT_POINTS_CACHE.get(acc.id, {}).get('last_update', 0)
+        }
+        for acc in GRVT_ACCOUNTS
+    }
+
     return {
         "accounts": {
             acc.id: {
@@ -1917,10 +1987,15 @@ async def get_earned_points():
                 "last_week_points": POINTS_CACHE.get(acc.id, {}).get('last_week_points', 0),
                 "last_update": POINTS_CACHE.get(acc.id, {}).get('last_update', 0)
             }
-            for acc in ACCOUNTS
+            for acc in ALL_EXTENDED_ACCOUNTS
         },
         "total_points": total_points,
         "total_last_week_points": total_last_week,
+        "grvt": {
+            "accounts": grvt_accounts,
+            "total_points": grvt_total,
+            "last_update": GRVT_POINTS_LAST_UPDATE,
+        },
         "last_update": POINTS_LAST_UPDATE,
         "cache_age_seconds": int(time.time() - POINTS_LAST_UPDATE) if POINTS_LAST_UPDATE > 0 else None,
         "poll_interval_seconds": POINTS_POLL_INTERVAL,
@@ -1931,14 +2006,10 @@ async def get_earned_points():
 @app.get("/api/points/{account_index}")
 async def get_account_points(account_index: int):
     """Get earned points for a specific account by index."""
-    if IS_FRONTEND_ONLY:
-        return await proxy_to_remote(f"/api/points/{account_index}")
-    
     account_id = f"account_{account_index}"
     
     if account_id not in POINTS_CACHE:
-        # Try to find account and return 0 if exists but not yet fetched
-        account = next((a for a in ACCOUNTS if a.id == account_id), None)
+        account = next((a for a in ALL_EXTENDED_ACCOUNTS if a.id == account_id), None)
         if account:
             return {
                 "account_id": account_id,
@@ -1962,10 +2033,8 @@ async def get_account_points(account_index: int):
 @app.post("/api/points/refresh")
 async def refresh_points():
     """Force refresh of earned points for all accounts."""
-    if IS_FRONTEND_ONLY:
-        return await proxy_to_remote("/api/points/refresh", method="POST")
-    
     await poll_all_accounts_points()
+    await poll_all_grvt_points()
     
     total_points = sum(
         data.get('points', 0) 
@@ -2138,7 +2207,10 @@ async def trade_history_background_poller():
 @app.get("/api/trade-history/epochs")
 async def get_trade_history_epochs():
     if IS_FRONTEND_ONLY:
-        return await proxy_to_remote("/api/trade-history/epochs")
+        return await proxy_to_remote_with_fallback(
+            "/api/trade-history/epochs",
+            fallback_response={"epochs": [], "message": "Not available"}
+        )
     try:
         epochs = await trade_history.get_available_epochs()
         return {"epochs": epochs, "last_update": TRADE_HISTORY_LAST_UPDATE}
@@ -2149,7 +2221,10 @@ async def get_trade_history_epochs():
 @app.get("/api/trade-history/epoch/{epoch_number}")
 async def get_trade_history_epoch(epoch_number: int):
     if IS_FRONTEND_ONLY:
-        return await proxy_to_remote(f"/api/trade-history/epoch/{epoch_number}")
+        return await proxy_to_remote_with_fallback(
+            f"/api/trade-history/epoch/{epoch_number}",
+            fallback_response={"message": "Not available", "data": {}}
+        )
     try:
         current_epoch = trade_history.get_epoch_number(datetime.utcnow())
         points_data = {
@@ -2195,7 +2270,10 @@ async def get_trade_history_db_stats():
 @app.get("/api/trade-history/regression")
 async def get_regression():
     if IS_FRONTEND_ONLY:
-        return await proxy_to_remote("/api/trade-history/regression")
+        return await proxy_to_remote_with_fallback(
+            "/api/trade-history/regression",
+            fallback_response={"message": "Not available", "data": {}}
+        )
     try:
         current_epoch = trade_history.get_epoch_number(datetime.utcnow())
         points_data = {

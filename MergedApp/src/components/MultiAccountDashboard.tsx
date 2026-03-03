@@ -152,7 +152,7 @@ function ExchangeSummaryRow({ group, pointsData, expandedExchanges, toggleExchan
                 account={account}
                 isSelected={selectedAccountId === account.id}
                 onClick={() => onAccountSelect?.(account.id)}
-                accountPoints={pointsData?.accounts?.[account.id]?.points ?? null}
+                accountPoints={pointsData?.accounts?.[account.id]?.points ?? pointsData?.grvt?.accounts?.[account.id]?.points ?? null}
                 accountLastWeekPoints={pointsData?.accounts?.[account.id]?.last_week_points ?? null}
               />
             ))
@@ -173,7 +173,7 @@ export const MultiAccountDashboard = ({
   const [showInactive, setShowInactive] = useState(false);
   const [expandedExchanges, setExpandedExchanges] = useState<Set<string>>(new Set());
   
-  const { points: pointsData, totalPoints, totalLastWeekPoints, isLoading: pointsLoading, refresh: refreshPoints, lastUpdate: pointsLastUpdate, error: pointsError } = useEarnedPoints();
+  const { points: pointsData, totalPoints, totalLastWeekPoints, grvtTotalPoints, isLoading: pointsLoading, refresh: refreshPoints, lastUpdate: pointsLastUpdate, error: pointsError } = useEarnedPoints();
 
   const HIDDEN_EXCHANGES = new Set(['edgex']);
 
@@ -292,18 +292,28 @@ export const MultiAccountDashboard = ({
               </span>
             </div>
 
-            {/* Points */}
+            {/* Extended Points */}
             <div className={`flex items-center gap-1.5 pl-2 border-l ${pointsError ? 'border-border/30' : 'border-yellow-500/30'}`}>
               <Star className={`w-3.5 h-3.5 ${pointsError ? 'text-muted-foreground' : 'text-yellow-500'}`} />
               {pointsError || (totalPoints === 0 && !pointsLastUpdate) ? (
-                <span className="text-xs text-muted-foreground">N/A</span>
+                <span className="text-xs text-muted-foreground">Ext: N/A</span>
               ) : (
                 <>
+                  <span className="text-[10px] text-yellow-400/70 mr-0.5">Ext</span>
                   <span className="font-bold text-yellow-500 text-sm">
                     {totalPoints.toLocaleString(undefined, { maximumFractionDigits: 0 })}
                   </span>
                   <span className="text-[10px] text-yellow-400/70">
                     +{totalLastWeekPoints.toLocaleString(undefined, { maximumFractionDigits: 0 })}/w
+                  </span>
+                </>
+              )}
+              {pointsData?.grvt && (
+                <>
+                  <span className="text-[10px] text-muted-foreground mx-0.5">|</span>
+                  <span className="text-[10px] text-purple-400/70 mr-0.5">GRVT</span>
+                  <span className="font-bold text-purple-400 text-sm">
+                    {grvtTotalPoints.toLocaleString(undefined, { maximumFractionDigits: 0 })}
                   </span>
                 </>
               )}

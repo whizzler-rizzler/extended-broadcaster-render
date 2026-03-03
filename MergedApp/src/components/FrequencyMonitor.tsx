@@ -1,6 +1,6 @@
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Activity, Wifi, Users, Clock, Heart, Server, Database, ChevronDown, ChevronUp } from "lucide-react";
+import { Activity, Wifi, Users, Heart, ChevronDown, ChevronUp } from "lucide-react";
 import { useEffect, useState, useMemo } from "react";
 import { SingleAccountData } from "@/types/multiAccount";
 
@@ -37,6 +37,39 @@ interface FrequencyMonitorProps {
   accounts?: Map<string, SingleAccountData>;
 }
 
+interface ExchangeLatency {
+  name: string;
+  key: string;
+  avgCacheAge: number;
+  accountCount: number;
+  status: 'green' | 'yellow' | 'red';
+}
+
+const EXCHANGE_DISPLAY_NAMES: Record<string, string> = {
+  extended: 'Extended',
+  reya: 'Reya',
+  hibachi: 'Hibachi',
+  grvt: 'GRVT',
+  '01': '01 Exchange',
+  pacifica: 'Pacifica',
+};
+
+const EXCHANGE_ORDER = ['reya', 'hibachi', 'grvt', '01', 'pacifica', 'extended'];
+const HIDDEN_EXCHANGES = ['edgex_'];
+
+const getExchangeKey = (id: string): string => {
+  if (id.startsWith('01_')) return '01';
+  if (id.startsWith('account_')) return 'extended';
+  const m = id.match(/^([a-zA-Z]+)/);
+  return m ? m[1] : id;
+};
+
+const getStatusColor = (ageSeconds: number): 'green' | 'yellow' | 'red' => {
+  if (ageSeconds < 3) return 'green';
+  if (ageSeconds < 10) return 'yellow';
+  return 'red';
+};
+
 export const FrequencyMonitor = ({ broadcasterStats, lastWsUpdate, isWsConnected, accounts }: FrequencyMonitorProps) => {
   const [wsFrequency, setWsFrequency] = useState<number[]>([]);
   const [lastWsTime, setLastWsTime] = useState<Date | null>(null);
@@ -57,20 +90,54 @@ export const FrequencyMonitor = ({ broadcasterStats, lastWsUpdate, isWsConnected
     : 0;
 
   const connectedClients = broadcasterStats?.broadcaster?.connected_clients ?? 0;
-  const cacheAgePositions = broadcasterStats?.cache?.positions_age_seconds ?? 0;
-  const cacheAgeBalance = broadcasterStats?.cache?.balance_age_seconds ?? 0;
-  const cacheAgeTrades = broadcasterStats?.cache?.trades_age_seconds ?? 0;
-  const lastPollPositions = broadcasterStats?.last_poll?.positions;
-  const lastPollTrades = broadcasterStats?.last_poll?.trades;
 
-  // Account heartbeat data - calculate age locally from accounts data
   const [now, setNow] = useState(Date.now());
   
-  // Update "now" every second to recalculate ages
   useEffect(() => {
     const interval = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(interval);
   }, []);
+
+  const exchangeLatencies = useMemo((): ExchangeLatency[] => {
+    const exchangeMap = new Map<string, number[]>();
+
+    if (accounts && accounts.size > 0) {
+      Array.from(accounts.values())
+        .filter(acc => !HIDDEN_EXCHANGES.some(prefix => acc.id.startsWith(prefix)))
+        .forEach(acc => {
+          const key = getExchangeKey(acc.id);
+          const lastUpdateTime = acc.lastUpdate ? new Date(acc.lastUpdate).getTime() : 0;
+          const ageSeconds = lastUpdateTime > 0 ? Math.max(0, (now - lastUpdateTime) / 1000) : null;
+          if (ageSeconds !== null) {
+            if (!exchangeMap.has(key)) exchangeMap.set(key, []);
+            exchangeMap.get(key)!.push(ageSeconds);
+          }
+        });
+    } else if (broadcasterStats?.accounts) {
+      broadcasterStats.accounts.forEach(acc => {
+        const key = getExchangeKey(acc.id);
+        const age = acc.positions_age_seconds ?? acc.balance_age_seconds ?? null;
+        if (age !== null) {
+          if (!exchangeMap.has(key)) exchangeMap.set(key, []);
+          exchangeMap.get(key)!.push(age);
+        }
+      });
+    }
+
+    return EXCHANGE_ORDER
+      .filter(key => exchangeMap.has(key))
+      .map(key => {
+        const ages = exchangeMap.get(key)!;
+        const avg = ages.reduce((a, b) => a + b, 0) / ages.length;
+        return {
+          name: EXCHANGE_DISPLAY_NAMES[key] || key,
+          key,
+          avgCacheAge: Math.round(avg * 10) / 10,
+          accountCount: ages.length,
+          status: getStatusColor(avg),
+        };
+      });
+  }, [accounts, broadcasterStats, now]);
 
   const accountHeartbeats = useMemo(() => {
     if (!accounts || accounts.size === 0) {
@@ -153,69 +220,39 @@ export const FrequencyMonitor = ({ broadcasterStats, lastWsUpdate, isWsConnected
         
         {isExpanded && (
         <>
-        {/* Main Stats Grid - Compact */}
-        <div className="grid grid-cols-6 gap-3 text-xs">
-          {/* External API Sources */}
-          <div className="space-y-1 p-2 bg-muted/30 rounded">
-            <div className="flex items-center gap-1 text-muted-foreground">
-              <Server className="w-3 h-3 text-primary" />
-              <span>Źródła API</span>
-            </div>
-            <div className="text-lg font-mono font-bold text-primary">
-              3
-            </div>
-            <div className="text-[10px] text-muted-foreground">
-              Positions, Balance, Trades
-            </div>
-          </div>
-
-          {/* Extended API Polling */}
-          <div className="space-y-1 p-2 bg-muted/30 rounded">
-            <div className="flex items-center gap-1 text-muted-foreground">
-              <Activity className="w-3 h-3 text-primary animate-pulse" />
-              <span>API Positions</span>
-            </div>
-            <div className="text-lg font-mono font-bold text-primary">
-              4x/s
-            </div>
-            <div className="text-[10px] text-muted-foreground">
-              {lastPollPositions 
-                ? new Date(lastPollPositions * 1000).toLocaleTimeString('pl-PL', { hour12: false })
-                : 'N/A'
-              }
-            </div>
-          </div>
-
-          {/* Balance API */}
-          <div className="space-y-1 p-2 bg-muted/30 rounded">
-            <div className="flex items-center gap-1 text-muted-foreground">
-              <Database className="w-3 h-3 text-primary/70" />
-              <span>API Balance</span>
-            </div>
-            <div className="text-lg font-mono font-bold text-primary/70">
-              4x/s
-            </div>
-            <div className="text-[10px] text-muted-foreground">
-              Cache: {cacheAgeBalance}s
-            </div>
-          </div>
-
-          {/* Trades Polling */}
-          <div className="space-y-1 p-2 bg-muted/30 rounded">
-            <div className="flex items-center gap-1 text-muted-foreground">
-              <Clock className="w-3 h-3 text-primary/70" />
-              <span>API Trades</span>
-            </div>
-            <div className="text-lg font-mono font-bold text-primary/70">
-              1x/5s
-            </div>
-            <div className="text-[10px] text-muted-foreground">
-              {lastPollTrades 
-                ? new Date(lastPollTrades * 1000).toLocaleTimeString('pl-PL', { hour12: false })
-                : 'N/A'
-              }
-            </div>
-          </div>
+        {/* Exchange Latencies + WS Stats */}
+        <div className={`grid gap-3 text-xs`} style={{ gridTemplateColumns: `repeat(${exchangeLatencies.length + 2}, minmax(0, 1fr))` }}>
+          {exchangeLatencies.map(ex => {
+            const statusClasses = ex.status === 'green'
+              ? 'border-success/40 bg-success/10'
+              : ex.status === 'yellow'
+                ? 'border-yellow-500/40 bg-yellow-500/10'
+                : 'border-destructive/40 bg-destructive/10';
+            const textClass = ex.status === 'green'
+              ? 'text-success'
+              : ex.status === 'yellow'
+                ? 'text-yellow-500'
+                : 'text-destructive';
+            const dotClass = ex.status === 'green'
+              ? 'bg-success animate-pulse'
+              : ex.status === 'yellow'
+                ? 'bg-yellow-500'
+                : 'bg-destructive';
+            return (
+              <div key={ex.key} className={`space-y-1 p-2 rounded border ${statusClasses}`}>
+                <div className="flex items-center gap-1 text-muted-foreground">
+                  <div className={`w-2 h-2 rounded-full ${dotClass}`} />
+                  <span className="truncate">{ex.name}</span>
+                </div>
+                <div className={`text-lg font-mono font-bold ${textClass}`}>
+                  {ex.avgCacheAge}s
+                </div>
+                <div className="text-[10px] text-muted-foreground">
+                  {ex.accountCount} {ex.accountCount === 1 ? 'account' : 'accounts'}
+                </div>
+              </div>
+            );
+          })}
 
           {/* WebSocket Broadcast */}
           <div className="space-y-1 p-2 bg-muted/30 rounded">
@@ -264,7 +301,7 @@ export const FrequencyMonitor = ({ broadcasterStats, lastWsUpdate, isWsConnected
                     ? 'bg-success/20 border border-success/30' 
                     : 'bg-destructive/20 border border-destructive/30'
                 }`}
-                title={`${acc.name}\nLast: ${acc.lastUpdate ? new Date(acc.lastUpdate).toLocaleTimeString() : 'Never'}\nAge: ${acc.timeSinceUpdate ?? 'N/A'}s`}
+                title={`${acc.name}\nAge: ${acc.timeSinceUpdate ?? 'N/A'}s`}
               >
                 <div className="text-[10px] font-medium truncate">
                   {acc.name.replace('Account ', 'Acc ')}
