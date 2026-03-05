@@ -73,7 +73,7 @@ export const useMarketDataSync = ({ positions, balance, extendedData, publicPric
     try {
       // Throttle to max once per 2000ms (same as REST API polling)
       const now = Date.now();
-      if (now - lastSyncRef.current < 2000) {
+      if (now - lastSyncRef.current < 10000) {
         return;
       }
       lastSyncRef.current = now;
@@ -124,7 +124,7 @@ export const useMarketDataSync = ({ positions, balance, extendedData, publicPric
 
   // Set up interval ONCE - only on mount
   useEffect(() => {
-    const interval = setInterval(syncToDatabase, 2000);
+    const interval = setInterval(syncToDatabase, 10000);
 
     return () => {
       clearInterval(interval);

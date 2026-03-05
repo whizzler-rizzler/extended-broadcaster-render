@@ -82,7 +82,7 @@ export const useAccountRestAPI = () => {
     fetchAccountData();
 
     // Poll every 2 seconds
-    intervalRef.current = setInterval(fetchAccountData, 2000);
+    intervalRef.current = setInterval(fetchAccountData, 10000);
 
     return () => {
       if (intervalRef.current) {

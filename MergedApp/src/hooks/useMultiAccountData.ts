@@ -9,7 +9,7 @@ import {
 } from '@/types/multiAccount';
 import { getApiUrl, getWsUrl } from '@/config/api';
 
-const REST_POLL_INTERVAL = 2000; // 0.5x per second
+const REST_POLL_INTERVAL = 10000;
 const WS_RECONNECT_DELAY = 3000;
 
 interface UseMultiAccountDataReturn {

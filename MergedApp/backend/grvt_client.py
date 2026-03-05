@@ -6,6 +6,7 @@ API docs: https://api-docs.grvt.io/
 """
 
 import os
+import re
 import aiohttp
 import time
 from typing import Dict, Any, List, Optional
@@ -72,6 +73,29 @@ def _find_proxy(account_num: int) -> Optional[str]:
             if parsed:
                 return parsed
     return None
+
+
+def _find_all_proxies(account_num: int) -> List[str]:
+    candidates = [
+        f"GRVT_{account_num}_proxy",
+        f"Rest_account_{account_num}_proxy",
+    ]
+    for i in range(1, 10):
+        candidates.append(f"Rest_account_{i}_proxy")
+    seen_names: set = set()
+    seen_urls: set = set()
+    result: List[str] = []
+    for env_name in candidates:
+        if env_name in seen_names:
+            continue
+        seen_names.add(env_name)
+        raw = os.getenv(env_name, "").strip()
+        if raw:
+            parsed = _parse_proxy_raw(raw)
+            if parsed and parsed not in seen_urls:
+                seen_urls.add(parsed)
+                result.append(parsed)
+    return result
 
 
 def load_grvt_accounts() -> List[GrvtAccountConfig]:
@@ -169,7 +193,27 @@ async def authenticate_grvt(account: GrvtAccountConfig) -> bool:
                 if result:
                     return True
             except Exception as proxy_err:
-                print(f"⚠️ [{account.name}] GRVT auth proxy failed ({type(proxy_err).__name__}), trying direct...")
+                print(f"⚠️ [{account.name}] GRVT auth proxy failed ({type(proxy_err).__name__}), trying alternatives...")
+
+        account_num = 0
+        num_m = re.search(r'(\d+)', account.name)
+        if num_m:
+            account_num = int(num_m.group(1))
+
+        if account_num > 0:
+            all_proxies = _find_all_proxies(account_num)
+            for alt_proxy in all_proxies:
+                if alt_proxy == account.proxy_url:
+                    continue
+                try:
+                    result = await _do_auth(alt_proxy)
+                    if result:
+                        account.proxy_url = alt_proxy
+                        print(f"✅ [{account.name}] GRVT auth succeeded with alternative proxy")
+                        return True
+                except Exception:
+                    continue
+
         return await _do_auth(None)
     except Exception as e:
         print(f"❌ [{account.name}] GRVT auth error: {type(e).__name__}: {e}")
