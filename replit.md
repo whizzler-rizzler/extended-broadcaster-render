@@ -1,6 +1,6 @@
 # Multi-Account Trading Dashboard
 
-Multi-account trading dashboard (React + Python FastAPI) monitoring real-time accounts across multiple exchanges: Extended (24 accounts), Reya (6 accounts), EdgeX (4 accounts - hidden on frontend), Hibachi (2 accounts), GRVT (4 accounts), 01 Exchange (6 accounts), Pacifica (2 accounts). Total: 48 accounts in API, 44 displayed on frontend (without EdgeX).
+Multi-account trading dashboard (React + Python FastAPI) monitoring real-time accounts across multiple exchanges: Extended (36 accounts), Reya (8 accounts), EdgeX (4 accounts - hidden on frontend), Hibachi (2 accounts), GRVT (4 accounts), 01 Exchange (6 accounts), Pacifica (2 accounts). Total: 62 accounts in API, 58 displayed on frontend (without EdgeX).
 
 ## Architecture
 
@@ -11,7 +11,7 @@ MergedApp/
     edgex_client.py      - EdgeX exchange client (4 accounts) with REST polling
     hibachi_client.py    - Hibachi exchange client (2 accounts) with REST polling
     grvt_client.py       - GRVT exchange client (4 accounts) with cookie-based auth and REST polling
-    reya_client.py       - Reya exchange client (6 accounts) with REST polling
+    reya_client.py       - Reya exchange client (8 accounts) with REST polling
     zero_one_client.py   - 01 Exchange client (6 accounts) with public REST API polling
     pacifica_client.py   - Pacifica exchange client (2 accounts) with public REST API polling
   src/
@@ -31,7 +31,7 @@ MergedApp/
 
 Backend runs in `FRONTEND_ONLY` mode:
 - **Extended**: Proxied from remote backend (`REMOTE_API_BASE`)
-- **Reya**: Polled locally (6 accounts)
+- **Reya**: Polled locally (8 accounts)
 - **EdgeX**: Polled locally (4 accounts) - hidden on frontend
 - **Hibachi**: Polled locally (2 accounts)
 - **GRVT**: Polled locally (4 accounts) with cookie-based authentication
@@ -76,7 +76,7 @@ Backend runs in `FRONTEND_ONLY` mode:
 - **Proxy**: Only uses dedicated `Pacifica_N_proxy` (no fallback to Rest_account proxy)
 
 ### Extended
-- 24 accounts proxied from remote backend
+- 36 accounts proxied from remote backend
 - Secrets: `Extended_N_{CODE}_API_KEY`, etc.
 
 ## Points System
