@@ -52,9 +52,10 @@ const EXCHANGE_DISPLAY_NAMES: Record<string, string> = {
   grvt: 'GRVT',
   '01': '01 Exchange',
   pacifica: 'Pacifica',
+  nado: 'Nado',
 };
 
-const EXCHANGE_ORDER = ['reya', 'hibachi', 'grvt', '01', 'pacifica', 'extended'];
+const EXCHANGE_ORDER = ['reya', 'hibachi', 'grvt', '01', 'pacifica', 'nado', 'extended'];
 const HIDDEN_EXCHANGES = ['edgex_'];
 
 const getExchangeKey = (id: string): string => {
@@ -167,7 +168,7 @@ export const FrequencyMonitor = ({ broadcasterStats, lastWsUpdate, isWsConnected
       const m = id.match(/^([a-zA-Z]+)/);
       return m ? m[1] : id;
     };
-    const exchangeOrder = ['reya', 'hibachi', 'grvt', '01', 'pacifica', 'extended'];
+    const exchangeOrder = ['reya', 'hibachi', 'grvt', '01', 'pacifica', 'nado', 'extended'];
     return Array.from(accounts.values())
       .filter(acc => !HIDDEN_EXCHANGES.some(prefix => acc.id.startsWith(prefix)))
       .map(acc => {
@@ -190,7 +191,7 @@ export const FrequencyMonitor = ({ broadcasterStats, lastWsUpdate, isWsConnected
         const rankB = orderB >= 0 ? orderB : exchangeOrder.length;
         if (rankA !== rankB) return rankA - rankB;
         const accNum = (name: string, id: string) => {
-          const m = name.match(/(?:Exchange|Extended|Reya|Hibachi|GRVT|Account)\s+(\d+)/i);
+          const m = name.match(/(?:Exchange|Extended|Reya|Hibachi|GRVT|Nado|Account)\s+(\d+)/i);
           if (m) return parseInt(m[1], 10);
           const idM = id.match(/_(\d+)$/);
           if (idM) return parseInt(idM[1], 10);

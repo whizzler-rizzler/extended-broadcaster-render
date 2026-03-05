@@ -1,6 +1,6 @@
 # Multi-Account Trading Dashboard
 
-Multi-account trading dashboard (React + Python FastAPI) monitoring real-time accounts across multiple exchanges: Extended (36 accounts), Reya (8 accounts), EdgeX (4 accounts - hidden on frontend), Hibachi (2 accounts), GRVT (4 accounts), 01 Exchange (6 accounts), Pacifica (2 accounts). Total: 62 accounts in API, 58 displayed on frontend (without EdgeX).
+Multi-account trading dashboard (React + Python FastAPI) monitoring real-time accounts across multiple exchanges: Extended (36 accounts), Reya (8 accounts), EdgeX (4 accounts - hidden on frontend), Hibachi (2 accounts), GRVT (4 accounts), 01 Exchange (6 accounts), Pacifica (2 accounts), Nado (8 accounts). Total: 70 accounts in API, 66 displayed on frontend (without EdgeX).
 
 ## Architecture
 
@@ -14,6 +14,7 @@ MergedApp/
     reya_client.py       - Reya exchange client (8 accounts) with REST polling
     zero_one_client.py   - 01 Exchange client (6 accounts) with public REST API polling
     pacifica_client.py   - Pacifica exchange client (2 accounts) with public REST API polling
+    nado_client.py       - Nado exchange client (8 accounts) with public REST API polling
   src/
     components/
       MultiAccountDashboard.tsx  - Main dashboard component
@@ -37,6 +38,7 @@ Backend runs in `FRONTEND_ONLY` mode:
 - **GRVT**: Polled locally (4 accounts) with cookie-based authentication
 - **01 Exchange**: Polled locally (6 accounts) via public REST API
 - **Pacifica**: Polled locally (2 accounts) via public REST API
+- **Nado**: Polled locally (8 accounts) via public REST API (uses same wallets as Reya)
 
 ## Exchange Integration Details
 
@@ -74,6 +76,15 @@ Backend runs in `FRONTEND_ONLY` mode:
 - **PNL calculation**: API doesn't provide mark price or unrealised PNL per position; PNL is computed as `account_equity - balance` from account endpoint and distributed across positions proportionally by notional
 - **Frontend key**: `pacifica_` prefix, exchange name `pacifica`, color `text-teal-400`
 - **Proxy**: Only uses dedicated `Pacifica_N_proxy` (no fallback to Rest_account proxy)
+
+### Nado
+- **API**: Public REST API at `https://gateway.prod.nado.xyz/v1` - NO authentication required for reads
+- **Endpoints**: `POST /query` with `{"type": "subaccount_info", "subaccount": "0x{addr}{default_hex}"}` (balance, positions, orders, health), `{"type": "symbols"}` (market info)
+- **Secrets**: Uses same wallets as Reya (`Reya_N_wallet_main`), no additional secrets needed
+- **Subaccount format**: wallet address (20 bytes) + "default" padded to 12 bytes hex (`64656661756c740000000000`)
+- **Data format**: All amounts in x18 (divide by 1e18). Product ID 0 = USDT0 (collateral). Perp positions have amount + v_quote_balance for PNL calc
+- **Frontend key**: `nado_` prefix, exchange name `nado`, color `text-lime-400`
+- **Proxy**: Uses `Nado_N_proxy` or falls back to `Rest_account_N_proxy`
 
 ### Extended
 - 36 accounts proxied from remote backend
