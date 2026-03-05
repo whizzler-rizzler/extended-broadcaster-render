@@ -1,6 +1,6 @@
 # Multi-Account Trading Dashboard
 
-Multi-account trading dashboard (React + Python FastAPI) monitoring real-time accounts across multiple exchanges: Extended (36 accounts), Reya (8 accounts), EdgeX (4 accounts - hidden on frontend), Hibachi (2 accounts), GRVT (4 accounts), 01 Exchange (6 accounts), Pacifica (2 accounts), Nado (8 accounts). Total: 70 accounts in API, 66 displayed on frontend (without EdgeX).
+Multi-account trading dashboard (React + Python FastAPI) monitoring real-time accounts across multiple exchanges: Extended (36 accounts), Reya (8 accounts), EdgeX (4 accounts - hidden on frontend), Hibachi (2 accounts), GRVT (4 accounts), 01 Exchange (8 accounts), Pacifica (2 accounts), Nado (8 accounts). Total: 72 accounts in API, 68 displayed on frontend (without EdgeX).
 
 ## Architecture
 
