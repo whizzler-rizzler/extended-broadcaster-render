@@ -205,12 +205,9 @@ def normalize_nado_data(raw: Dict) -> Dict:
         total_notional += notional
 
         entry_price = abs(v_quote / amount) if amount != 0 else 0
-        side = "LONG" if amount > 0 else "SHORT"
+        side = "SHORT" if amount > 0 else "LONG"
 
-        if side == "LONG":
-            pnl = amount * mark_price + v_quote
-        else:
-            pnl = amount * mark_price + v_quote
+        pnl = -(amount * mark_price + v_quote)
 
         total_unrealised_pnl += pnl
 
@@ -267,7 +264,7 @@ def normalize_nado_data(raw: Dict) -> Dict:
         symbol = _get_symbol(pid)
         amount = _x18(o.get("amount", "0"))
         price = _x18(o.get("price_x18", "0"))
-        side = "LONG" if amount > 0 else "SHORT"
+        side = "SHORT" if amount > 0 else "LONG"
 
         orders.append({
             "market": symbol,

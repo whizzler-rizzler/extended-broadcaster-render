@@ -1,6 +1,6 @@
 # Multi-Account Trading Dashboard
 
-Multi-account trading dashboard (React + Python FastAPI) monitoring real-time accounts across multiple exchanges: Extended (36 accounts), Reya (8 accounts), EdgeX (4 accounts - hidden on frontend), Hibachi (2 accounts), GRVT (4 accounts), 01 Exchange (8 accounts), Pacifica (2 accounts), Nado (8 accounts). Total: 72 accounts in API, 68 displayed on frontend (without EdgeX).
+Multi-account trading dashboard (React + Python FastAPI) monitoring real-time accounts across multiple exchanges: Extended (36 accounts), Reya (8 accounts), EdgeX (4 accounts - hidden on frontend), Hibachi (2 accounts), GRVT (6 accounts), 01 Exchange (8 accounts), Pacifica (2 accounts), Nado (8 accounts). Total: 74 accounts in API, 70 displayed on frontend (without EdgeX).
 
 ## Architecture
 
@@ -10,9 +10,9 @@ MergedApp/
     main.py              - FastAPI application with REST endpoints, WebSocket server, local poller
     edgex_client.py      - EdgeX exchange client (4 accounts) with REST polling
     hibachi_client.py    - Hibachi exchange client (2 accounts) with REST polling
-    grvt_client.py       - GRVT exchange client (4 accounts) with cookie-based auth and REST polling
+    grvt_client.py       - GRVT exchange client (6 accounts) with cookie-based auth and REST polling
     reya_client.py       - Reya exchange client (8 accounts) with REST polling
-    zero_one_client.py   - 01 Exchange client (6 accounts) with public REST API polling
+    zero_one_client.py   - 01 Exchange client (8 accounts) with public REST API polling
     pacifica_client.py   - Pacifica exchange client (2 accounts) with public REST API polling
     nado_client.py       - Nado exchange client (8 accounts) with public REST API polling
   src/
@@ -35,8 +35,8 @@ Backend runs in `FRONTEND_ONLY` mode:
 - **Reya**: Polled locally (8 accounts)
 - **EdgeX**: Polled locally (4 accounts) - hidden on frontend
 - **Hibachi**: Polled locally (2 accounts)
-- **GRVT**: Polled locally (4 accounts) with cookie-based authentication
-- **01 Exchange**: Polled locally (6 accounts) via public REST API
+- **GRVT**: Polled locally (6 accounts) with cookie-based authentication
+- **01 Exchange**: Polled locally (8 accounts) via public REST API
 - **Pacifica**: Polled locally (2 accounts) via public REST API
 - **Nado**: Polled locally (8 accounts) via public REST API (uses same wallets as Reya)
 
