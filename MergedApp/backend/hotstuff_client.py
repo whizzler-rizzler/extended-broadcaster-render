@@ -142,17 +142,24 @@ def normalize_hotstuff_data(raw: Dict) -> Dict:
     total_notional = 0
 
     for symbol, pos_data in perp_positions.items():
-        size = pos_data.get("size", 0) or 0
+        legs = pos_data.get("legs", [])
+        if not legs:
+            continue
+
+        leg = legs[0]
+        size = leg.get("size", 0) or 0
         if abs(size) < 1e-12:
             continue
 
-        entry_price = pos_data.get("entry_price", 0) or 0
-        mark_price = pos_data.get("mark_price", 0) or 0
+        entry_price = leg.get("entry_price", 0) or 0
+        notional = leg.get("position_value", 0) or 0
         position_upnl = pos_data.get("upnl", 0) or 0
-        notional = abs(size) * mark_price
+        liq_price = pos_data.get("liquidation_price", 0) or 0
+        mark_price = notional / abs(size) if abs(size) > 1e-12 else 0
         total_notional += notional
         side = "LONG" if size > 0 else "SHORT"
-        liq_price = pos_data.get("liquidation_price", 0) or 0
+        leverage_val = leg.get("leverage", {})
+        lev = leverage_val.get("value", 0) if isinstance(leverage_val, dict) else 0
 
         positions.append({
             "market": symbol,
@@ -165,7 +172,7 @@ def normalize_hotstuff_data(raw: Dict) -> Dict:
             "midPriceUnrealisedPnl": round(position_upnl, 2),
             "notional": round(notional, 2),
             "value": str(round(notional, 2)),
-            "leverage": 0,
+            "leverage": lev,
             "liquidationPrice": round(liq_price, 2),
             "funding": 0,
             "isolated": False,
