@@ -45,6 +45,7 @@ function getExchangeKey(account: SingleAccountData): string {
   if (account.id.startsWith('grvt_')) return 'grvt';
   if (account.id.startsWith('01_')) return '01exchange';
   if (account.id.startsWith('nado_')) return 'nado';
+  if (account.id.startsWith('hotstuff_')) return 'hotstuff';
   return 'extended';
 }
 
@@ -58,6 +59,7 @@ const EXCHANGE_META: Record<string, { label: string; color: string; borderColor:
   grvt: { label: 'GRVT', color: 'text-yellow-400', borderColor: 'border-yellow-500/50' },
   '01exchange': { label: '01 Exchange', color: 'text-cyan-400', borderColor: 'border-cyan-500/50' },
   nado: { label: 'Nado', color: 'text-lime-400', borderColor: 'border-lime-500/50' },
+  hotstuff: { label: 'Hotstuff', color: 'text-orange-400', borderColor: 'border-orange-500/50' },
 };
 
 function fmt$(v: number, decimals = 0): string {
@@ -211,7 +213,7 @@ export const MultiAccountDashboard = ({
       accs.sort(sortByNum);
     }
     const groups: ExchangeGroup[] = [];
-    const order = ['reya', 'hibachi', 'grvt', '01exchange', 'extended', 'pacifica', 'nado', 'hyperliquid', 'edgex'];
+    const order = ['reya', 'hibachi', 'grvt', '01exchange', 'extended', 'pacifica', 'nado', 'hotstuff', 'hyperliquid', 'edgex'];
     const makeGroup = (key: string, accs: SingleAccountData[]) => {
       const meta = EXCHANGE_META[key] || { label: key, color: 'text-gray-400', borderColor: 'border-gray-500/50' };
       const sorted = [...accs].sort(sortByNum);

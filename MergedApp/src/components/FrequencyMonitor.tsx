@@ -53,9 +53,10 @@ const EXCHANGE_DISPLAY_NAMES: Record<string, string> = {
   '01': '01 Exchange',
   pacifica: 'Pacifica',
   nado: 'Nado',
+  hotstuff: 'Hotstuff',
 };
 
-const EXCHANGE_ORDER = ['reya', 'hibachi', 'grvt', '01', 'pacifica', 'nado', 'extended'];
+const EXCHANGE_ORDER = ['reya', 'hibachi', 'grvt', '01', 'pacifica', 'nado', 'hotstuff', 'extended'];
 const HIDDEN_EXCHANGES = ['edgex_'];
 
 const getExchangeKey = (id: string): string => {
@@ -168,7 +169,7 @@ export const FrequencyMonitor = ({ broadcasterStats, lastWsUpdate, isWsConnected
       const m = id.match(/^([a-zA-Z]+)/);
       return m ? m[1] : id;
     };
-    const exchangeOrder = ['reya', 'hibachi', 'grvt', '01', 'pacifica', 'nado', 'extended'];
+    const exchangeOrder = ['reya', 'hibachi', 'grvt', '01', 'pacifica', 'nado', 'hotstuff', 'extended'];
     return Array.from(accounts.values())
       .filter(acc => !HIDDEN_EXCHANGES.some(prefix => acc.id.startsWith(prefix)))
       .map(acc => {

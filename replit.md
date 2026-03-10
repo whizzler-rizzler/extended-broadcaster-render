@@ -1,6 +1,6 @@
 # Multi-Account Trading Dashboard
 
-Multi-account trading dashboard (React + Python FastAPI) monitoring real-time accounts across multiple exchanges: Extended (36 accounts), Reya (8 accounts), EdgeX (4 accounts - hidden on frontend), Hibachi (2 accounts), GRVT (6 accounts), 01 Exchange (8 accounts), Pacifica (2 accounts), Nado (8 accounts). Total: 74 accounts in API, 70 displayed on frontend (without EdgeX).
+Multi-account trading dashboard (React + Python FastAPI) monitoring real-time accounts across multiple exchanges: Extended (36 accounts), Reya (8 accounts), EdgeX (4 accounts - hidden on frontend), Hibachi (2 accounts), GRVT (6 accounts), 01 Exchange (8 accounts), Pacifica (2 accounts), Nado (8 accounts), Hotstuff (8 accounts). Total: 82 accounts in API, 78 displayed on frontend (without EdgeX).
 
 ## Architecture
 
@@ -15,6 +15,7 @@ MergedApp/
     zero_one_client.py   - 01 Exchange client (8 accounts) with public REST API polling
     pacifica_client.py   - Pacifica exchange client (2 accounts) with public REST API polling
     nado_client.py       - Nado exchange client (8 accounts) with public REST API polling
+    hotstuff_client.py   - Hotstuff exchange client (8 accounts) with public REST API polling
   src/
     components/
       MultiAccountDashboard.tsx  - Main dashboard component
@@ -39,6 +40,7 @@ Backend runs in `FRONTEND_ONLY` mode:
 - **01 Exchange**: Polled locally (8 accounts) via public REST API
 - **Pacifica**: Polled locally (2 accounts) via public REST API
 - **Nado**: Polled locally (8 accounts) via public REST API (uses same wallets as Reya)
+- **Hotstuff**: Polled locally (8 accounts) via public REST API (uses same wallets as Reya)
 
 ## Exchange Integration Details
 
@@ -85,6 +87,15 @@ Backend runs in `FRONTEND_ONLY` mode:
 - **Data format**: All amounts in x18 (divide by 1e18). Product ID 0 = USDT0 (collateral). Perp positions have amount + v_quote_balance for PNL calc
 - **Frontend key**: `nado_` prefix, exchange name `nado`, color `text-lime-400`
 - **Proxy**: Uses `Nado_N_proxy` or falls back to `Rest_account_N_proxy`
+
+### Hotstuff
+- **API**: Public REST API at `https://api.hotstuff.trade/info` - NO authentication required
+- **Request**: `POST` with `{"method": "accountSummary", "params": {"user": "0x..."}}`
+- **Response**: `total_account_equity`, `margin_balance`, `upnl`, `collateral.USDC.balance`, `perp_positions`, `initial_margin_utilization`, `maintenance_margin_utilization`, `available_balance`, `vault_balances`
+- **Secrets**: Uses same wallets as Reya (`Reya_N_wallet_main`), no additional secrets needed
+- **Vault balances**: Vault amounts are included in equity calculation
+- **Frontend key**: `hotstuff_` prefix, exchange name `hotstuff`, color `text-orange-400`
+- **Proxy**: Uses `Hotstuff_N_proxy` or falls back to `Rest_account_N_proxy`
 
 ### Extended
 - 36 accounts proxied from remote backend

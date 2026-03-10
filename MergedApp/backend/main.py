@@ -44,6 +44,10 @@ from nado_client import (
     load_nado_accounts, poll_nado_account,
     NadoAccountConfig, NadoAccountCache, NADO_CACHES,
 )
+from hotstuff_client import (
+    load_hotstuff_accounts, poll_hotstuff_account,
+    HotstuffAccountConfig, HotstuffAccountCache, HOTSTUFF_CACHES,
+)
 
 app = FastAPI(title="Extended API Multi-Account Broadcaster")
 
@@ -282,6 +286,9 @@ print(f"🎯 Total Pacifica accounts configured: {len(PACIFICA_ACCOUNTS)}")
 
 NADO_ACCOUNTS = load_nado_accounts()
 print(f"🎯 Total Nado accounts configured: {len(NADO_ACCOUNTS)}")
+
+HOTSTUFF_ACCOUNTS = load_hotstuff_accounts()
+print(f"🎯 Total Hotstuff accounts configured: {len(HOTSTUFF_ACCOUNTS)}")
 
 # ============= BROADCASTER GLOBAL STATE =============
 # Cache for each account - keyed by account ID
@@ -1029,6 +1036,7 @@ GRVT_POLL_COUNTER = 0
 ZERO_ONE_POLL_COUNTER = 0
 PACIFICA_POLL_COUNTER = 0
 NADO_POLL_COUNTER = 0
+HOTSTUFF_POLL_COUNTER = 0
 
 MARGIN_CHECK_COUNTER = 0  # Check margins every 20 cycles (5 seconds)
 
@@ -1245,8 +1253,35 @@ async def poll_all_nado_accounts():
             print(f"❌ [Nado {NADO_ACCOUNTS[i].name}] poll error: {r}")
 
 
+async def poll_hotstuff_account_data(account: HotstuffAccountConfig):
+    cache = HOTSTUFF_CACHES[account.id]
+    changed = await poll_hotstuff_account(account, cache)
+    if changed:
+        await broadcast_to_clients({
+            "type": "account_update",
+            "account_id": account.id,
+            "account_name": account.name,
+            "exchange": "hotstuff",
+            "positions": cache.positions,
+            "balance": cache.balance,
+            "orders": cache.orders,
+            "timestamp": time.time()
+        })
+
+
+async def poll_all_hotstuff_accounts():
+    if not HOTSTUFF_ACCOUNTS:
+        return
+    results = await asyncio.gather(*[
+        poll_hotstuff_account_data(account) for account in HOTSTUFF_ACCOUNTS
+    ], return_exceptions=True)
+    for i, r in enumerate(results):
+        if isinstance(r, Exception):
+            print(f"❌ [Hotstuff {HOTSTUFF_ACCOUNTS[i].name}] poll error: {r}")
+
+
 async def local_exchange_poller():
-    print(f"🚀 [LocalPoller] Started for {len(REYA_ACCOUNTS)} Reya + {len(EDGEX_ACCOUNTS)} EdgeX + {len(HIBACHI_ACCOUNTS)} Hibachi + {len(GRVT_ACCOUNTS)} GRVT + {len(ZERO_ONE_ACCOUNTS)} 01 Exchange + {len(PACIFICA_ACCOUNTS)} Pacifica + {len(NADO_ACCOUNTS)} Nado accounts")
+    print(f"🚀 [LocalPoller] Started for {len(REYA_ACCOUNTS)} Reya + {len(EDGEX_ACCOUNTS)} EdgeX + {len(HIBACHI_ACCOUNTS)} Hibachi + {len(GRVT_ACCOUNTS)} GRVT + {len(ZERO_ONE_ACCOUNTS)} 01 Exchange + {len(PACIFICA_ACCOUNTS)} Pacifica + {len(NADO_ACCOUNTS)} Nado + {len(HOTSTUFF_ACCOUNTS)} Hotstuff accounts")
     if ZERO_ONE_ACCOUNTS:
         await resolve_all_account_ids(ZERO_ONE_ACCOUNTS)
     while True:
@@ -1265,6 +1300,8 @@ async def local_exchange_poller():
                 await poll_all_pacifica_accounts()
             if NADO_ACCOUNTS:
                 await poll_all_nado_accounts()
+            if HOTSTUFF_ACCOUNTS:
+                await poll_all_hotstuff_accounts()
             await asyncio.sleep(2.0)
         except Exception as e:
             print(f"❌ [LocalPoller] Error: {e}")
@@ -1279,7 +1316,7 @@ async def background_poller():
     - Main loop (2s): positions + balance + orders + trades for all accounts
     - Margin check (6s): check margins and send alerts
     """
-    global TRADES_POLL_COUNTER, MARGIN_CHECK_COUNTER, REYA_POLL_COUNTER, EDGEX_POLL_COUNTER, HIBACHI_POLL_COUNTER, GRVT_POLL_COUNTER, ZERO_ONE_POLL_COUNTER, PACIFICA_POLL_COUNTER, NADO_POLL_COUNTER
+    global TRADES_POLL_COUNTER, MARGIN_CHECK_COUNTER, REYA_POLL_COUNTER, EDGEX_POLL_COUNTER, HIBACHI_POLL_COUNTER, GRVT_POLL_COUNTER, ZERO_ONE_POLL_COUNTER, PACIFICA_POLL_COUNTER, NADO_POLL_COUNTER, HOTSTUFF_POLL_COUNTER
     
     # Count accounts with proxies
     proxied_accounts = sum(1 for a in ACCOUNTS if a.proxy_url)
@@ -1329,6 +1366,11 @@ async def background_poller():
             if NADO_POLL_COUNTER >= 1:
                 await poll_all_nado_accounts()
                 NADO_POLL_COUNTER = 0
+
+            HOTSTUFF_POLL_COUNTER += 1
+            if HOTSTUFF_POLL_COUNTER >= 1:
+                await poll_all_hotstuff_accounts()
+                HOTSTUFF_POLL_COUNTER = 0
             
             TRADES_POLL_COUNTER += 1
             if TRADES_POLL_COUNTER >= 1:
@@ -1370,7 +1412,7 @@ async def startup_alert_test():
 async def startup_broadcaster():
     if IS_FRONTEND_ONLY:
         print(f"🌐 [Startup] FRONTEND_ONLY mode - proxying Extended to {REMOTE_API_BASE}")
-        if REYA_ACCOUNTS or EDGEX_ACCOUNTS or HIBACHI_ACCOUNTS or GRVT_ACCOUNTS:
+        if REYA_ACCOUNTS or EDGEX_ACCOUNTS or HIBACHI_ACCOUNTS or GRVT_ACCOUNTS or ZERO_ONE_ACCOUNTS or PACIFICA_ACCOUNTS or NADO_ACCOUNTS or HOTSTUFF_ACCOUNTS:
             asyncio.create_task(local_exchange_poller())
             print(f"✅ [Startup] Local poller started for {len(REYA_ACCOUNTS)} Reya + {len(EDGEX_ACCOUNTS)} EdgeX + {len(HIBACHI_ACCOUNTS)} Hibachi + {len(GRVT_ACCOUNTS)} GRVT accounts")
         asyncio.create_task(points_background_poller())
@@ -1441,7 +1483,7 @@ async def get_cached_accounts():
     """
     if IS_FRONTEND_ONLY:
         remote_data = await proxy_to_remote("/api/cached-accounts")
-        if (REYA_ACCOUNTS or EDGEX_ACCOUNTS or HIBACHI_ACCOUNTS or GRVT_ACCOUNTS) and isinstance(remote_data, dict):
+        if (REYA_ACCOUNTS or EDGEX_ACCOUNTS or HIBACHI_ACCOUNTS or GRVT_ACCOUNTS or ZERO_ONE_ACCOUNTS or PACIFICA_ACCOUNTS or NADO_ACCOUNTS or HOTSTUFF_ACCOUNTS) and isinstance(remote_data, dict):
             current_time = time.time()
             accounts = remote_data.get("accounts", {})
             for account in REYA_ACCOUNTS:
@@ -1552,6 +1594,23 @@ async def get_cached_accounts():
                     "id": account.id,
                     "name": account.name,
                     "exchange": "nado",
+                    "positions": cache.positions,
+                    "balance": cache.balance,
+                    "trades": [],
+                    "orders": cache.orders,
+                    "cache_age_ms": {
+                        "positions": int((current_time - cache.last_update["positions"]) * 1000) if cache.last_update["positions"] > 0 else None,
+                        "balance": int((current_time - cache.last_update["balance"]) * 1000) if cache.last_update["balance"] > 0 else None,
+                        "orders": int((current_time - cache.last_update["orders"]) * 1000) if cache.last_update["orders"] > 0 else None,
+                    },
+                    "last_update": cache.last_update.copy()
+                }
+            for account in HOTSTUFF_ACCOUNTS:
+                cache = HOTSTUFF_CACHES[account.id]
+                accounts[account.id] = {
+                    "id": account.id,
+                    "name": account.name,
+                    "exchange": "hotstuff",
                     "positions": cache.positions,
                     "balance": cache.balance,
                     "trades": [],
@@ -1715,9 +1774,27 @@ async def get_cached_accounts():
             "last_update": cache.last_update.copy()
         }
 
+    for account in HOTSTUFF_ACCOUNTS:
+        cache = HOTSTUFF_CACHES[account.id]
+        accounts_data[account.id] = {
+            "id": account.id,
+            "name": account.name,
+            "exchange": "hotstuff",
+            "positions": cache.positions,
+            "balance": cache.balance,
+            "trades": [],
+            "orders": cache.orders,
+            "cache_age_ms": {
+                "positions": int((current_time - cache.last_update["positions"]) * 1000) if cache.last_update["positions"] > 0 else None,
+                "balance": int((current_time - cache.last_update["balance"]) * 1000) if cache.last_update["balance"] > 0 else None,
+                "orders": int((current_time - cache.last_update["orders"]) * 1000) if cache.last_update["orders"] > 0 else None,
+            },
+            "last_update": cache.last_update.copy()
+        }
+
     return {
         "accounts": accounts_data,
-        "total_accounts": len(ACCOUNTS) + len(REYA_ACCOUNTS) + len(EDGEX_ACCOUNTS) + len(HIBACHI_ACCOUNTS) + len(GRVT_ACCOUNTS) + len(ZERO_ONE_ACCOUNTS) + len(PACIFICA_ACCOUNTS) + len(NADO_ACCOUNTS),
+        "total_accounts": len(ACCOUNTS) + len(REYA_ACCOUNTS) + len(EDGEX_ACCOUNTS) + len(HIBACHI_ACCOUNTS) + len(GRVT_ACCOUNTS) + len(ZERO_ONE_ACCOUNTS) + len(PACIFICA_ACCOUNTS) + len(NADO_ACCOUNTS) + len(HOTSTUFF_ACCOUNTS),
         "timestamp": current_time
     }
 
@@ -1926,10 +2003,22 @@ async def websocket_broadcast(websocket: WebSocket):
                 "orders": cache.orders,
             }
 
+        for account in HOTSTUFF_ACCOUNTS:
+            cache = HOTSTUFF_CACHES[account.id]
+            accounts_snapshot[account.id] = {
+                "id": account.id,
+                "name": account.name,
+                "exchange": "hotstuff",
+                "positions": cache.positions,
+                "balance": cache.balance,
+                "trades": [],
+                "orders": cache.orders,
+            }
+
         snapshot = {
             "type": "snapshot",
             "accounts": accounts_snapshot,
-            "total_accounts": len(ACCOUNTS) + len(REYA_ACCOUNTS) + len(EDGEX_ACCOUNTS) + len(HIBACHI_ACCOUNTS) + len(GRVT_ACCOUNTS) + len(ZERO_ONE_ACCOUNTS) + len(PACIFICA_ACCOUNTS) + len(NADO_ACCOUNTS),
+            "total_accounts": len(ACCOUNTS) + len(REYA_ACCOUNTS) + len(EDGEX_ACCOUNTS) + len(HIBACHI_ACCOUNTS) + len(GRVT_ACCOUNTS) + len(ZERO_ONE_ACCOUNTS) + len(PACIFICA_ACCOUNTS) + len(NADO_ACCOUNTS) + len(HOTSTUFF_ACCOUNTS),
             "timestamp": time.time()
         }
         await websocket.send_json(snapshot)
